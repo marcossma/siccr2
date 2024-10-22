@@ -11,7 +11,7 @@
 
 header {
     background: silver;
-    padding: 20px;
+    padding: 5px;
 }
 
 main {
@@ -20,18 +20,17 @@ main {
 }
 
 aside {
-    background: blue;
-    padding: 20px;
+    padding: 5px;
     width: 200px;
 }
 
 section {
     background: yellow;
-    padding: 20px;
+    padding: 5px;
     width: 100%;
 }
 
 footer {
     background: green;
-    padding: 20px;
+    padding: 5px;
 }
