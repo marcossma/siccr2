@@ -10,8 +10,20 @@
 }
 
 header {
-    background: silver;
-    padding: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 20px;
+}
+
+header img {
+    width: 250px;
+}
+
+header .acesso {
+    width: 100px;
+    height: 100px;
+    background: green;
 }
 
 main {
