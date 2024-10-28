@@ -14,6 +14,7 @@ header {
     justify-content: space-between;
     align-items: center;
     padding: 5px 20px;
+    border-bottom: 1px solid #009536;
 }
 
 header img {
@@ -37,7 +38,7 @@ aside {
 }
 
 section {
-    background: yellow;
+    background: white;
     padding: 5px;
     width: 100%;
 }

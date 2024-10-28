@@ -41,7 +41,7 @@ class MenuComponent extends HTMLElement {
                     font-size: 12px;
                     padding: 5px;
                     cursor: pointer;
-                    transition: 0.3s ease-in-out;
+                    transition: 0.2s ease-in-out;
                 }
 
                 nav ul li:hover {
