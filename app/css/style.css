@@ -2,11 +2,13 @@
     padding: 0px;
     margin: 0px;
     box-sizing: border-box;
+    font-family: verdana;
 }
 
 .container {
     display: flex;
     flex-direction: column;
+    justify-content: center;
 }
 
 header {
@@ -21,14 +23,25 @@ header img {
 }
 
 header .acesso {
+    display: flex;
+    justify-content: center;
+    align-items: center;
     width: 100px;
     height: 100px;
     background: green;
+    border-radius: 50%;
+}
+
+header .acesso a {
+    color: white;
+    text-decoration: none;
+    cursor: pointer;
 }
 
 main {
     display: flex;
-    flex-direction: row;
+    width: 80%;
+    margin: 0 auto;
 }
 
 aside {
@@ -37,12 +50,16 @@ aside {
 }
 
 section {
-    background: yellow;
+    /* background: yellow; */
     padding: 5px;
     width: 100%;
 }
 
 footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
     background: green;
     padding: 5px;
 }

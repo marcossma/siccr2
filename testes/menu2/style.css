@@ -1,0 +1,53 @@
+/* Estilo do menu nav */
+nav ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    background-color: #333;
+}
+
+nav ul li {
+    display: inline-block;
+    position: relative;
+}
+
+nav ul li a {
+    color: white;
+    padding: 10px 20px;
+    display: block;
+    text-decoration: none;
+}
+
+/* Hover no menu principal */
+nav ul li a:hover {
+    background-color: #555;
+}
+
+/* Estilo do submenu (inicialmente oculto) */
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+    top: 100%;
+    left: 0px;
+}
+
+/* Estilo dos links dentro do submenu */
+.dropdown-content li {
+    display: block;
+}
+
+.dropdown-content li a {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+}
+
+/* Hover nos links do submenu */
+.dropdown-content li a:hover {
+    background-color: #ddd;
+}

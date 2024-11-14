@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Teste 2 - Menu Dropdown</title>
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="#">Home</a></li>
+
+            <!-- Item de menu com submenu -->
+             <li class="dropdown">
+                <a href="#produtos" class="dropdown-btn" onclick="toggleDropdown(event, 'produtos-menu');">Produtos</a>
+                <ul id="produtos-menu" class="dropdown-content">
+                    <li><a href="#">Produto 1</a></li>
+                    <li><a href="#">Produto 2</a></li>
+                    <li><a href="#">Produto 3</a></li>
+                </ul>
+             </li>
+
+             <!-- Menu Serviços com submenu -->
+              <li class="dropdown">
+                <a href="#servicos" class="dropdown-btn" onclick="toggleDropdown(event, 'servicos-menu')">Serviços</a>
+                <ul id="servicos-menu" class="dropdown-content">
+                    <li><a href="#">Serviço 1</a></li>
+                    <li><a href="#">Serviço 2</a></li>
+                    <li><a href="#">Serviço 3</a></li>
+                </ul>
+              </li>
+
+              <li><a href="#contato">Contato</a></li>
+        </ul>
+    </nav>
+
+    <script src="script.js"></script>
+</body>
+</html>

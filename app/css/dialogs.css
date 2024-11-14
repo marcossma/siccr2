@@ -1,0 +1,50 @@
+#dialogLogin {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border: none;
+    background: none;
+}
+
+#dialogLogin::backdrop {
+    box-shadow: 0 0 10px rgba(0, 0, 0, 1);
+}
+
+#dialogLogin fieldset {
+    padding: 20px;
+    border-radius: 10px;
+    background: white;
+}
+
+#dialogLogin fieldset legend {
+    padding: 5px 10px;
+    border: 1px solid black;
+    border-radius: 5px;
+    background: green;
+    color: white;
+}
+
+#dialogLogin #frmLogin {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.formInput {
+    padding: 10px;
+    border-radius: 5px;
+    border: none;
+    outline: none;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
+}
+
+#btnLogin {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    border: none;
+    background: green;
+    color: white;
+    cursor: pointer;
+}
