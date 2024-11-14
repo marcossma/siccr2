@@ -95,7 +95,7 @@ class MenuComponent extends HTMLElement {
     
                     <!-- Menu Financeiro com submenu -->
                     <li class="dropdown">
-                        <a href="#servicos" class="dropdown-btn"><i class="bi bi-cash-coin"></i> Financeiro</a>
+                        <a href="#servicos" class="dropdown-btn"><i class="bi bi-cash-coin"></i> Financeiro <i class="bi bi-caret-down"></i></a>
                         <ul id="servicos-menu" class="dropdown-content">
                             <li><a href="#">Gerenciar Subunidades</a></li>
                             <li><a href="#">Tipos de Despesas</a></li>
@@ -114,7 +114,7 @@ class MenuComponent extends HTMLElement {
                     
                     <!-- Menu Infraestutura com submenu -->
                     <li class="dropdown">
-                        <a href="#servicos" class="dropdown-btn"><i class="bi bi-buildings"></i> Infraestrutura</a>
+                        <a href="#servicos" class="dropdown-btn"><i class="bi bi-buildings"></i> Infraestrutura <i class="bi bi-caret-down"></i></a>
                         <ul id="servicos-menu" class="dropdown-content">
                             <li><a href="#">Listar Prédios</a></li>
                         </ul>
@@ -122,7 +122,7 @@ class MenuComponent extends HTMLElement {
                     
                     <!-- Menu Transporte com submenu -->
                     <li class="dropdown">
-                        <a href="#servicos" class="dropdown-btn"><i class="bi bi-truck-front"></i> Transporte</a>
+                        <a href="#servicos" class="dropdown-btn"><i class="bi bi-truck-front"></i> Transporte <i class="bi bi-caret-down"></i></a>
                         <ul id="servicos-menu" class="dropdown-content">
                             <li><a href="#">Solicitações de viagens</a></li>
                             <li><a href="#">Agendar Viagem</a></li>
