@@ -8,6 +8,8 @@ class MenuComponent extends HTMLElement {
         // Código do HTML e CSS no shadow DOM
         this.shadowRoot.innerHTML = `
             <style>
+                @import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css");
+                
                 * {
                     font-family: arial;
                     letter-spacing: 1px;
@@ -23,12 +25,16 @@ class MenuComponent extends HTMLElement {
                     list-style-type: none;
                     padding: 0;
                     margin: 0;
-                    background-color: #333;
+                    background-color: green;
                 }
     
                 nav ul li {
                     display: inline-block;
                     position: relative;
+                }
+
+                i {
+                    font-size: 16px;
                 }
     
                 nav ul li a {
@@ -75,11 +81,11 @@ class MenuComponent extends HTMLElement {
             
             <nav>
                 <ul>
-                    <li><a href="#">Home</a></li>
+                    <li><a href="#"><i class="bi bi-house"></i> Home</a></li>
     
                     <!-- Item de menu com submenu -->
                     <li class="dropdown">
-                        <a href="#" class="dropdown-btn">Administrativo</a>
+                        <a href="#" class="dropdown-btn"><i class="bi bi-journals"></i> Administrativo <i class="bi bi-caret-down"></i></a>
                         <ul id="produtos-menu" class="dropdown-content">
                             <li><a href="#">Abrir Agendamento</a></li>
                             <li><a href="#">Solicitações de agendamento</a></li>
@@ -89,7 +95,7 @@ class MenuComponent extends HTMLElement {
     
                     <!-- Menu Financeiro com submenu -->
                     <li class="dropdown">
-                        <a href="#servicos" class="dropdown-btn">Financeiro</a>
+                        <a href="#servicos" class="dropdown-btn"><i class="bi bi-cash-coin"></i> Financeiro</a>
                         <ul id="servicos-menu" class="dropdown-content">
                             <li><a href="#">Gerenciar Subunidades</a></li>
                             <li><a href="#">Tipos de Despesas</a></li>
@@ -100,7 +106,7 @@ class MenuComponent extends HTMLElement {
                     
                     <!-- Menu Patrimônio com submenu -->
                     <li class="dropdown">
-                        <a href="#servicos" class="dropdown-btn">Patrimônio</a>
+                        <a href="#servicos" class="dropdown-btn"><i class="bi bi-ticket-detailed"></i> Patrimônio</a>
                         <ul id="servicos-menu" class="dropdown-content">
                             <li><a href="#">Listar patrimônios</a></li>
                         </ul>
@@ -108,7 +114,7 @@ class MenuComponent extends HTMLElement {
                     
                     <!-- Menu Infraestutura com submenu -->
                     <li class="dropdown">
-                        <a href="#servicos" class="dropdown-btn">Intraestrutura</a>
+                        <a href="#servicos" class="dropdown-btn"><i class="bi bi-buildings"></i> Infraestrutura</a>
                         <ul id="servicos-menu" class="dropdown-content">
                             <li><a href="#">Listar Prédios</a></li>
                         </ul>
@@ -116,14 +122,24 @@ class MenuComponent extends HTMLElement {
                     
                     <!-- Menu Transporte com submenu -->
                     <li class="dropdown">
-                        <a href="#servicos" class="dropdown-btn">Transporte</a>
+                        <a href="#servicos" class="dropdown-btn"><i class="bi bi-truck-front"></i> Transporte</a>
                         <ul id="servicos-menu" class="dropdown-content">
                             <li><a href="#">Solicitações de viagens</a></li>
                             <li><a href="#">Agendar Viagem</a></li>
                         </ul>
                     </li>
     
-                    <li><a href="#contato">Contato</a></li>
+                    <!-- Menu Contato com submenu -->
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-btn"><i class="bi bi-telephone"></i> Contato</a>
+                        <ul id="contato-menu" class="dropdown-content">
+                            <li><a href="#">Secretaria do CCR</a></li>
+                            <li><a href="#">SID</a></li>
+                            <li><a href="#">SIG-AFA</a></li>
+                            <li><a href="#">SIG-VAZ</a></li>
+                            <li><a href="#">SIPG</a></li>
+                        </ul>
+                    </li>
                 </ul>
             </nav>
         `;

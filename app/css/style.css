@@ -1,3 +1,5 @@
+@import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css");
+
 * {
     padding: 0px;
     margin: 0px;
@@ -51,11 +53,7 @@ aside {
 }
 
 section {
-<<<<<<< HEAD
     /* background: yellow; */
-=======
-    background: white;
->>>>>>> dd77c2d4e50c8d55d8b49b04d5c41b36caec61f1
     padding: 5px;
     width: 100%;
 }
