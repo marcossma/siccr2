@@ -16,6 +16,7 @@ header {
     justify-content: space-between;
     align-items: center;
     padding: 5px 20px;
+    border-bottom: 1px solid #009536;
 }
 
 header img {
@@ -50,7 +51,11 @@ aside {
 }
 
 section {
+<<<<<<< HEAD
     /* background: yellow; */
+=======
+    background: white;
+>>>>>>> dd77c2d4e50c8d55d8b49b04d5c41b36caec61f1
     padding: 5px;
     width: 100%;
 }
