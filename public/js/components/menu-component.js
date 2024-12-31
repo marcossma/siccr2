@@ -40,7 +40,7 @@ class MenuComponent extends HTMLElement {
                 nav ul li a {
                     color: white;
                     padding: 10px 20px;
-                    display: block;
+                    display: inline-block;
                     text-decoration: none;
                 }
     
@@ -63,14 +63,14 @@ class MenuComponent extends HTMLElement {
     
                 /* Estilo dos links dentro do submenu */
                 .dropdown-content li {
-                    display: block;
+                    display: inline-block;
                 }
     
                 .dropdown-content li a {
                     color: black;
                     padding: 12px 16px;
                     text-decoration: none;
-                    display: block;
+                    display: inline-block;
                 }
     
                 /* Hover nos links do submenu */
