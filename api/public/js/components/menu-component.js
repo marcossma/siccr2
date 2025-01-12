@@ -25,7 +25,7 @@ class MenuComponent extends HTMLElement {
                     list-style-type: none;
                     padding: 0;
                     margin: 0;
-                    background-color: green;
+                    background-color: #009536;
                 }
     
                 nav ul li {
@@ -40,7 +40,7 @@ class MenuComponent extends HTMLElement {
                 nav ul li a {
                     color: white;
                     padding: 10px 20px;
-                    display: inline-block;
+                    display: block;
                     text-decoration: none;
                 }
     
@@ -63,14 +63,14 @@ class MenuComponent extends HTMLElement {
     
                 /* Estilo dos links dentro do submenu */
                 .dropdown-content li {
-                    display: inline-block;
+                    display: block;
                 }
     
                 .dropdown-content li a {
                     color: black;
                     padding: 12px 16px;
                     text-decoration: none;
-                    display: inline-block;
+                    display: block;
                 }
     
                 /* Hover nos links do submenu */
@@ -81,15 +81,15 @@ class MenuComponent extends HTMLElement {
             
             <nav>
                 <ul>
-                    <li><a href="#"><i class="bi bi-house"></i> Home</a></li>
+                    <li><a href="/"><i class="bi bi-house"></i> Home</a></li>
     
                     <!-- Item de menu com submenu -->
                     <li class="dropdown">
                         <a href="#" class="dropdown-btn"><i class="bi bi-journals"></i> Administrativo <i class="bi bi-caret-down"></i></a>
                         <ul id="produtos-menu" class="dropdown-content">
-                            <li><a href="#">Abrir Agendamento</a></li>
-                            <li><a href="#">Solicitações de agendamento</a></li>
-                            <li><a href="#">Gerenciamento de usuários</a></li>
+                            <li><a href="https://siccr.guiadigitalsm.com.br/salas" target="_blank">Abrir Agendamento</a></li>
+                            <li><a href="/solicitacoes-de-agendamento">Solicitações de agendamento</a></li>
+                            <li><a href="/gerenciamento-de-usuarios">Gerenciamento de usuários</a></li>
                         </ul>
                     </li>
     
@@ -106,7 +106,7 @@ class MenuComponent extends HTMLElement {
                     
                     <!-- Menu Patrimônio com submenu -->
                     <li class="dropdown">
-                        <a href="#servicos" class="dropdown-btn"><i class="bi bi-ticket-detailed"></i> Patrimônio</a>
+                        <a href="#servicos" class="dropdown-btn"><i class="bi bi-ticket-detailed"></i> Patrimônio <i class="bi bi-caret-down"></i></a>
                         <ul id="servicos-menu" class="dropdown-content">
                             <li><a href="#">Listar patrimônios</a></li>
                         </ul>
@@ -138,6 +138,7 @@ class MenuComponent extends HTMLElement {
                             <li><a href="#">SIG-AFA</a></li>
                             <li><a href="#">SIG-VAZ</a></li>
                             <li><a href="#">SIPG</a></li>
+                            <li><a href="#">TI-CCR</a></li>
                         </ul>
                     </li>
                 </ul>

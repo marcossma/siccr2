@@ -31,7 +31,7 @@ header .acesso {
     align-items: center;
     width: 100px;
     height: 100px;
-    background: green;
+    background: #009536;
     border-radius: 50%;
 }
 
@@ -63,6 +63,6 @@ footer {
     justify-content: center;
     align-items: center;
     color: white;
-    background: green;
+    background: #009536;
     padding: 5px;
 }

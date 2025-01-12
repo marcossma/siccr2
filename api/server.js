@@ -1,13 +1,38 @@
-// app.js
+// server.js - arquivo principal do servidor
+require("dotenv").config();
 const express = require("express");
+const http = require("http");
 const cors = require("cors");
-const db = require("./config/database");
+// const db = require("./config/database");
+const path = require("path");
+const WebSocket = require("ws");
+
+const PORT = process.env.SERVER_PORT || 15000;
 
 const app = express();
-const PORT = process.env.PORT || 15000;
-
 app.use(cors());
 
+// Configurar o uso de arquivos estáticos
+app.use(express.static(path.join(__dirname, "public")));
+
+// Configurar rotas amigáveis para o servidor HTTP
+app.get("/", (req, res) => {
+    res.status(200).sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// Solicitações de agendamento
+app.get("/solicitacoes-de-agendamento", (req, res) => {
+    res.status(200).sendFile(path.join(__dirname, "public", "solicitacoes-de-agendamento.html"));
+});
+
+// Gerenciamento de usuários
+app.get("/gerenciamento-de-usuarios", (req, res) => {
+    res.status(200).sendFile(path.join(__dirname, "public", "gerenciamento-de-usuarios.html"));
+});
+
+//##############
+// Rotas de API
+// #############
 app.get("/api/test-db", async(req, res) => {
     try {
         const [rows] = await db.query("select 1 + 1 as solution");
@@ -18,6 +43,37 @@ app.get("/api/test-db", async(req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
+// Criar o servidor HTTP
+const server = http.createServer(app);
+
+// Criar o servidor WebSocket
+const wss = new WebSocket.Server({ server });
+
+// Configurando os eventos WebSocket
+wss.on("connection", (ws) => {
+    console.log("Novo cliente conectado!");
+
+    // Enviar mensagem ao cliente conectado
+    ws.send("Bem vindo ao WebSocket Server!");
+
+    // Evento: Quando o servidor recebe uma mensagem do cliente
+    ws.on("message", (message) => {
+        console.log(`Mensagem recebida do cliente: ${message}`);
+
+        // Enviar uma resposta para todos os clientes conectados
+        wss.clients.forEach((cliente) => {
+            if (cliente.readyState === WebSocket.OPEN) {
+                cliente.send(`Servidor recebeu: ${message}`);
+            }
+        });
+    });
+
+    // Evento: Quando o cliente se desconecta
+    ws.on("close", () => {
+        console.log("Cliente desconectado!");
+    });
+});
+
+server.listen(PORT, () => {
+    console.log(`Servidor rodando na porta http://localhost:${PORT}`);
 });
