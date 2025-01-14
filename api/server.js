@@ -15,7 +15,7 @@ app.use(cors());
 // Configurar o uso de arquivos estáticos
 app.use(express.static(path.join(__dirname, "public")));
 
-// Configurar rotas amigáveis para o servidor HTTP
+// Configurar rotas amigáveis para o servidor HTTP - Páginas estáticas
 app.get("/:pagina", (req, res) => {
     const pagina = req.params.pagina;
     const filePath = path.join(__dirname, "public", `${pagina}.html`);
