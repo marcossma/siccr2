@@ -16,19 +16,21 @@ app.use(cors());
 app.use(express.static(path.join(__dirname, "public")));
 
 // Configurar rotas amigáveis para o servidor HTTP
-app.get("/", (req, res) => {
-    res.status(200).sendFile(path.join(__dirname, "public", "index.html"));
+app.get("/:pagina", (req, res) => {
+    const pagina = req.params.pagina;
+    const filePath = path.join(__dirname, "public", `${pagina}.html`);
+
+    res.sendFile(filePath, (error) => {
+        if (error) {
+            // res.status(404).json({
+            //     status: "error",
+            //     message: "Página não encontrada!"}
+            // );
+            res.status(404).send("Página não encontrada!");
+        }
+    });
 });
 
-// Solicitações de agendamento
-app.get("/solicitacoes-de-agendamento", (req, res) => {
-    res.status(200).sendFile(path.join(__dirname, "public", "solicitacoes-de-agendamento.html"));
-});
-
-// Gerenciamento de usuários
-app.get("/gerenciamento-de-usuarios", (req, res) => {
-    res.status(200).sendFile(path.join(__dirname, "public", "gerenciamento-de-usuarios.html"));
-});
 
 //##############
 // Rotas de API
