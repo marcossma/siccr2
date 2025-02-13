@@ -8,12 +8,19 @@ class ResponsiveMenu extends HTMLElement {
       // Template HTML + CSS do componente
       shadow.innerHTML = `
         <style>
+        * {
+          margin: 0px;
+          padding: 0px;
+          box-sizing: border-box;
+          font-family: system-ui;
+          font-size: 14px;
+        }
           /* Estilo da navbar */
           .navbar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background-color: #333;
+            background-color: #1f800b;
             color: white;
             padding: 10px 20px;
             position: relative;
@@ -30,6 +37,7 @@ class ResponsiveMenu extends HTMLElement {
             gap: 20px;
             margin: 0;
             padding: 0;
+            width: 100%;
           }
           .menu li {
             list-style: none;
@@ -53,16 +61,22 @@ class ResponsiveMenu extends HTMLElement {
           .dropdown-menu {
             display: none; /* Esconde por padrão */
             position: absolute;
-            top: 100%;
-            left: 0;
-            background-color: #444;
+            top: 120%;
+            left: 10px;
+            background-color: #1f800b;
+            /*background-color: #25a10d;*/
             padding: 10px 0;
             border-radius: 4px;
             min-width: 150px;
+            width: 320px;
             z-index: 1000;
+            box-shadow: 2px 2px 2px rgba(0, 0, 0, 1);
+            border-top: 1px solid black;
+            border-left: 1px solid black;
           }
           .dropdown-menu li {
             list-style: none;
+            width: 100%;
           }
           .dropdown-menu a {
             display: block;
@@ -70,7 +84,7 @@ class ResponsiveMenu extends HTMLElement {
             color: white;
           }
           .dropdown-menu a:hover {
-            background-color: #555;
+            background-color: #25a10d;
           }
   
           /* Exibe o dropdown quando o elemento pai tem a classe "open" */
@@ -83,7 +97,7 @@ class ResponsiveMenu extends HTMLElement {
             .menu {
               display: none;
               flex-direction: column;
-              background-color: #333;
+              background-color: #1f800b;
               position: absolute;
               top: 60px;
               left: 0;
@@ -102,23 +116,45 @@ class ResponsiveMenu extends HTMLElement {
         <nav class="navbar">
           <!--div class="logo">MinhaLogo</div-->
           <ul class="menu">
-            <li><a href="#">Início</a></li>
+            <li><a href="/">Início</a></li>
             <li class="dropdown">
-              <a href="#" class="dropdown-toggle">Serviços</a>
+              <a href="#" class="dropdown-toggle"><span>Administrativo ⤵<span></a>
               <ul class="dropdown-menu">
-                <li><a href="#">Web Design</a></li>
-                <li><a href="#">Desenvolvimento</a></li>
-                <li><a href="#">SEO</a></li>
+                <li><a href="https://siccr.guiadigitalsm.com.br/salas" target="_blank">Abrir agendamento</a></li>
+                <li><a href="/solicitacoes-de-agendamento">Solicitações de agendamento</a></li>
+                <hr>
+                <li><a href="/gerenciamento-de-usuarios">Gerenciamento de usuários</a></li>
               </ul>
             </li>
             <li class="dropdown">
-              <a href="#" class="dropdown-toggle">Sobre</a>
+              <a href="#" class="dropdown-toggle"><span>Financeiro ⤵<span></a>
               <ul class="dropdown-menu">
                 <li><a href="#">Equipe</a></li>
                 <li><a href="#">História</a></li>
               </ul>
             </li>
-            <li><a href="#">Contato</a></li>
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle"><span>Patrimônio ⤵<span></a>
+              <ul class="dropdown-menu">
+                <li><a href="#">Equipe</a></li>
+                <li><a href="#">História</a></li>
+              </ul>
+            </li>
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle"><span>Infraestrutura ⤵<span></a>
+              <ul class="dropdown-menu">
+                <li><a href="#">Equipe</a></li>
+                <li><a href="#">História</a></li>
+              </ul>
+            </li>
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle"><span>Transporte ⤵<span></a>
+              <ul class="dropdown-menu">
+                <li><a href="#">Equipe</a></li>
+                <li><a href="#">História</a></li>
+              </ul>
+            </li>
+            <li><a href="/contato">Contato</a></li>
           </ul>
           <div class="menu-toggle">☰</div>
         </nav>
