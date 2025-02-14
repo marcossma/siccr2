@@ -3,11 +3,11 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up (queryInterface, Sequelize) {
-    await queryInterface.createTable("Users", {
+    await queryInterface.createTable("users", {
       user_id: {
-        allowNull: false,
-        autoIncremente: true,
+        autoIncrement: true,
         primaryKey: true,
+        allowNull: false,
         type: Sequelize.INTEGER
       },
       nome: {
@@ -34,13 +34,13 @@ module.exports = {
       permissao: {
         type: Sequelize.STRING
       },
-      createdAt: {
+      createdat: {
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updatedat: {
         type: Sequelize.DATE
       },
-      updatedForUser: {
+      updatedforuser: {
         type: Sequelize.INTEGER
       }
     });
@@ -53,7 +53,7 @@ module.exports = {
   },
 
   async down (queryInterface, Sequelize) {
-    await queryInterface.dropTable("Users");
+    await queryInterface.dropTable("users");
     /**
      * Add reverting commands here.
      *

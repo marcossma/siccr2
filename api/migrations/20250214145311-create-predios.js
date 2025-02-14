@@ -16,13 +16,13 @@ module.exports = {
       descricao: {
         type: Sequelize.STRING
       },
-      createdAt: {
+      createdat: {
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updatedat: {
         type: Sequelize.DATE
       },
-      updatedForUser: {
+      updatedforuser: {
         type: Sequelize.STRING
       }
     });

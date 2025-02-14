@@ -3,13 +3,17 @@ require("dotenv").config();
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
-// const db = require("./config/database");
 const path = require("path");
 const WebSocket = require("ws");
 
+// Importar rotas dos usuários
+const usuariosRoutes = require("./routes/usuarios.js");
+
+// Porta do servidor
 const PORT = process.env.SERVER_PORT || 15000;
 
 const app = express();
+app.use(express.json());
 app.use(cors());
 
 // Configurar o uso de arquivos estáticos
@@ -35,15 +39,17 @@ app.get("/:pagina", (req, res) => {
 //##############
 // Rotas de API
 // #############
-app.get("/api/test-db", async(req, res) => {
-    try {
-        const [rows] = await db.query("select 1 + 1 as solution");
-        res.json({solution: rows[0].solution});
-    } catch (error) {
-        console.error("Erro ao conectar ao banco de dados: ", error);
-        res.status(500).send("Erro ao conectar ao banco de dados.");
-    }
+app.get("/api/test", async(req, res) => {
+    res.status(201).json({
+        status: "success",
+        message: "Api funcionando!",
+        data: ""
+    });
 });
+
+// Rotas para os usuários
+// ######################
+app.use("/api/usuarios", usuariosRoutes);
 
 // Criar o servidor HTTP
 const server = http.createServer(app);
