@@ -1,17 +1,15 @@
 // config/database.js
 require("dotenv").config();
-const mysql = require("mysql2");
+const { Pool } = require("pg");
 
-// Configuração da conexão com o MySQL
-const pool = mysql.createPool({
-    host: process.env.DB_HOST,
+// Configurando o banco de dados
+const pool = new Pool({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
+    host: process.env.DB_HOST,
     database: process.env.DB_NAME,
     port: process.env.DB_PORT,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
 });
 
-module.exports = pool.promise();
+// Exportar o pool para ser usando em outros arquivos
+module.exports = pool;
