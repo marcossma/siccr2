@@ -19,5 +19,5 @@
     "sequelize-cli": "^6.6.2",
     "ws": "^8.18.0"
   },
-  "description": ""
+  "description": "SICCR - Sistema Integrado Centro de Ciências Rurais"
 }

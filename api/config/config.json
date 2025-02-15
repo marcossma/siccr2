@@ -3,7 +3,7 @@
     "username": "postgres",
     "password": "#Alpha_*123",
     "database": "siccr",
-    "host": "127.0.0.1",
+    "host": "localhost",
     "dialect": "postgres"
   },
   "test": {
