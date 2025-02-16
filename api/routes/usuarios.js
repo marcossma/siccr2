@@ -26,7 +26,7 @@ router.get("/", async (req, res) => {
 
 // Rota para adicionar novo usuário
 router.post("/", async (req, res) => {
-    const { nome, email, siape, senha, data_nascimento, subunidade_id, whatsapp, permissao, createdAt, updatedAt, updatedForUser } = req.body;
+    const { nome, email, siape, senha, data_nascimento, subunidade_id, whatsapp, permissao, createdat, updatedat, updatedforuser } = req.body;
 
     try {
         // Verificar se todos os campos necessários foram preenchidos
@@ -54,7 +54,7 @@ router.post("/", async (req, res) => {
 
         // 2 - Inserir o novo usuário no banco de dados
         const query = "insert into users (nome, email, siape, senha, data_nascimento, subunidade_id, whatsapp, permissao, createdat, updatedat, updatedForUser) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning *";
-        const values = [nome, email, siape, hashedPassword, data_nascimento, subunidade_id, whatsapp, permissao, createdAt, updatedAt, updatedForUser];
+        const values = [nome, email, siape, hashedPassword, data_nascimento, subunidade_id, whatsapp, permissao, createdat, updatedat, updatedforuser];
         const result = await pool.query(query, values);
 
         // Retorna o usuário cadastrado
@@ -73,6 +73,44 @@ router.post("/", async (req, res) => {
         res.status(500).json({
             status: "error",
             message: "Erro ao tentar cadastrar novo usuário",
+            data: ""
+        });
+    }
+});
+
+// Rota para Atualizar usuário
+router.put("/:id", async (req, res) => {
+    const user_id = req.params.id;
+    const { nome, email, siape, data_nascimento, subunidade_id, whatsapp, permissao, updatedat, updatedforuser } = req.body;
+
+    try {
+        const userExist = await pool.query("select * from users where user_id = $1", [user_id]);
+        if (userExist.rows.length < 1) {
+            return res.status(500).json({
+                status: "error",
+                message: "Usuário não encontrado.",
+                data: ""
+            });
+        }
+
+        const query = "update users set nome = $1, email = $2, siape = $3, data_nascimento = $4, subunidade_id = $5, whatsapp = $6, permissao = $7, updatedat = $8, updatedforuser = $9 where user_id = $10 returning *";
+        const values = [nome, email, siape, data_nascimento, subunidade_id, whatsapp, permissao, updatedat, updatedforuser, user_id];
+        const result = await pool.query(query, values);
+
+        return res.status(201).json({
+            status: "success",
+            message: "Usuário atualizado com sucesso.",
+            data: {
+                user_id: result.rows[0].user_id,
+                nome: result.rows[0].nome,
+                siape: result.rows[0].siape
+            }
+        });
+    } catch(error) {
+        console.log("Erro ao tentar atualizar usuário: ", error);
+        res.status(500).json({
+            status: "error",
+            message: "Erro ao tentar atualizar usuário.",
             data: ""
         });
     }
