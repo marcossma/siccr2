@@ -3,11 +3,14 @@ require("dotenv").config();
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
+const helmet = require("helmet");
 const path = require("path");
 const WebSocket = require("ws");
 
 // Importar rotas dos usuários
 const usuariosRoutes = require("./routes/usuarios.js");
+// Importar rotas de autenticação
+const usuariosAuth = require("./routes/usuariosAuth.js");
 
 // Porta do servidor
 const PORT = process.env.SERVER_PORT || 15000;
@@ -15,6 +18,7 @@ const PORT = process.env.SERVER_PORT || 15000;
 const app = express();
 app.use(express.json());
 app.use(cors());
+app.use(helmet());
 
 // Configurar o uso de arquivos estáticos
 app.use(express.static(path.join(__dirname, "public")));
@@ -50,6 +54,10 @@ app.get("/api/test", async(req, res) => {
 // Rotas para os usuários
 // ######################
 app.use("/api/usuarios", usuariosRoutes);
+
+// Rota para autenticação
+// ######################
+app.use("/api/auth", usuariosAuth);
 
 // Criar o servidor HTTP
 const server = http.createServer(app);
