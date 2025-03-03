@@ -35,7 +35,7 @@ router.post("/", async (req, res) => {
                 status: "error",
                 message: "Os campos nome, siape e senha, são obrigatórios.",
                 data: ""
-            })
+            });
         }
 
         // Verificar se o siape já foi cadastrado

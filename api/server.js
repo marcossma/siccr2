@@ -40,9 +40,9 @@ app.get("/:pagina", (req, res) => {
 });
 
 
-//##############
-// Rotas de API
-// #############
+// ##############
+//  Rotas de API
+// ##############
 app.get("/api/test", async(req, res) => {
     res.status(201).json({
         status: "success",
