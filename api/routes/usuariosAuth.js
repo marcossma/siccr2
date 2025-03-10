@@ -23,7 +23,7 @@ router.post("/login", async (req, res) => {
             return res.status(400).json({
                 status: "error",
                 message: "Os campos SIAPE e SENHA são obrigatórios.",
-                data: []
+                data: null
             });
         }
 
@@ -35,7 +35,7 @@ router.post("/login", async (req, res) => {
             return res.status(200).json({
                 status: "success",
                 message: "Usuário autenticado com sucesso.",
-                data: []
+                data: user.rows
             });
         }
 
@@ -47,7 +47,7 @@ router.post("/login", async (req, res) => {
         res.status(500).json({
             status: "error",
             message: "Erro ao tentar efetuar o login",
-            data: []
+            data: null
         });
     }
 });
