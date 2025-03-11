@@ -44,7 +44,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
                 document.querySelector("#frmLogin").reset();
                 dialogLogin.close();
-
                 return;
             }
         })
