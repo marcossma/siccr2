@@ -1,5 +1,6 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const pool = require("../config/database.js");
 
 // Criar um roteador para o express
@@ -28,13 +29,23 @@ router.post("/login", async (req, res) => {
         }
 
         const user = await pool.query("select * from users where siape = $1", [siape]);
-        console.log(user.rows);
+        
+        if (user.rowCount <= 0) {
+            return res.status(401).json({
+                status: "error",
+                message: "Usuário ou senha inválidos!",
+                data: null
+            });
+        }
+        
 
-        if (!await bcrypt.compare(senha, user.senha)) {
+        const senhaCompare = await bcrypt.compare(senha, user.rows[0].senha); // <-- Compara a senha do formulário com a senha do banco de dados do usuário
+
+        if (!senhaCompare) {
             console.error("Erro: ", error);
             return res.status(401).json({
                 status: "error",
-                message: "Credenciais inválidas",
+                message: "Usuário ou senha inválidos!",
                 data: null
             });
         }
@@ -43,7 +54,7 @@ router.post("/login", async (req, res) => {
             id: user.id, nome: user.nome, siape: user.siape, email: user.email, whatsapp: user.whatsapp, permissao: user.permissao, subunidade: user.subunidade_id
         }, "jwt-chave-super-secreta-full", {expiresIn: "1h"});
 
-        console.log("Usuário autenticado");
+        console.log(`Usuário ${user.rows[0].nome} autenticado`);
             return res.status(200).json({
                 status: "success",
                 message: "Usuário autenticado com sucesso.",

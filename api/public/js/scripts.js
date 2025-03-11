@@ -5,11 +5,15 @@ document.addEventListener("DOMContentLoaded", function(event) {
     const btnCancelarLogin = document.querySelector("#btnCancelarLogin");
     const dialogLogin = document.querySelector("#dialogLogin");
         
+    // Botão para exibir o formulário de login
+    // =======================================
     btnEntrar.addEventListener("click", function(event) {
         event.preventDefault();
         dialogLogin.showModal();
     });
 
+    // Botão para efetuar o login
+    // ==========================
     btnLogin.addEventListener("click", function(event) {
         event.preventDefault();
         const txtLogin = document.querySelector("#txtLogin").value;
@@ -29,14 +33,31 @@ document.addEventListener("DOMContentLoaded", function(event) {
         })
         .then((data) => { 
             console.log(data);
+            if (data.status === "success") {
+                localStorage.setItem("siccr_user_id", data.data[0].user_id);
+                localStorage.setItem("siccr_nome", data.data[0].nome);
+                localStorage.setItem("siccr_email", data.data[0].email);
+                localStorage.setItem("siccr_data_nascimento", data.data[0].data_nascimento);
+                localStorage.setItem("siccr_whatsapp", data.data[0].whatsapp);
+                localStorage.setItem("siccr_subunidade_id", data.data[0].subunidade_id);
+                localStorage.setItem("permissao", data.data[0].permissao);
+
+                document.querySelector("#frmLogin").reset();
+                dialogLogin.close();
+
+                return;
+            }
         })
         .catch((error) => {
             console.log("Erro: ", error);
         });
     });
 
+    // Botão para fechar o formulário de login
+    // =======================================
     btnCancelarLogin.addEventListener("click", function(event) {
         event.preventDefault();
+        document.querySelector("#frmLogin").reset();
         dialogLogin.close();
     });
 });
