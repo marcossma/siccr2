@@ -46,6 +46,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
 
                 localStorage.setItem("siccr", JSON.stringify(dados));
+                localStorage.setItem("siccr_token", data.token);
                 // localStorage.setItem("siccr_nome", data.data[0].nome);
                 // localStorage.setItem("siccr_email", data.data[0].email);
                 // localStorage.setItem("siccr_data_nascimento", data.data[0].data_nascimento);

@@ -206,7 +206,10 @@ class ResponsiveMenu extends HTMLElement {
           }
         });
       });
+
+      console.log("Menu responsivo Initialized!");
     }
+
   }
   
   // Define o Web Component

@@ -1,1 +1,4 @@
-export { default as responsiveMenu } from "./responsive-menu.js";
+// import "../../js/components/responsive-menu.js";
+import "./responsive-menu.js";
+
+console.log("Módulos carregados!");
