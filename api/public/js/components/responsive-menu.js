@@ -17,7 +17,7 @@ class ResponsiveMenu extends HTMLElement {
         }
           /* Estilo da navbar */
           .navbar {
-            display: flex;
+            display: none;
             justify-content: space-between;
             align-items: center;
             background-color: #1f800b;
@@ -160,10 +160,23 @@ class ResponsiveMenu extends HTMLElement {
         </nav>
       `;
   
+      // Controle de exibição da navbar
+      const navbar = shadow.querySelector(".navbar");
+
+      // Obtém o token caso exista (usuário logado)
+      const token = localStorage.getItem("siccr_token");
+
       // Referências aos elementos
       const menuToggle = shadow.querySelector('.menu-toggle');
       const menu = shadow.querySelector('.menu');
   
+      // Exibir ou ocultar a barra de navegação
+      if (token) {
+        navbar.style.display = "flex";
+      } else {
+        navbar.style.display = "none";
+      }
+
       // Alterna o menu responsivo ao clicar no botão ☰
       menuToggle.addEventListener('click', () => {
         menu.classList.toggle('active');

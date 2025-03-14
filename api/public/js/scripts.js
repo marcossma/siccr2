@@ -32,15 +32,27 @@ document.addEventListener("DOMContentLoaded", function(event) {
             return response.json();
         })
         .then((data) => { 
-            console.log(data);
+            // console.log(data);
             if (data.status === "success") {
-                localStorage.setItem("siccr_user_id", data.data[0].user_id);
-                localStorage.setItem("siccr_nome", data.data[0].nome);
-                localStorage.setItem("siccr_email", data.data[0].email);
-                localStorage.setItem("siccr_data_nascimento", data.data[0].data_nascimento);
-                localStorage.setItem("siccr_whatsapp", data.data[0].whatsapp);
-                localStorage.setItem("siccr_subunidade_id", data.data[0].subunidade_id);
-                localStorage.setItem("permissao", data.data[0].permissao);
+                const dados = `{
+                    user_id: "${data.data[0].user_id}",
+                    nome: "${data.data[0].nome}",
+                    data_nascimento: "${data.data[0].data_nascimento}",
+                    whatsapp: "${data.data[0].whatsapp}",
+                    subunidade_id: "${data.data[0].subunidade_id}",
+                    permissao: "${data.data[0].permissao}",
+                    token: "${data.token}"
+                }`
+
+
+                localStorage.setItem("siccr", JSON.stringify(dados));
+                // localStorage.setItem("siccr_nome", data.data[0].nome);
+                // localStorage.setItem("siccr_email", data.data[0].email);
+                // localStorage.setItem("siccr_data_nascimento", data.data[0].data_nascimento);
+                // localStorage.setItem("siccr_whatsapp", data.data[0].whatsapp);
+                // localStorage.setItem("siccr_subunidade_id", data.data[0].subunidade_id);
+                // localStorage.setItem("permissao", data.data[0].permissao);
+                // localStorage.setItem("siccr_token", data.token)
 
                 document.querySelector("#frmLogin").reset();
                 dialogLogin.close();
@@ -59,4 +71,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
         document.querySelector("#frmLogin").reset();
         dialogLogin.close();
     });
+
+    const dados = localStorage.getItem("siccr");
+    console.log(JSON.stringify(dados));
 });
