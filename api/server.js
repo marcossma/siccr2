@@ -30,11 +30,11 @@ app.get("/:pagina", (req, res) => {
 
     res.sendFile(filePath, (error) => {
         if (error) {
-            // res.status(404).json({
-            //     status: "error",
-            //     message: "Página não encontrada!"}
-            // );
-            res.status(404).send("Página não encontrada!");
+            res.status(404).json({
+                status: "error",
+                message: "Página não encontrada!"}
+            );
+            // res.status(404).send("Página não encontrada!");
         }
     });
 });

@@ -73,6 +73,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
         dialogLogin.close();
     });
 
-    const dados = localStorage.getItem("siccr");
-    console.log(JSON.stringify(dados));
+    const dados = JSON.parse(localStorage.getItem("siccr"));
+    console.log(dados);
 });
