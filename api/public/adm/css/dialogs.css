@@ -1,0 +1,45 @@
+.dialogPainel {
+    position: absolute;
+    min-width: 400px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border: none;
+    outline: none;
+    background: none;
+}
+
+.dialogPainel::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.dialogPainel fieldset {
+    padding: 20px;
+    border-radius: 5px;
+    background: white;
+    border: none;
+}
+
+.dialogPainel fieldset legend {
+    padding: 10px;
+    font-size: 20px;
+    background: white;
+    border-radius: 5px;
+    background: #009536;
+    color: white;
+}
+
+.btnPainelFormulario {
+    padding: 10px;
+    border-radius: 5px;
+    border: none;
+    outline: none;
+    background-color: #009536;
+    color: white;
+    cursor: pointer;
+    transition: 0.3s ease;
+}
+
+.btnPainelFormulario:hover {
+    transform: scale(1.1);
+}

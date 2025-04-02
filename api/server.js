@@ -24,8 +24,8 @@ app.use(helmet());
 app.use(express.static(path.join(__dirname, "public")));
 
 // Configurar rotas amigáveis para o servidor HTTP - Páginas estáticas
-app.get("/:pagina", (req, res) => {
-    const pagina = req.params.pagina;
+app.get("/*", (req, res) => {
+    const pagina = req.params[0];
     const filePath = path.join(__dirname, "public", `${pagina}.html`);
 
     res.sendFile(filePath, (error) => {

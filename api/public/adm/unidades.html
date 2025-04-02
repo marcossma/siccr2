@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICCR - Sistema Integrado Centro de Ciências Rurais</title>
+    <link rel="shortcut icon" href="../img/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/dialogs.css">
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/ui-kit.css">
+    <link rel="stylesheet" href="./css/dialogs.css">
+    <script type="module" src="../js/scripts.js" defer></script>
+    <script type="module" src="./js/script.js"></script>
+</head>
+<body>
+    <!-- Formulário de Login DIALOG -->
+    <dialog id="dialogLogin">
+        <fieldset>
+            <legend>Login</legend>
+
+            <form id="frmLogin">
+                <div class="row">
+                    <input type="text" name="txtLogin" id="txtLogin" class="formInput" placeholder="Digite o seu login">
+                </div>
+                <div class="row">
+                    <input type="password" name="txtSenha" id="txtSenha" class="formInput" placeholder="Digite a sua senha">
+                </div>
+                <div class="row">
+                    <button id="btnLogin">Entrar</button>
+                    <button id="btnCancelarLogin">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+    <!-- Fim formulário de Login DIALOG -->
+    <div class="container">
+        <header>
+            <a href="/">
+                <img src="../img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo">
+            </a>
+            <div class="acesso">
+                <a href="#" id="btnEntrar">Entrar</a>
+            </div>
+        </header>
+        <div>
+            <responsive-menu></responsive-menu>
+        </div>
+        <main class="flex flex--column">
+            <section class="titulo_painel flex wrap justify--space--between align--items--center">
+                <h1 class="flex align--items--center gap--15">
+                    <i class="bi bi-globe font--size--40"></i>
+                    Painel Administrativo - Unidades
+                </h1>
+
+                <button class="btn_adicionar unidade flex align--items--center gap--10 cursor--pointer" title="Adicionar nova Unidade">Adicionar <i class="bi bi-globe font--size--20"></i></button>
+            </section>
+
+            <section class="informacoes_painel">
+                <div class="cabecalho flex">
+                    <div class="titulo flex flex--2">Cód.</div>
+                    <div class="titulo flex flex--10">Unidade</div>
+                    <div class="titulo flex flex--2">Sigla</div>
+                    <div class="titulo flex flex--1">Ações</div>
+                </div>
+
+                <div class="dados flex align--items--center cursor--pointer">
+                    <div class="dado flex flex--2">03.00</div>
+                    <div class="dado flex flex--10">Centro de Ciências Rurais</div>
+                    <div class="dado flex flex--2">CCR</div>
+                    <div class="dado flex flex--1 font--size--20">
+                        <i class="bi bi-pencil-square" title="Editar"></i>
+                        <i class="bi bi-info-circle" title="Ver mais informações"></i>
+                    </div>
+                </div>
+
+                <div class="dados flex align--items--center cursor--pointer">
+                    <div class="dado flex flex--2">03.00</div>
+                    <div class="dado flex flex--10">Centro de Ciências Rurais</div>
+                    <div class="dado flex flex--2">CCR</div>
+                    <div class="dado flex flex--1 font--size--20">
+                        <i class="bi bi-pencil-square" title="Editar"></i>
+                        <i class="bi bi-info-circle" title="Ver mais informações"></i>
+                    </div>
+                </div>
+
+                <div class="dados flex align--items--center cursor--pointer">
+                    <div class="dado flex flex--2">03.00</div>
+                    <div class="dado flex flex--10">Centro de Ciências Rurais</div>
+                    <div class="dado flex flex--2">CCR</div>
+                    <div class="dado flex flex--1 font--size--20">
+                        <i class="bi bi-pencil-square" title="Editar"></i>
+                        <i class="bi bi-info-circle" title="Ver mais informações"></i>
+                    </div>
+                </div>
+            </section>
+            
+        </main>
+        <footer>Rodapé</footer>
+    </div>
+
+    <!-- Formulário cadastro Unidade -->
+    <dialog class="dialogPainel unidades">
+        <fieldset>
+            <legend>Cadastro de Unidade</legend>
+
+            <form class="frmCadastroPainel frmUnidade flex flex--column gap--15">
+                <div class="row">
+                    <input type="text" name="txtCodigoUnidade" id="txtCodigoUnidade" class="formInput width--100" placeholder="Digite o código da unidade">
+                    <label class="painelLabel" for="txtCodigoUnidade">Ex.: 03.00</label>
+                </div>
+                <div class="row">
+                    <input type="text" name="txtUnidade" id="txtUnidade" class="formInput width--100" placeholder="Digite o nome da unidade">
+                    <label class="painelLabel" for="txtUnidade">Ex.: Centro de Ciências Rurais</label>
+                </div>
+                
+                <div class="row">
+                    <input type="text" name="txtSigla" id="txtSigla" class="formInput width--100" placeholder="Digite a sigla da unidade">
+                    <label class="painelLabel" for="txtSigla">Ex.: CCR</label>
+                </div>
+                <div class="row">
+                    <button class="btnPainelFormulario cadastrarUnidade">Cadastrar</button>
+                    <button class="btnPainelFormulario cancelarUnidade">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+    <!-- Fim formulário cadastro Unidade -->
+
+    <script type="module" src="../js/components/index.js"></script>
+</body>
+</html>
