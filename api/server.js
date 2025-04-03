@@ -11,6 +11,8 @@ const WebSocket = require("ws");
 const usuariosRoutes = require("./routes/usuarios.js");
 // Importar rotas de autenticação
 const usuariosAuth = require("./routes/usuariosAuth.js");
+// Importar rotas para unidades
+const unidadesRoutes = require("./routes/unidades.js");
 
 // Porta do servidor
 const PORT = process.env.SERVER_PORT || 15000;
@@ -19,6 +21,29 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 app.use(helmet());
+
+// ##############
+//  Rotas de API
+// ##############
+app.get("/api/test", async(req, res) => {
+    res.status(201).json({
+        status: "success",
+        message: "Api funcionando!",
+        data: ""
+    });
+});
+
+// Rotas para os usuários
+// ######################
+app.use("/api/usuarios", usuariosRoutes);
+
+// Rota para autenticação
+// ######################
+app.use("/api/auth", usuariosAuth);
+
+// Rota para as unidades
+// #####################
+app.use("/api/unidades", unidadesRoutes);
 
 // Configurar o uso de arquivos estáticos
 app.use(express.static(path.join(__dirname, "public")));
@@ -40,24 +65,7 @@ app.get("/*", (req, res) => {
 });
 
 
-// ##############
-//  Rotas de API
-// ##############
-app.get("/api/test", async(req, res) => {
-    res.status(201).json({
-        status: "success",
-        message: "Api funcionando!",
-        data: ""
-    });
-});
 
-// Rotas para os usuários
-// ######################
-app.use("/api/usuarios", usuariosRoutes);
-
-// Rota para autenticação
-// ######################
-app.use("/api/auth", usuariosAuth);
 
 // Criar o servidor HTTP
 const server = http.createServer(app);
