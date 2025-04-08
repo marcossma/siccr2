@@ -43,3 +43,18 @@
 .btnPainelFormulario:hover {
     transform: scale(1.1);
 }
+
+.cancelarUnidade {
+    background: none;
+    color: red;
+    border: 1px solid red;
+}
+
+.cancelarUnidade:hover {
+    background: red;
+    color: white;
+}
+
+.atualizarUnidade {
+    display: none;
+}

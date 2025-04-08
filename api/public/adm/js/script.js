@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
         const btnAdicionar = document.querySelector(".btn_adicionar");
         const frmUnidade = document.querySelector(".frmUnidade");
         const btnCadastrarUnidade = document.querySelector(".cadastrarUnidade");
+        const btnAtualizarUnidade = document.querySelector(".atualizarUnidade");
         const btnCancelarUnidade = document.querySelector(".cancelarUnidade");
         const dialogPainel = document.querySelector(".dialogPainel");
         const listaUnidades = document.querySelector(".listaUnidades");
@@ -29,7 +30,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                         <div class="dado flex flex--10">${unidade.unidade}</div>
                         <div class="dado flex flex--2">${unidade.sigla}</div>
                         <div class="dado flex flex--1 font--size--20">
-                            <i class="bi bi-pencil-square editar" title="Editar" data-tipo="editar"></i>
+                            <i class="bi bi-pencil-square editar" title="Editar" data-id="${unidade.unidade_id}" data-codigo="${unidade.codigo}" data-unidade="${unidade.unidade}" data-sigla="${unidade.sigla}"></i>
                             <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
                         </div>
                     `;
@@ -103,6 +104,31 @@ document.addEventListener("DOMContentLoaded", function(event) {
             // Ao terminar o processamento, limpa o formulário e fecha o modal.
             frmUnidade.reset();
             dialogPainel.close();
+        });
+
+        btnAtualizarUnidade.addEventListener("click", function(event) {
+            event.preventDefault();
+            console.log(document.querySelector("#txtCodigoUnidade").value);
+            console.log(document.querySelector("#txtUnidade").value);
+            console.log(document.querySelector("#txtSigla").value);
+        });
+
+        // Abrir modal para atualizar os dados da unidade
+        listaUnidades.addEventListener("click", function(event) {
+            if (event.target.classList.contains("editar")) {
+                btnCadastrarUnidade.style.display = "none";
+                btnAtualizarUnidade.style.display = "inline-block";
+                // Aplicar os values nos campos de formulário com os valore da unidade
+                document.querySelector("#txtCodigoUnidade").value = event.target.getAttribute("data-codigo");
+                document.querySelector("#txtUnidade").value = event.target.getAttribute("data-unidade");
+                document.querySelector("#txtSigla").value = event.target.getAttribute("data-sigla");
+                const id_unidade = event.target.getAttribute("data-id");
+                dialogPainel.showModal();
+            }
+
+            if (event.target.classList.contains("info")) {
+                console.log(event.target);
+            }
         });
     }
     
