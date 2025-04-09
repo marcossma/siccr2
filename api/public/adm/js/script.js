@@ -14,6 +14,38 @@ document.addEventListener("DOMContentLoaded", function(event) {
         const dialogPainel = document.querySelector(".dialogPainel");
         const listaUnidades = document.querySelector(".listaUnidades");
         
+        // Função para atualizar informações da Unidade
+        async function updateUnidade(idUnidade, codigoUnidade, unidade, sigla) {
+            const dadosAtualizar = {
+                codigo: codigoUnidade,
+                unidade: unidade,
+                sigla: sigla
+            };
+
+            try {
+                await fetch(`${apiUrl}/unidades/${idUnidade}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(dadosAtualizar)
+                }).then((response) => {
+                    if (!response.ok) {
+                        console.error(`Ocorreu um erro: ${response.error}`);
+                    }
+
+                    return response.json();
+                }).then((data) => {
+                    console.log(data);
+                    carregarUnidades();
+                }).catch((error) => {
+                    console.error(`Ocorreu um erro no fetch: ${error}`);
+                });
+            } catch (error) {
+                console.error(`Ocorreu um erro ao tentar atualizar a unidade: ${error}`);
+            }
+        }
+
         // Função para carregar as Unidades cadastradas
         async function carregarUnidades() {
             listaUnidades.innerHTML = "";
@@ -49,6 +81,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
         btnAdicionar.addEventListener("click", function(event) {
             event.preventDefault();
             if (event.target.classList.contains("unidade")) {
+                btnAtualizarUnidade.style.display = "none";
+                btnCadastrarUnidade.style.display = "inline-block";
                 dialogPainel.showModal();
             }
         });
@@ -108,6 +142,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
         btnAtualizarUnidade.addEventListener("click", function(event) {
             event.preventDefault();
+            console.log(document.querySelector("#txtIdUnidade").value);
             console.log(document.querySelector("#txtCodigoUnidade").value);
             console.log(document.querySelector("#txtUnidade").value);
             console.log(document.querySelector("#txtSigla").value);
@@ -119,9 +154,11 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 btnCadastrarUnidade.style.display = "none";
                 btnAtualizarUnidade.style.display = "inline-block";
                 // Aplicar os values nos campos de formulário com os valore da unidade
+                document.querySelector("#txtIdUnidade").value = event.target.getAttribute("data-id");
                 document.querySelector("#txtCodigoUnidade").value = event.target.getAttribute("data-codigo");
                 document.querySelector("#txtUnidade").value = event.target.getAttribute("data-unidade");
                 document.querySelector("#txtSigla").value = event.target.getAttribute("data-sigla");
+                // Pensar em como pegar o id_Unidade e enviar para atualizar
                 const id_unidade = event.target.getAttribute("data-id");
                 dialogPainel.showModal();
             }

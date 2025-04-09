@@ -60,5 +60,24 @@ router.get("/", async (req, res) => {
     }
 });
 
+router.put("/:idunidade", async (req, res) => {
+    // Fazer a regra de negócio para atualização da unidade
+    const unidade_id = req.params.idunidade;
+    const { codigoUnidade, unidade, sigla } = req.body;
+
+    console.log(`
+        Id unidade: ${unidade_id}
+        Código unidade: ${codigoUnidade}
+        Unidade: ${unidade}
+        Sigla: ${sigla}
+    `);
+    
+    res.status(200).json({
+        status: "success",
+        message: "Informações da unidade atualizada",
+        data: ""
+    });
+});
+
 // Exportar o roteador
 module.exports = router;
