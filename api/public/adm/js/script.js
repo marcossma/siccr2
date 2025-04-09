@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
                     return response.json();
                 }).then((data) => {
-                    console.log(data);
+                    // console.log(data);
                     carregarUnidades();
                 }).catch((error) => {
                     console.error(`Ocorreu um erro no fetch: ${error}`);
@@ -142,10 +142,13 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
         btnAtualizarUnidade.addEventListener("click", function(event) {
             event.preventDefault();
-            console.log(document.querySelector("#txtIdUnidade").value);
-            console.log(document.querySelector("#txtCodigoUnidade").value);
-            console.log(document.querySelector("#txtUnidade").value);
-            console.log(document.querySelector("#txtSigla").value);
+            const idUnidade = document.querySelector("#txtIdUnidade").value;
+            const codigoUnidade = document.querySelector("#txtCodigoUnidade").value;
+            const unidade = document.querySelector("#txtUnidade").value;
+            const sigla = document.querySelector("#txtSigla").value;
+            updateUnidade(idUnidade, codigoUnidade, unidade, sigla);
+            frmUnidade.reset();
+            dialogPainel.close();
         });
 
         // Abrir modal para atualizar os dados da unidade
@@ -164,7 +167,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
             }
 
             if (event.target.classList.contains("info")) {
-                console.log(event.target);
+                alert("Funcionalidade em fase de implementação!");
             }
         });
     }

@@ -63,19 +63,14 @@ router.get("/", async (req, res) => {
 router.put("/:idunidade", async (req, res) => {
     // Fazer a regra de negócio para atualização da unidade
     const unidade_id = req.params.idunidade;
-    const { codigoUnidade, unidade, sigla } = req.body;
+    const { codigo, unidade, sigla } = req.body;
 
-    console.log(`
-        Id unidade: ${unidade_id}
-        Código unidade: ${codigoUnidade}
-        Unidade: ${unidade}
-        Sigla: ${sigla}
-    `);
+    const result = await pool.query("update unidades set codigo = $1, unidade = $2, sigla = $3 where unidade_id = $4 returning *", [codigo, unidade, sigla, unidade_id]);
     
     res.status(200).json({
         status: "success",
         message: "Informações da unidade atualizada",
-        data: ""
+        data: result.rows
     });
 });
 
