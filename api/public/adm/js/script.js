@@ -3,8 +3,24 @@ document.addEventListener("DOMContentLoaded", function(event) {
     const apiUrl = "http://localhost:15000/api";
 
     console.log(apiUrl); // <--- Apagar depois
-
     const urlParam = window.location.pathname;
+    // Função para carregar as Unidades cadastradas
+
+    const unidadesCarregadas = carregarUnidades();
+    console.log(unidadesCarregadas.then((unidade) => {
+        console.log(unidade);
+    }));
+
+    async function carregarUnidades() {
+        try {
+            const response = await fetch(`${apiUrl}/unidades`);
+            const unidades = await response.json();
+
+            return unidades.data;
+        } catch (error) {
+            console.error("Erro ao tentar carregar as unidades: ", error);
+        }
+    }
 
     // Rotina para o gestão de unidades
     if (urlParam === "/adm/unidades") {
