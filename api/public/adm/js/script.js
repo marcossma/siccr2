@@ -6,7 +6,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
     const urlParam = window.location.pathname;
 
-    if (urlParam == "/adm/unidades") {
+    // Rotina para o gestão de unidades
+    if (urlParam === "/adm/unidades") {
         // Seleção de elementos
         const btnAdicionar = document.querySelector(".btn_adicionar");
         const frmUnidade = document.querySelector(".frmUnidade");
@@ -172,6 +173,11 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 alert("Funcionalidade em fase de implementação!");
             }
         });
+    }
+
+    // Rotina para a gestão de subunidades
+    if (urlParam === "/adm/subunidades") {
+        console.log("Subunidades");
     }
     
 });

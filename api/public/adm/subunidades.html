@@ -55,11 +55,54 @@
                 <button class="btn_adicionar subunidade flex align--items--center gap--10 cursor--pointer">Adicionar <i class="bi bi-globe-americas font--size--20"></i></button>
             </section>
 
-            <section></section>
+            <section class="informacoes_painel">
+                <div class="cabecalho flex">
+                    <div class="titulo flex flex--2">Cód.</div>
+                    <div class="titulo flex flex--8">Subunidade</div>
+                    <div class="titulo flex flex--8">Unidade</div>
+                    <div class="titulo flex flex--2">Sigla</div>
+                    <div class="titulo flex flex--1">Ações</div>
+                </div>
+
+                <div class="listaUnidades">
+                    <!-- Unidades carregadas dinamicamente do banco de dados -->
+                </div>
+
+            </section>
             
         </main>
         <footer>Rodapé</footer>
     </div>
+
+    <!-- Formulário cadastro Subunidade -->
+    <dialog class="dialogPainel unidades">
+        <fieldset>
+            <legend>Cadastro de Subunidade</legend>
+
+            <form class="frmCadastroPainel frmUnidade flex flex--column gap--15">
+                <div class="row">
+                    <input type="hidden" name="txtIdSubUnidade" id="txtIdSubUnidade">
+                    <input type="text" name="txtCodigoSubUnidade" id="txtCodigoSubUnidade" class="formInput width--100" placeholder="Digite o código da subunidade">
+                    <label class="painelLabel" for="txtCodigoUnidade">Ex.: 03.36</label>
+                </div>
+                <div class="row">
+                    <input type="text" name="txtSubUnidade" id="txtSubUnidade" class="formInput width--100" placeholder="Digite o nome da subunidade">
+                    <label class="painelLabel" for="txtSubUnidade">Ex.: Departamento de Fitotecnia</label>
+                </div>
+                
+                <div class="row">
+                    <input type="text" name="txtSiglaSubUnidade" id="txtSiglaSubUnidade" class="formInput width--100" placeholder="Digite a sigla da subunidade">
+                    <label class="painelLabel" for="txtSiglaSubunidade">Ex.: DFT</label>
+                </div>
+                <div class="row">
+                    <button class="btnPainelFormulario cadastrarUnidade">Cadastrar</button>
+                    <button class="btnPainelFormulario atualizarUnidade">Atualizar</button>
+                    <button class="btnPainelFormulario cancelarUnidade">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+    <!-- Fim formulário cadastro Subunidade -->
 
     <script type="module" src="../js/components/index.js"></script>
 </body>
