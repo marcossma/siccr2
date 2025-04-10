@@ -4,7 +4,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
     console.log(apiUrl);
 
-    if (window.location.href.includes("unidade")) {
+    const urlParam = window.location.pathname;
+
+    if (urlParam == "/adm/unidades") {
         // Seleção de elementos
         const btnAdicionar = document.querySelector(".btn_adicionar");
         const frmUnidade = document.querySelector(".frmUnidade");
