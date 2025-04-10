@@ -2,7 +2,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
     console.log("Módulo Administrativo carregado.");
     const apiUrl = "http://localhost:15000/api";
 
-    console.log(apiUrl);
+    console.log(apiUrl); // <--- Apagar depois
 
     const urlParam = window.location.pathname;
 
@@ -86,6 +86,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
             if (event.target.classList.contains("unidade")) {
                 btnAtualizarUnidade.style.display = "none";
                 btnCadastrarUnidade.style.display = "inline-block";
+                document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastrar unidade";
                 dialogPainel.showModal();
             }
         });
@@ -159,6 +160,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
             if (event.target.classList.contains("editar")) {
                 btnCadastrarUnidade.style.display = "none";
                 btnAtualizarUnidade.style.display = "inline-block";
+                document.querySelector(".dialogPainel fieldset legend").textContent = "Editar unidade";
                 // Aplicar os values nos campos de formulário com os valore da unidade
                 document.querySelector("#txtIdUnidade").value = event.target.getAttribute("data-id");
                 document.querySelector("#txtCodigoUnidade").value = event.target.getAttribute("data-codigo");
@@ -177,7 +179,25 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
     // Rotina para a gestão de subunidades
     if (urlParam === "/adm/subunidades") {
-        console.log("Subunidades");
+        console.log("Subunidades"); //<-- Apenas para debug apagar depois...
+        // Seleção de elementos
+        const btnAdicionar = document.querySelector(".btn_adicionar");
+        const frmUnidade = document.querySelector(".frmUnidade");
+        const btnCadastrarUnidade = document.querySelector(".cadastrarUnidade");
+        const btnAtualizarUnidade = document.querySelector(".atualizarUnidade");
+        const btnCancelarUnidade = document.querySelector(".cancelarUnidade");
+        const dialogPainel = document.querySelector(".dialogPainel");
+        const listaUnidades = document.querySelector(".listaUnidades");
+
+        // Adição de Listeners
+        btnAdicionar.addEventListener("click", function(event) {
+            event.preventDefault();
+            if (event.target.classList.contains("subunidade")) {
+                btnAtualizarUnidade.style.display = "none";
+                btnCadastrarUnidade.style.display = "inline-block";
+                dialogPainel.showModal();
+            }
+        });
     }
     
 });
