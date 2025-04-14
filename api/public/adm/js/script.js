@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", function(event) {
-    console.log("Módulo Administrativo carregado.");
     const apiUrl = "http://localhost:15000/api";
 
     console.log(apiUrl); // <--- Apagar depois
@@ -72,7 +71,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 const response = await fetch(`${apiUrl}/unidades`);
                 const unidades = await response.json();
 
-                
                 unidades.data.forEach((unidade) => {
                     const divElement = document.createElement("div");
                     divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
@@ -204,6 +202,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
         const btnCancelarUnidade = document.querySelector(".cancelarUnidade");
         const dialogPainel = document.querySelector(".dialogPainel");
         const listaUnidades = document.querySelector(".listaUnidades");
+
+        
 
         // Adição de Listeners
         btnAdicionar.addEventListener("click", function(event) {
