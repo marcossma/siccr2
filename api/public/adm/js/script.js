@@ -241,5 +241,34 @@ document.addEventListener("DOMContentLoaded", function(event) {
             console.log(JSON.stringify(objDados));
         })
     }
+
+    // Rotina para a gestão de prédios
+    if (urlParam === "/adm/predios") {
+        const btnAdicionar = document.querySelector(".btn_adicionar");
+        const frmUnidade = document.querySelector(".frmUnidade");
+        const btnCadastrarUnidade = document.querySelector(".cadastrarUnidade");
+        const btnAtualizarUnidade = document.querySelector(".atualizarUnidade");
+        const btnCancelarUnidade = document.querySelector(".cancelarUnidade");
+        const dialogPainel = document.querySelector(".dialogPainel");
+        const listaUnidades = document.querySelector(".listaUnidades");
+
+        // Adição de Listeners
+        btnAdicionar.addEventListener("click", function(event) {
+            event.preventDefault();
+            if (event.target.classList.contains("predio")) {
+                btnAtualizarUnidade.style.display = "none";
+                btnCadastrarUnidade.style.display = "inline-block";
+
+                dialogPainel.showModal();
+            }
+        });
+
+        btnCancelarUnidade.addEventListener("click", function(event) {
+            event.preventDefault();
+            frmUnidade.reset();
+            
+            dialogPainel.close();
+        })
+    }
     
 });

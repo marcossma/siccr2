@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SICCR - Sistema Integrado Centro de Ciências Rurais</title>
     <link rel="shortcut icon" href="../img/favicon.png" type="image/x-icon">
-    <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="../css/dialogs.css">
-    <link rel="stylesheet" href="./css/style.css">
-    <link rel="stylesheet" href="./css/ui-kit.css">
-    <script type="module" src="../js/scripts.js" defer></script>
-    <script type="module" src="./js/script.js"></script>
+        <link rel="stylesheet" href="../css/style.css">
+        <link rel="stylesheet" href="../css/dialogs.css">
+        <link rel="stylesheet" href="./css/style.css">
+        <link rel="stylesheet" href="./css/ui-kit.css">
+        <link rel="stylesheet" href="./css/dialogs.css">
+        <script type="module" src="../js/scripts.js" defer></script>
+        <script type="module" src="./js/script.js"></script>
 </head>
 <body>
     <!-- Formulário de Login DIALOG -->
@@ -62,6 +63,32 @@
         </main>
         <footer>Rodapé</footer>
     </div>
+
+    <!-- Formulário cadastro Unidade -->
+    <dialog class="dialogPainel unidades">
+        <fieldset>
+            <legend>Cadastro de Prédio</legend>
+
+            <form class="frmCadastroPainel frmUnidade flex flex--column gap--15">
+                <div class="row">
+                    <input type="hidden" name="txtIdPredio" id="txtIdPredio">
+                    <input type="text" name="txtPredio" id="txtPredio" class="formInput width--100" placeholder="Digite a identificação do prédio">
+                    <label class="painelLabel" for="txtPredio">Ex.: 42 ou 44L</label>
+                </div>
+                <div class="row">
+                    <input type="text" name="txtPredioDescricao" id="txtPredioDescricao" class="formInput width--100" placeholder="Digite a descrição do prédio">
+                    <label class="painelLabel" for="txtPredioDescricao">Ex.: Pomar da Fitotecnia</label>
+                </div>
+                
+                <div class="row">
+                    <button class="btnPainelFormulario cadastrarUnidade">Cadastrar</button>
+                    <button class="btnPainelFormulario atualizarUnidade">Atualizar</button>
+                    <button class="btnPainelFormulario cancelarUnidade">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+    <!-- Fim formulário cadastro Unidade -->
 
     <script type="module" src="../js/components/index.js"></script>
 </body>
