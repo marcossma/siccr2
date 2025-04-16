@@ -80,7 +80,7 @@
         <fieldset>
             <legend>Cadastro de Subunidade</legend>
 
-            <form class="frmCadastroPainel frmUnidade flex flex--column gap--15">
+            <form class="frmCadastroPainel frmUnidade flex flex--column gap--15" name="">
                 <div class="row">
                     <input type="hidden" name="txtIdSubUnidade" id="txtIdSubUnidade">
                     <input type="text" name="txtCodigoSubUnidade" id="txtCodigoSubUnidade" class="formInput width--100" placeholder="Digite o código da subunidade">
@@ -94,6 +94,13 @@
                 <div class="row">
                     <input type="text" name="txtSiglaSubUnidade" id="txtSiglaSubUnidade" class="formInput width--100" placeholder="Digite a sigla da subunidade">
                     <label class="painelLabel" for="txtSiglaSubunidade">Ex.: DFT</label>
+                </div>
+
+                <div class="row">
+                    <select name="txtUnidade" id="txtUnidade" class="formInput width--100">
+                        <option value="">Selecione a unidade...</option>
+                    </select>
+                    <label class="painelLabel" for="txtUnidade">Selecione a unidade vinculada</label>
                 </div>
                 <div class="row">
                     <button class="btnPainelFormulario cadastrarUnidade">Cadastrar</button>

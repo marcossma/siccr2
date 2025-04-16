@@ -5,10 +5,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
     const urlParam = window.location.pathname;
     // Função para carregar as Unidades cadastradas
 
+    // Função para carregar os dados das unidades cadastradas
+
     const unidadesCarregadas = carregarUnidades();
-    console.log(unidadesCarregadas.then((unidade) => {
-        console.log(unidade);
-    }));
 
     async function carregarUnidades() {
         try {
@@ -55,7 +54,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     return response.json();
                 }).then((data) => {
                     // console.log(data);
-                    carregarUnidades();
+                    renderizarUnidades();
                 }).catch((error) => {
                     console.error(`Ocorreu um erro no fetch: ${error}`);
                 });
@@ -65,7 +64,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
         }
 
         // Função para carregar as Unidades cadastradas
-        async function carregarUnidades() {
+        async function renderizarUnidades() {
             listaUnidades.innerHTML = "";
             try {
                 const response = await fetch(`${apiUrl}/unidades`);
@@ -92,7 +91,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
             }
         }
 
-        carregarUnidades();
+        renderizarUnidades();
 
         // Adição de Listeners
         btnAdicionar.addEventListener("click", function(event) {
@@ -148,7 +147,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 return response;
             }).then((data) => {
                 console.log(data);
-                carregarUnidades();
+                renderizarUnidades();
             }).catch((error) => {
                 console.error("Ocorreu um erro em catch: ", error);
             });
@@ -209,11 +208,38 @@ document.addEventListener("DOMContentLoaded", function(event) {
         btnAdicionar.addEventListener("click", function(event) {
             event.preventDefault();
             if (event.target.classList.contains("subunidade")) {
+                let selectUnidades = document.querySelector("#txtUnidade");
+                selectUnidades.innerHTML = "<option value=''>Selecione a unidade...</option>";
                 btnAtualizarUnidade.style.display = "none";
                 btnCadastrarUnidade.style.display = "inline-block";
+
+                let optUnidades = null;
+
+                unidadesCarregadas.then((unidade) => {
+                    unidade.forEach((uni) => {
+                        optUnidades += `
+                            <option value="${uni.unidade_id}">${uni.unidade}</option>
+                        `;
+                    });
+
+                    selectUnidades.innerHTML += optUnidades;
+                });
                 dialogPainel.showModal();
             }
         });
+
+        btnCancelarUnidade.addEventListener("click", function(event) {
+            event.preventDefault();
+            frmUnidade.reset();
+            dialogPainel.close();
+        });
+
+        btnCadastrarUnidade.addEventListener("click", function(event) {
+            event.preventDefault();
+            const formData = new FormData(frmUnidade);
+            const objDados = Object.fromEntries(formData.entries());
+            console.log(JSON.stringify(objDados));
+        })
     }
     
 });
