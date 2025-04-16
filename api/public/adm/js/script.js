@@ -213,16 +213,12 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 btnAtualizarUnidade.style.display = "none";
                 btnCadastrarUnidade.style.display = "inline-block";
 
-                let optUnidades = null;
-
                 unidadesCarregadas.then((unidade) => {
                     unidade.forEach((uni) => {
-                        optUnidades += `
+                        selectUnidades.innerHTML += `
                             <option value="${uni.unidade_id}">${uni.unidade}</option>
                         `;
                     });
-
-                    selectUnidades.innerHTML += optUnidades;
                 });
                 dialogPainel.showModal();
             }
@@ -256,8 +252,19 @@ document.addEventListener("DOMContentLoaded", function(event) {
         btnAdicionar.addEventListener("click", function(event) {
             event.preventDefault();
             if (event.target.classList.contains("predio")) {
+                let selectUnidades = document.querySelector("#txtUnidade");
+                selectUnidades.innerHTML = `<option value="">Selecinone a unidade...</option>`
                 btnAtualizarUnidade.style.display = "none";
                 btnCadastrarUnidade.style.display = "inline-block";
+                document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastro de prédio";
+
+                unidadesCarregadas.then((unidade) => {
+                    unidade.forEach((uni) => {
+                        selectUnidades.innerHTML += `
+                            <option value="${uni.unidade_id}">${uni.unidade}</option>
+                        `;
+                    });
+                });
 
                 dialogPainel.showModal();
             }
@@ -266,9 +273,15 @@ document.addEventListener("DOMContentLoaded", function(event) {
         btnCancelarUnidade.addEventListener("click", function(event) {
             event.preventDefault();
             frmUnidade.reset();
-            
             dialogPainel.close();
-        })
+        });
+
+        btnCadastrarUnidade.addEventListener("click", function(event) {
+            event.preventDefault();
+            const formData = new FormData(frmUnidade);
+            const objDados = Object.fromEntries(formData.entries());
+            console.log(JSON.stringify(objDados));
+        });
     }
     
 });

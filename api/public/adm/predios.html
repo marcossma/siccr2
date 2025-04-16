@@ -56,8 +56,19 @@
                 <button class="btn_adicionar predio flex align--items--center gap--10 cursor--pointer">Adicionar <i class="bi bi-buildings font--size--20"></i></button>
             </section>
 
-            <section>
-                
+            <section class="informacoes_painel">
+
+                <div class="cabecalho flex">
+                    <div class="titulo flex flex--2">Prédio</div>
+                    <div class="titulo flex flex--10">Descrição</div>
+                    <div class="titulo flex flex--2">Unidade</div>
+                    <div class="titulo flex flex--1">Ações</div>
+                </div>
+
+                <div class="listaUnidades">
+                    <!-- Unidades carregadas dinamicamente do banco de dados -->
+                </div>
+
             </section>
             
         </main>
@@ -77,9 +88,16 @@
                 </div>
                 <div class="row">
                     <input type="text" name="txtPredioDescricao" id="txtPredioDescricao" class="formInput width--100" placeholder="Digite a descrição do prédio">
-                    <label class="painelLabel" for="txtPredioDescricao">Ex.: Pomar da Fitotecnia</label>
+                    <label class="painelLabel" for="txtPredioDescricao">Ex.: Pomar da Fitotecnia (opcional)</label>
                 </div>
                 
+                <div class="row">
+                    <select name="txtUnidade" id="txtUnidade" class="formInput width--100">
+                        <!-- Options serão adicionados dinamicamente -->
+                    </select>
+                    <label class="painelLabel" for="txtUnidade">Selecione a unidade vinculada</label>
+                </div>
+
                 <div class="row">
                     <button class="btnPainelFormulario cadastrarUnidade">Cadastrar</button>
                     <button class="btnPainelFormulario atualizarUnidade">Atualizar</button>

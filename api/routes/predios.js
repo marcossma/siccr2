@@ -5,7 +5,7 @@ const router = express.Router();
 
 // Rota para adicionar nova unidade
 router.post("/", async (req, res) => {
-    const {predio, descricao} = req.body;
+    const {predio, descricao, unidade_id} = req.body;
 
     try {
         // Verifica se não está faltando nenhum campo
@@ -18,8 +18,8 @@ router.post("/", async (req, res) => {
         }
 
         // Prepara a query para cadastrar a unidade
-        const query = "insert into predios (predio, descricao) values ($1, $2) returning *";
-        const values = [predio, descricao];
+        const query = "insert into predios (predio, descricao, unidade_id) values ($1, $2, $3) returning *";
+        const values = [predio, descricao, unidade_id];
 
         // Cadastra a unidade
         const result = await pool.query(query, values);
@@ -28,7 +28,7 @@ router.post("/", async (req, res) => {
         res.status(201).json({
             status: "success",
             message: "Prédio Cadastrado com sucesso.",
-            data: result
+            data: result.rows
         });
     } catch(error) {
         console.log(`Ocorreu um erro: ${error}`);
@@ -63,9 +63,9 @@ router.get("/", async (req, res) => {
 router.put("/:idpredio", async (req, res) => {
     // Fazer a regra de negócio para atualização da unidade
     const predio_id = req.params.idpredio;
-    const { predio, descricao } = req.body;
+    const { predio, descricao, unidade_id } = req.body;
 
-    const result = await pool.query("update predios set predio = $1, descricao = $2 where predio_id = $3 returning *", [predio, descricao, predio_id]);
+    const result = await pool.query("update predios set predio = $1, descricao = $2, unidade_id = $3 where predio_id = $4 returning *", [predio, descricao, unidade_id, predio_id]);
     
     res.status(200).json({
         status: "success",
