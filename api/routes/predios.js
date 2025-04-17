@@ -3,21 +3,21 @@ const pool = require("../config/database.js");
 
 const router = express.Router();
 
-// Rota para adicionar nova unidade
+// Rota para adicionar novo PRÉDIO
 router.post("/", async (req, res) => {
     const {predio, descricao, unidade_id} = req.body;
 
     try {
-        // Verifica se não está faltando nenhum campo
-        if (!predio) {
+        // Verifica se não estão faltando campos obrigatórios
+        if (!predio || !unidade_id) {
             return res.status(400).json({
                 status: "error",
-                message: "O campo IDENTIFICAÇÃO DO PRÉDIO deve ser preenchido.",
+                message: "Os campos IDENTIFICAÇÃO DO PRÉDIO e UNIDADE devem ser preenchidos.",
                 data: ""
             });
         }
 
-        // Prepara a query para cadastrar a unidade
+        // Prepara a query para cadastrar o PRÉDIO
         const query = "insert into predios (predio, descricao, unidade_id) values ($1, $2, $3) returning *";
         const values = [predio, descricao, unidade_id];
 
@@ -41,7 +41,7 @@ router.post("/", async (req, res) => {
 
 });
 
-// Rota para listar as unidades
+// Rota para listar os PRÉDIOS
 router.get("/", async (req, res) => {
     try {
         const result = await pool.query("select * from predios order by predio");
@@ -60,8 +60,27 @@ router.get("/", async (req, res) => {
     }
 });
 
+// Rota para listar os PRÉDIOS E DADOS DAS UNIDADES
+router.get("/total-info", async(req, res) => {
+    try {
+        const result = await pool.query("select * from predios inner join unidades on predios.unidade_id = unidades.unidade_id");
+        res.status(200).json({
+            status: "success",
+            message: "",
+            data: result.rows
+        })
+    } catch(error) {
+        console.log(`Erro ao tentar listar todas as informações do prédio: ${error}`);
+        res.status(500).json({
+            status: "error",
+            message: "Erro ao tentar listar todas as informações do prédio.",
+            data: ""
+        });
+    }
+});
+
 router.put("/:idpredio", async (req, res) => {
-    // Fazer a regra de negócio para atualização da unidade
+    // Fazer a regra de negócio para atualização do PRÉDIO
     const predio_id = req.params.idpredio;
     const { predio, descricao, unidade_id } = req.body;
 

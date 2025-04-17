@@ -8,7 +8,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
     // Função para carregar os dados das unidades cadastradas
 
     const unidadesCarregadas = carregarUnidades();
+    const prediosCarregados = carregarPredios();
+    const prediosCarregadosTotalInfo = carregarPrediosTotalInfo();
 
+    // Função para carregar UNIDADES
     async function carregarUnidades() {
         try {
             const response = await fetch(`${apiUrl}/unidades`);
@@ -18,6 +21,30 @@ document.addEventListener("DOMContentLoaded", function(event) {
         } catch (error) {
             console.error("Erro ao tentar carregar as unidades: ", error);
         }
+    }
+
+    // Função para carregar PRÉDIOS
+    async function carregarPredios() {
+        try {
+            const response = await fetch(`${apiUrl}/predios`);
+            const predios = await response.json();
+
+            return predios.data;
+        } catch(error) {
+            console.log("Erro ao tentar carregar os prédios: ", error);
+        }
+    }
+
+    async function carregarPrediosTotalInfo() {
+        try {
+            const response = await fetch(`${apiUrl}/predios/total-info`);
+            const predios = await response.json();
+
+            return predios.data;
+        } catch (error) {
+            console.log(`Erro ao tentar listar todas as informações dos prédios: ${error}`);
+        }
+
     }
 
     // Rotina para o gestão de unidades
@@ -248,7 +275,65 @@ document.addEventListener("DOMContentLoaded", function(event) {
         const dialogPainel = document.querySelector(".dialogPainel");
         const listaUnidades = document.querySelector(".listaUnidades");
 
-        // Adição de Listeners
+        // Função para mostrar a lista de PRÉDIOS
+        async function renderizarPredios() {
+            let prediosCarregadosTotalInfo = carregarPrediosTotalInfo();
+
+            prediosCarregadosTotalInfo.then((predios) => {
+                listaUnidades.innerHTML = "";
+    
+                predios.forEach((predio) => {
+                    const divElement = document.createElement("div");
+                    divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
+                    divElement.innerHTML = `
+                        <div class="dado flex flex--2">${predio.predio}</div>
+                        <div class="dado flex flex--10">${predio.descricao}</div>
+                        <div class="dado flex flex--2">${predio.sigla}</div>
+                        <div class="dado flex flex--1 font--size--20">
+                                <i class="bi bi-pencil-square editar" title="Editar" data-id="${predio.predio_id}" data-descricao="${predio.descricao}" data-unidade="${predio.unidade}"></i>
+                                <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
+                            </div>
+                    `;
+    
+                    listaUnidades.appendChild(divElement);
+                });
+            });
+        }
+
+        // Função para Cadastrar novo PRÉDIO
+        async function cadastrarPredio(predio, descricao = "", unidade_id) {
+            if (!predio || !unidade_id) {
+                alert("Os campos IDENTIFICAÇÃO DO PRÉDIO e UNIDADE devem ser preenchidos!");
+                return;
+            }
+
+            const predioNovo = { predio, descricao, unidade_id };
+
+            fetch(`${apiUrl}/predios`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(predioNovo)
+            }).then((response) => {
+                if (!response.ok) {
+                    throw new Error(`Erro ao tentar cadastrar novo prédio: ${response.error}`);
+                }
+                return response.json();
+            }).then((data) => {
+                console.log(data);
+                renderizarPredios();
+            }).catch((error) => {
+                console.log(`Ocorreu um erro ao tentar cadastrar novo PRÉDIO: ${error}`);
+            });
+
+            frmUnidade.reset();
+            dialogPainel.close();
+        }
+
+        renderizarPredios();
+
+        // Adição de Listeners 
         btnAdicionar.addEventListener("click", function(event) {
             event.preventDefault();
             if (event.target.classList.contains("predio")) {
@@ -270,17 +355,20 @@ document.addEventListener("DOMContentLoaded", function(event) {
             }
         });
 
+        // Cancelar cadastro do PRÉDIO
         btnCancelarUnidade.addEventListener("click", function(event) {
             event.preventDefault();
             frmUnidade.reset();
             dialogPainel.close();
         });
 
+        // Cadastro de PRÉDIO
         btnCadastrarUnidade.addEventListener("click", function(event) {
             event.preventDefault();
             const formData = new FormData(frmUnidade);
             const objDados = Object.fromEntries(formData.entries());
-            console.log(JSON.stringify(objDados));
+            console.log(objDados);
+            cadastrarPredio(objDados.txtPredio, objDados.txtPredioDescricao, objDados.txtUnidade);
         });
     }
     

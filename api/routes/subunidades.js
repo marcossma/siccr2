@@ -6,21 +6,21 @@ const router = express.Router();
 // Rota para adicionar nova Subunidade
 // Essa estrutura foi copiada da Unidades, refazer toda para a Subunidades
 router.post("/", async (req, res) => {
-    const {codigo, unidade, sigla} = req.body;
+    const {codigo, subunidade, sigla, unidade, predio } = req.body;
 
     try {
         // Verifica se não está faltando nenhum campo
-        if (!codigo || !unidade || !sigla) {
+        if (!codigo || !subunidade || !unidade) {
             return res.status(400).json({
                 status: "error",
-                message: "Todos os campos devem ser preenchidos.",
+                message: "Os campos CÓDIGO, SUBUNIDADE e UNIDADE devem ser preenchidos.",
                 data: ""
             });
         }
 
         // Prepara a query para cadastrar a unidade
-        const query = "insert into unidades (codigo, unidade, sigla) values ($1, $2, $3) returning *";
-        const values = [codigo, unidade, sigla];
+        const query = "insert into unidades (codigo, subunidade, sigla, unidade, predio) values ($1, $2, $3, $4, $5) returning *";
+        const values = [codigo, subunidade, sigla, unidade, predio];
 
         // Cadastra a unidade
         const result = await pool.query(query, values);
@@ -28,14 +28,14 @@ router.post("/", async (req, res) => {
         // Retorna os dados da operação
         res.status(201).json({
             status: "success",
-            message: "Unidade Cadastrada com sucesso.",
+            message: "Subunidade Cadastrada com sucesso.",
             data: result
         });
     } catch(error) {
         console.log(`Ocorreu um erro: ${error}`);
         res.status(500).json({
             status: "error",
-            message: "Erro ao tentar cadastrar unidade.",
+            message: "Erro ao tentar cadastrar Subunidade.",
             data: ""
         });
     }
