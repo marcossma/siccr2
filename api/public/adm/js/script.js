@@ -1,16 +1,7 @@
 document.addEventListener("DOMContentLoaded", function(event) {
     const apiUrl = "http://localhost:15000/api";
-
-    console.log(apiUrl); // <--- Apagar depois
     const urlParam = window.location.pathname;
-    // Função para carregar as Unidades cadastradas
-
-    // Função para carregar os dados das unidades cadastradas
-
-    const unidadesCarregadas = carregarUnidades();
-    const prediosCarregados = carregarPredios();
-    const prediosCarregadosTotalInfo = carregarPrediosTotalInfo();
-
+  
     // Função para carregar UNIDADES
     async function carregarUnidades() {
         try {
@@ -35,6 +26,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
         }
     }
 
+    // Função para carregar PRÉDIOS inner UNIDADES
     async function carregarPrediosTotalInfo() {
         try {
             const response = await fetch(`${apiUrl}/predios/total-info`);
@@ -240,7 +232,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 btnAtualizarUnidade.style.display = "none";
                 btnCadastrarUnidade.style.display = "inline-block";
 
-                unidadesCarregadas.then((unidade) => {
+                carregarUnidades().then((unidade) => {
                     unidade.forEach((uni) => {
                         selectUnidades.innerHTML += `
                             <option value="${uni.unidade_id}">${uni.unidade}</option>
@@ -274,12 +266,13 @@ document.addEventListener("DOMContentLoaded", function(event) {
         const btnCancelarUnidade = document.querySelector(".cancelarUnidade");
         const dialogPainel = document.querySelector(".dialogPainel");
         const listaUnidades = document.querySelector(".listaUnidades");
+        const selectUnidades = document.querySelector("#txtUnidade");
 
         // Função para mostrar a lista de PRÉDIOS
         async function renderizarPredios() {
-            let prediosCarregadosTotalInfo = carregarPrediosTotalInfo();
+            // let prediosCarregadosTotalInfo = carregarPrediosTotalInfo();
 
-            prediosCarregadosTotalInfo.then((predios) => {
+            carregarPrediosTotalInfo().then((predios) => {
                 listaUnidades.innerHTML = "";
     
                 predios.forEach((predio) => {
@@ -290,7 +283,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                         <div class="dado flex flex--10">${predio.descricao}</div>
                         <div class="dado flex flex--2">${predio.sigla}</div>
                         <div class="dado flex flex--1 font--size--20">
-                                <i class="bi bi-pencil-square editar" title="Editar" data-id="${predio.predio_id}" data-descricao="${predio.descricao}" data-unidade="${predio.unidade}"></i>
+                                <i class="bi bi-pencil-square editar" title="Editar" data-id="${predio.predio_id}" data-predio="${predio.predio}" data-descricao="${predio.descricao}" data-unidade="${predio.unidade}" data-unidade_id="${predio.unidade_id}"></i>
                                 <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
                             </div>
                     `;
@@ -309,7 +302,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
             const predioNovo = { predio, descricao, unidade_id };
 
-            fetch(`${apiUrl}/predios`, {
+            await fetch(`${apiUrl}/predios`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -336,14 +329,17 @@ document.addEventListener("DOMContentLoaded", function(event) {
         // Adição de Listeners 
         btnAdicionar.addEventListener("click", function(event) {
             event.preventDefault();
+            let selectUnidades = document.querySelector("#txtUnidade");
+            console.log(selectUnidades);
+
             if (event.target.classList.contains("predio")) {
-                let selectUnidades = document.querySelector("#txtUnidade");
                 selectUnidades.innerHTML = `<option value="">Selecinone a unidade...</option>`
                 btnAtualizarUnidade.style.display = "none";
                 btnCadastrarUnidade.style.display = "inline-block";
                 document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastro de prédio";
 
-                unidadesCarregadas.then((unidade) => {
+                // unidadesCarregadas.then((unidade) => {
+                carregarUnidades().then((unidade) => {
                     unidade.forEach((uni) => {
                         selectUnidades.innerHTML += `
                             <option value="${uni.unidade_id}">${uni.unidade}</option>
@@ -369,6 +365,37 @@ document.addEventListener("DOMContentLoaded", function(event) {
             const objDados = Object.fromEntries(formData.entries());
             console.log(objDados);
             cadastrarPredio(objDados.txtPredio, objDados.txtPredioDescricao, objDados.txtUnidade);
+        });
+
+        // Botão para abrir o formulário de atualização do PRÉDIO
+        listaUnidades.addEventListener("click", function(event) {
+            if (event.target.classList.contains("editar")) {
+                btnCadastrarUnidade.style.display = "none";
+                btnAtualizarUnidade.style.display = "inline-block";
+                
+                selectUnidades.innerHTML = `<option value=''>Selecione a unidade...</option>`;
+
+                carregarUnidades().then((unidades) => {
+                    selectUnidades.innerHTML = "<option value=''>Selecione a unidade...</option>";
+                    unidades.forEach((unidade) => {
+                        console.log(`${unidade.unidade_id} - ${event.target.getAttribute("data-unidade_id")}`);
+                        selectUnidades.innerHTML += `
+                            <option value="${unidade.unidade_id}">${unidade.unidade}</option>
+                        `
+                    });
+                    // Mantém selecionado a opção que foi cadastrada para a atualização
+                    selectUnidades.value = event.target.getAttribute("data-unidade_id");
+                });
+
+                document.querySelector(".dialogPainel fieldset legend").textContent = "Editar Prédio";
+                // Aplicar os valores do botão editar aos campos do formulário de edição
+                document.querySelector("#txtIdPredio").value = event.target.getAttribute("data-id");
+                document.querySelector("#txtPredio").value = event.target.getAttribute("data-predio");
+                document.querySelector("#txtPredioDescricao").value = event.target.getAttribute("data-descricao");
+                document.querySelector("#txtUnidade").value = event.target.getAttribute("data-unidade");
+
+                dialogPainel.showModal();
+            }
         });
     }
     
