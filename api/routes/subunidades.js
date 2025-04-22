@@ -4,13 +4,12 @@ const pool = require("../config/database.js");
 const router = express.Router();
 
 // Rota para adicionar nova Subunidade
-// Essa estrutura foi copiada da Unidades, refazer toda para a Subunidades
 router.post("/", async (req, res) => {
-    const {codigo, subunidade, sigla, unidade, predio } = req.body;
+    const {codigo, nome, sigla, unidade_id, predio_id, email, chefe } = req.body;
 
     try {
         // Verifica se não está faltando nenhum campo
-        if (!codigo || !subunidade || !unidade) {
+        if (!codigo || !nome || !unidade_id) {
             return res.status(400).json({
                 status: "error",
                 message: "Os campos CÓDIGO, SUBUNIDADE e UNIDADE devem ser preenchidos.",
@@ -18,9 +17,9 @@ router.post("/", async (req, res) => {
             });
         }
 
-        // Prepara a query para cadastrar a unidade
-        const query = "insert into unidades (codigo, subunidade, sigla, unidade, predio) values ($1, $2, $3, $4, $5) returning *";
-        const values = [codigo, subunidade, sigla, unidade, predio];
+        // Prepara a query para cadastrar a subunidade
+        const query = "insert into subunidades (codigo, nome, sigla, unidade_id, predio_id, email, chefe) values ($1, $2, $3, $4, $5, $6, $7) returning *";
+        const values = [codigo, nome, sigla, unidade_id, predio_id, email, chefe];
 
         // Cadastra a unidade
         const result = await pool.query(query, values);
@@ -29,7 +28,7 @@ router.post("/", async (req, res) => {
         res.status(201).json({
             status: "success",
             message: "Subunidade Cadastrada com sucesso.",
-            data: result
+            data: result.rows
         });
     } catch(error) {
         console.log(`Ocorreu um erro: ${error}`);
@@ -42,10 +41,10 @@ router.post("/", async (req, res) => {
 
 });
 
-// Rota para listar as unidades
+// Rota para listar as subunidades
 router.get("/", async (req, res) => {
     try {
-        const result = await pool.query("select * from unidades order by unidade");
+        const result = await pool.query("select * from subunidades order by nome");
         res.status(200).json({
             status: "success",
             message: "",
@@ -61,16 +60,16 @@ router.get("/", async (req, res) => {
     }
 });
 
-router.put("/:idunidade", async (req, res) => {
+router.put("/:idsubunidade", async (req, res) => {
     // Fazer a regra de negócio para atualização da unidade
-    const unidade_id = req.params.idunidade;
-    const { codigo, unidade, sigla } = req.body;
+    const subunidade_id = req.params.idsubunidade;
+    const { codigo, nome, sigla, unidade_id, predio_id, email, chefe } = req.body;
 
-    const result = await pool.query("update unidades set codigo = $1, unidade = $2, sigla = $3 where unidade_id = $4 returning *", [codigo, unidade, sigla, unidade_id]);
+    const result = await pool.query("update unidades set codigo = $1, nome = $2, sigla = $3, unidade_id = $4, predio_id = $5, email = $6, chefe = $7 where subunidade_id = $8 returning *", [codigo, nome, sigla, unidade_id, predio_id, email, chefe, subunidade_id]);
     
     res.status(200).json({
         status: "success",
-        message: "Informações da unidade atualizada",
+        message: "Informações da subunidade atualizada.",
         data: result.rows
     });
 });

@@ -15,6 +15,8 @@ const usuariosAuth = require("./routes/usuariosAuth.js");
 const unidadesRoutes = require("./routes/unidades.js");
 // Importar rotas para prédios
 const prediosRoutes = require("./routes/predios.js");
+// Importar rotas para subunidades
+const subunidadesRoutes = require("./routes/subunidades.js");
 
 // Porta do servidor
 const PORT = process.env.SERVER_PORT || 15000;
@@ -46,9 +48,14 @@ app.use("/api/auth", usuariosAuth);
 // Rota para as unidades
 // #####################
 app.use("/api/unidades", unidadesRoutes);
+
 // Rota para os prédios
 // ####################
 app.use("/api/predios", prediosRoutes);
+
+// Rota para as subunidades
+// ####################
+app.use("/api/subunidades", subunidadesRoutes);
 
 // Configurar o uso de arquivos estáticos
 app.use(express.static(path.join(__dirname, "public")));

@@ -82,32 +82,39 @@
 
             <form class="frmCadastroPainel frmUnidade flex flex--column gap--15" name="">
                 <div class="row">
-                    <input type="hidden" name="txtIdSubUnidade" id="txtIdSubUnidade">
-                    <input type="text" name="txtCodigoSubUnidade" id="txtCodigoSubUnidade" class="formInput width--100" placeholder="Digite o código da subunidade">
-                    <label class="painelLabel" for="txtCodigoUnidade">Ex.: 03.36</label>
+                    <input type="hidden" name="idSubUnidade" id="idSubUnidade">
+                    <input type="text" name="codigo" id="codigo" class="formInput width--100" placeholder="Digite o código da subunidade">
+                    <label class="painelLabel" for="codigo">Ex.: 03.36</label>
                 </div>
                 <div class="row">
-                    <input type="text" name="txtSubUnidade" id="txtSubUnidade" class="formInput width--100" placeholder="Digite o nome da subunidade">
-                    <label class="painelLabel" for="txtSubUnidade">Ex.: Departamento de Fitotecnia</label>
+                    <input type="text" name="nome" id="nome" class="formInput width--100" placeholder="Digite o nome da subunidade">
+                    <label class="painelLabel" for="nome">Ex.: Departamento de Fitotecnia</label>
                 </div>
                 
                 <div class="row">
-                    <input type="text" name="txtSiglaSubUnidade" id="txtSiglaSubUnidade" class="formInput width--100" placeholder="Digite a sigla da subunidade">
-                    <label class="painelLabel" for="txtSiglaSubunidade">Ex.: DFT</label>
+                    <input type="text" name="sigla" id="sigla" class="formInput width--100" placeholder="Digite a sigla da subunidade">
+                    <label class="painelLabel" for="sigla">Ex.: DFT</label>
                 </div>
 
                 <div class="row">
-                    <select name="txtUnidade" id="txtUnidade" class="formInput width--100">
+                    <select name="chefe" id="chefe" class="formInput width--100">
                         <!-- Options serão adicionados dinamicamente -->
                     </select>
-                    <label class="painelLabel" for="txtUnidade">Selecione a unidade vinculada</label>
+                    <label class="painelLabel" for="chefe">Selecione o chefe da unidade...</label>
                 </div>
 
                 <div class="row">
-                    <select name="txtPredio" id="txtPredio" class="formInput width--100">
+                    <select name="unidade_id" id="unidade_id" class="formInput width--100">
                         <!-- Options serão adicionados dinamicamente -->
                     </select>
-                    <label class="painelLabel" for="txtPredio">Selecione o prédio</label>
+                    <label class="painelLabel" for="unidade_id">Selecione a unidade vinculada</label>
+                </div>
+
+                <div class="row">
+                    <select name="predio_id" id="predio_id" class="formInput width--100">
+                        <!-- Options serão adicionados dinamicamente -->
+                    </select>
+                    <label class="painelLabel" for="predio_id">Selecione o prédio</label>
                 </div>
 
                 <div class="row">

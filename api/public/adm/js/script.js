@@ -221,14 +221,17 @@ document.addEventListener("DOMContentLoaded", function(event) {
         const dialogPainel = document.querySelector(".dialogPainel");
         const listaUnidades = document.querySelector(".listaUnidades");
 
+
         
 
         // Adição de Listeners
         btnAdicionar.addEventListener("click", function(event) {
             event.preventDefault();
             if (event.target.classList.contains("subunidade")) {
-                let selectUnidades = document.querySelector("#txtUnidade");
+                let selectUnidades = document.querySelector("#unidade_id");
+                let selectPredios = document.querySelector("#predio_id");
                 selectUnidades.innerHTML = "<option value=''>Selecione a unidade...</option>";
+                selectPredios.innerHTML = "<option value=''>Selecione o prédio...</option>";
                 btnAtualizarUnidade.style.display = "none";
                 btnCadastrarUnidade.style.display = "inline-block";
 
@@ -239,6 +242,15 @@ document.addEventListener("DOMContentLoaded", function(event) {
                         `;
                     });
                 });
+
+                carregarPrediosTotalInfo().then((predios) => {
+                    predios.forEach((predio) => {
+                        selectPredios.innerHTML += `
+                            <option value="${predio.predio_id}">${predio.predio}</option>
+                        `;
+                    });
+                });
+
                 dialogPainel.showModal();
             }
         });
@@ -397,6 +409,5 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 dialogPainel.showModal();
             }
         });
-    }
-    
+    }  
 });
