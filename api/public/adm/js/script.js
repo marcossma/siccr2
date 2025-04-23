@@ -14,6 +14,30 @@ document.addEventListener("DOMContentLoaded", function(event) {
         }
     }
 
+    // Função para carregar Subunidades
+    async function carregarSubunidades() {
+        try {
+            const response = await fetch(`${apiUrl}/subunidades`);
+            const subunidades = await response.json();
+
+            return subunidades.data;
+        } catch (error) {
+            console.error("Erro aoo tentar carregar as SUBUNIDADES: ", error);
+        }
+    }
+
+    // Função para carregar usuários cadastrados
+    async function carregarUsuarios() {
+        try {
+            const response = await fetch(`${apiUrl}/usuarios`);
+            const usuarios = await response.json();
+
+            return usuarios;
+        } catch(error) {
+            console.error(`Erro ao tentar carregar Usuários: ${error}`);
+        }
+    }
+
     // Função para carregar PRÉDIOS
     async function carregarPredios() {
         try {
@@ -409,5 +433,58 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 dialogPainel.showModal();
             }
         });
-    }  
+    }
+
+    if (urlParam === "/adm/usuarios") {
+        const btnAdicionar = document.querySelector(".btn_adicionar");
+        const frmUnidade = document.querySelector(".frmUnidade");
+        const btnCadastrarUnidade = document.querySelector(".cadastrarUnidade");
+        const btnAtualizarUnidade = document.querySelector(".atualizarUnidade");
+        const btnCancelarUnidade = document.querySelector(".cancelarUnidade");
+        const dialogPainel = document.querySelector(".dialogPainel");
+        const listaUnidades = document.querySelector(".listaUnidades");
+        const selectSubunidades = document.querySelector("#subunidade");
+        
+        selectSubunidades.innerHTML = "<option>Selecione a subunidade de lotação...</option>";
+
+        // Carregamento dos options da lista de subunidades do formulário de cadastro de usuário
+        carregarSubunidades().then((subunidades) => {
+            subunidades.forEach((subunidade) => {
+                const optUnidade = document.createElement("option");
+                optUnidade.value = `${subunidade.subunidade_id}`;
+                optUnidade.textContent = `${subunidade.nome}`;
+    
+                selectSubunidades.appendChild(optUnidade);
+            });
+        });
+
+        carregarUsuarios().then((usuarios) => {
+            usuarios.data.forEach((usuario) => {
+                console.log(usuario);
+            });
+        });
+
+        // Listener dos botões
+        btnAdicionar.addEventListener("click", function(event) {
+            event.preventDefault();
+            document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastrar novo usuário";
+            dialogPainel.showModal();
+        });
+
+        btnCadastrarUnidade.addEventListener("click", function(event) {
+            event.preventDefault();
+            const formData = new FormData(frmUnidade);
+            const dados = Object.fromEntries(formData.entries());
+            console.log(dados);
+
+            frmUnidade.reset();
+            dialogPainel.close();
+        });
+
+        btnCancelarUnidade.addEventListener("click", function(event) {
+            event.preventDefault();
+            frmUnidade.reset();
+            dialogPainel.close();
+        });
+    }
 });

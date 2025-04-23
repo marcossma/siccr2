@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="../css/dialogs.css">
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/ui-kit.css">
+    <link rel="stylesheet" href="./css/dialogs.css">
     <script type="module" src="../js/scripts.js" defer></script>
     <script type="module" src="./js/script.js"></script>
 </head>
@@ -60,6 +61,77 @@
         </main>
         <footer>Rodapé</footer>
     </div>
+
+    <!-- Formulário cadastro Unidade -->
+    <dialog class="dialogPainel unidades">
+        <fieldset>
+            <legend>Cadastro de Usuário</legend>
+
+            <form class="frmCadastroPainel frmUnidade flex flex--column gap--15">
+                <div class="row">
+                    <input type="hidden" name="idUsuario" id="idUsuario">
+                    <input type="text" name="nome" id="nome" class="formInput width--100" placeholder="Digite o nome do servidor">
+                    <label class="painelLabel" for="nome">Ex.: Daniel Mânica</label>
+                </div>
+
+                <div class="row">
+                    <input type="text" name="email" id="email" class="formInput width--100" placeholder="Digite email do servidor">
+                    <label class="painelLabel" for="email">Ex.: patrimonio.ccr@ufsm.br</label>
+                </div>
+
+                <div class="row">
+                    <input type="text" name="siape" id="siape" class="formInput width--100" placeholder="Digite siape do servidor">
+                    <label class="painelLabel" for="siape">Ex.: 2152076</label>
+                </div>
+
+                <div class="row">
+                    <input type="password" name="senha" id="senha" class="formInput width--100" placeholder="Digite uma senha de acesso">
+                    <label class="painelLabel" for="senha"></label>
+                </div>
+
+                <div class="row">
+                    <input type="date" name="data_nascimento" id="data_nascimento" class="formInput width--100">
+                    <label class="painelLabel" for="data_nascimento">Digite ou selecione a data de nascimento</label>
+                </div>
+
+                <div class="row">
+                    <input type="text" name="whatsapp" id="whatsapp" class="formInput width--100" placeholder="Digite o whatsapp do servidor">
+                    <label class="painelLabel" for="whatsapp">Ex.: 5599999999</label>
+                </div>
+                
+                <div class="row">
+                    <select name="subunidade" id="subunidade" class="formInput width--100">
+                        <!-- Options serão adicionados dinamicamente -->
+                    </select>
+                    <label class="painelLabel" for="subunidade">Selecione a subunidade de lotação...</label>
+                </div>
+
+                <div class="row flex justify--content--center align--items--center gap--10">
+                    <label for="" class="formLabel">Selecione as permissões: </label>
+                    <div class="flex align--items--center justify--content--center gap--20">
+                        <span>
+                            <input type="checkbox" name="permissao[]" id="diretor"> Diretor
+                        </span>
+                        <span>
+                            <input type="checkbox" name="permissao[]" id="chefia"> Chefia
+                        </span>
+                        <span>
+                            <input type="checkbox" name="permissao[]" id="servidor"> Servidor
+                        </span>
+                    </div>
+                </div>
+
+
+
+                <div class="row">
+                    <button class="btnPainelFormulario cadastrarUnidade">Cadastrar</button>
+                    <button class="btnPainelFormulario atualizarUnidade">Atualizar</button>
+                    <button class="btnPainelFormulario cancelarUnidade">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+    <!-- Fim formulário cadastro Unidade -->
 
     <script type="module" src="../js/components/index.js"></script>
 </body>
