@@ -492,6 +492,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
             event.preventDefault();
             const formData = new FormData(frmUnidade);
             const dados = Object.fromEntries(formData.entries());
+            dados.permissoes = formData.getAll("permissoes");
             console.log(dados);
 
             frmUnidade.reset();
