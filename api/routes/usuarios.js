@@ -26,7 +26,7 @@ router.get("/", async (req, res) => {
 
 // Rota para adicionar novo usuário
 router.post("/", async (req, res) => {
-    const { nome, email, siape, senha, data_nascimento, subunidade_id, whatsapp, permissao, createdat, updatedat, updatedforuser } = req.body;
+    const { nome, email, siape, senha, data_nascimento, subunidade_id, whatsapp, permissoes, createdat, updatedat, updatedforuser } = req.body;
 
     try {
         // Verificar se todos os campos necessários foram preenchidos
@@ -54,7 +54,7 @@ router.post("/", async (req, res) => {
 
         // 2 - Inserir o novo usuário no banco de dados
         const query = "insert into users (nome, email, siape, senha, data_nascimento, subunidade_id, whatsapp, permissao, createdat, updatedat, updatedForUser) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning *";
-        const values = [nome, email, siape, hashedPassword, data_nascimento, subunidade_id, whatsapp, permissao, createdat, updatedat, updatedforuser];
+        const values = [nome, email, siape, hashedPassword, data_nascimento, subunidade_id, whatsapp, permissoes, createdat, updatedat, updatedforuser];
         const result = await pool.query(query, values);
 
         // Retorna o usuário cadastrado
