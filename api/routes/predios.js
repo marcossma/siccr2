@@ -63,7 +63,7 @@ router.get("/", async (req, res) => {
 // Rota para listar os PRÉDIOS E DADOS DAS UNIDADES
 router.get("/total-info", async(req, res) => {
     try {
-        const result = await pool.query("select * from predios inner join unidades on predios.unidade_id = unidades.unidade_id");
+        const result = await pool.query("select * from predios inner join unidades on predios.unidade_id = unidades.unidade_id order by predios.predio");
         res.status(200).json({
             status: "success",
             message: "",
@@ -79,10 +79,11 @@ router.get("/total-info", async(req, res) => {
     }
 });
 
-router.put("/:idpredio", async (req, res) => {
+router.put("/:predio_id", async (req, res) => {
     // Fazer a regra de negócio para atualização do PRÉDIO
-    const predio_id = req.params.idpredio;
+    const predio_id = req.params.predio_id;
     const { predio, descricao, unidade_id } = req.body;
+    console.log(predio_id);
 
     const result = await pool.query("update predios set predio = $1, descricao = $2, unidade_id = $3 where predio_id = $4 returning *", [predio, descricao, unidade_id, predio_id]);
     

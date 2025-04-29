@@ -302,7 +302,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
         const btnCancelarUnidade = document.querySelector(".cancelarUnidade");
         const dialogPainel = document.querySelector(".dialogPainel");
         const listaUnidades = document.querySelector(".listaUnidades");
-        const selectUnidades = document.querySelector("#txtUnidade");
+        const selectUnidades = document.querySelector("#unidade_id");
 
         // Função para mostrar a lista de PRÉDIOS
         async function renderizarPredios() {
@@ -350,7 +350,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 }
                 return response.json();
             }).then((data) => {
-                console.log(data);
+                // console.log(data);
                 renderizarPredios();
             }).catch((error) => {
                 console.log(`Ocorreu um erro ao tentar cadastrar novo PRÉDIO: ${error}`);
@@ -360,13 +360,42 @@ document.addEventListener("DOMContentLoaded", function(event) {
             dialogPainel.close();
         }
 
+        async function atualizarPredio(predio_id, predio, descricao, unidade_id) {
+            const dadosAtualizar = {
+                predio: predio,
+                descricao: descricao,
+                unidade_id: unidade_id
+            };
+
+            try {
+                await fetch(`${apiUrl}/predios/${predio_id}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(dadosAtualizar)
+                }).then((response) => {
+                    if (!response.ok) {
+                        console.error(`Erro ao tentar atualizar prédio: ${response.error}`);
+                    }
+
+                    return response.json();
+                }).then((data) => {
+                    // console.log(data);
+                }).catch((error) => {
+                    console.error(`Erro ao tentar atualizar prédio: ${error}`);
+                })
+            } catch (error) {
+                console.log(`Erro ao tentar atualizar prédio: ${error}`);
+            }
+        }
+
         renderizarPredios();
 
         // Adição de Listeners 
         btnAdicionar.addEventListener("click", function(event) {
             event.preventDefault();
-            let selectUnidades = document.querySelector("#txtUnidade");
-            console.log(selectUnidades);
+            let selectUnidades = document.querySelector("#unidade_id");
 
             if (event.target.classList.contains("predio")) {
                 selectUnidades.innerHTML = `<option value="">Selecinone a unidade...</option>`
@@ -399,8 +428,17 @@ document.addEventListener("DOMContentLoaded", function(event) {
             event.preventDefault();
             const formData = new FormData(frmUnidade);
             const objDados = Object.fromEntries(formData.entries());
-            console.log(objDados);
             cadastrarPredio(objDados.txtPredio, objDados.txtPredioDescricao, objDados.txtUnidade);
+        });
+
+        btnAtualizarUnidade.addEventListener("click", function(event) {
+            event.preventDefault();
+            const formData = new FormData(frmUnidade);
+            const objDados = Object.fromEntries(formData.entries());
+            atualizarPredio(parseInt(objDados.predio_id), objDados.predio, objDados.descricao, parseInt(objDados.unidade_id));
+            renderizarPredios();
+            frmUnidade.reset();
+            dialogPainel.close();
         });
 
         // Botão para abrir o formulário de atualização do PRÉDIO
@@ -414,7 +452,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 carregarUnidades().then((unidades) => {
                     selectUnidades.innerHTML = "<option value=''>Selecione a unidade...</option>";
                     unidades.forEach((unidade) => {
-                        console.log(`${unidade.unidade_id} - ${event.target.getAttribute("data-unidade_id")}`);
                         selectUnidades.innerHTML += `
                             <option value="${unidade.unidade_id}">${unidade.unidade}</option>
                         `
@@ -425,10 +462,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
                 document.querySelector(".dialogPainel fieldset legend").textContent = "Editar Prédio";
                 // Aplicar os valores do botão editar aos campos do formulário de edição
-                document.querySelector("#txtIdPredio").value = event.target.getAttribute("data-id");
-                document.querySelector("#txtPredio").value = event.target.getAttribute("data-predio");
-                document.querySelector("#txtPredioDescricao").value = event.target.getAttribute("data-descricao");
-                document.querySelector("#txtUnidade").value = event.target.getAttribute("data-unidade");
+                document.querySelector("#predio_id").value = event.target.getAttribute("data-id");
+                document.querySelector("#predio").value = event.target.getAttribute("data-predio");
+                document.querySelector("#descricao").value = event.target.getAttribute("data-descricao");
+                document.querySelector("#unidade_id").value = event.target.getAttribute("data-unidade");
 
                 dialogPainel.showModal();
             }
