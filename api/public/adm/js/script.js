@@ -504,10 +504,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     <div class="dado flex flex--3">${usuario.nome}</div>
                     <div class="dado flex flex--3">${usuario.email}</div>
                     <div class="dado flex flex--2">${usuario.siape}</div>
-                    <div class="dado flex flex--2">${usuario.data_nascimento}</div>
+                    <div class="dado flex flex--3">${usuario.data_nascimento}</div>
                     <div class="dado flex flex--2">${usuario.subunidade_id}</div>
-                    <div class="dado flex flex--3">${usuario.whatsapp}</div>
-                    <div class="dado flex flex--3">${usuario.permissao}</div>
+                    <div class="dado flex flex--2">${usuario.whatsapp}</div>
+                    <div class="dado flex flex--4">${usuario.permissao}</div>
                     <div class="dado flex flex--2 font--size--20">
                         <i class="bi bi-pencil-square editar" title="Editar" data-id="${usuario.user_id}" data-nome="${usuario.nome}" data-email="${usuario.email}" data-siape="${usuario.siape} data-data_nascimento="${usuario.data_nascimento} data-subunidade_id="${usuario.subunidade_id} data-whatsapp="${usuario.whatsapp} data-siape="${usuario.permissao}"></i>
                         <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
