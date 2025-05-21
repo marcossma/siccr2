@@ -518,7 +518,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
             });
         });
 
-        // Listener dos botões
+        // Listener dos botões USUÁRIOS
         btnAdicionar.addEventListener("click", function(event) {
             event.preventDefault();
             document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastrar novo usuário";
