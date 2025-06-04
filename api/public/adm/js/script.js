@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
             const response = await fetch(`${apiUrl}/usuarios`);
             const usuarios = await response.json();
 
-            return usuarios;
+            return usuarios.data;
         } catch(error) {
             console.error(`Erro ao tentar carregar Usuários: ${error}`);
         }
@@ -244,8 +244,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
         const btnCancelarUnidade = document.querySelector(".cancelarUnidade");
         const dialogPainel = document.querySelector(".dialogPainel");
         const listaUnidades = document.querySelector(".listaUnidades");
-
-
         
 
         // Adição de Listeners
@@ -254,10 +252,13 @@ document.addEventListener("DOMContentLoaded", function(event) {
             if (event.target.classList.contains("subunidade")) {
                 let selectUnidades = document.querySelector("#unidade_id");
                 let selectPredios = document.querySelector("#predio_id");
+                let selectUsuarios = document.querySelector("#chefe");
                 selectUnidades.innerHTML = "<option value=''>Selecione a unidade...</option>";
                 selectPredios.innerHTML = "<option value=''>Selecione o prédio...</option>";
                 btnAtualizarUnidade.style.display = "none";
                 btnCadastrarUnidade.style.display = "inline-block";
+
+                console.log(selectUsuarios);
 
                 carregarUnidades().then((unidade) => {
                     unidade.forEach((uni) => {
@@ -271,6 +272,14 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     predios.forEach((predio) => {
                         selectPredios.innerHTML += `
                             <option value="${predio.predio_id}">${predio.predio}</option>
+                        `;
+                    });
+                });
+
+                carregarUsuarios().then((usuarios) => {
+                    usuarios.forEach((usuario) => {
+                        selectUsuarios.innerHTML += `
+                            <option value="${usuario.user_id}">${usuario.nome}</option>
                         `;
                     });
                 });
@@ -496,7 +505,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
         });
 
         carregarUsuarios().then((usuarios) => {
-            usuarios.data.forEach((usuario) => {
+            usuarios.forEach((usuario) => {
                 console.log(usuario);
                 const divElement = document.createElement("div");
                 divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
