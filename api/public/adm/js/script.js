@@ -26,6 +26,17 @@ document.addEventListener("DOMContentLoaded", function(event) {
         }
     }
 
+    // Função para carregar Subunidades INNER Usuarios e mais...
+    async function carregarSubunidadesTotalInfo() {
+        try {
+            const response = await fetch(`${apiUrl}/subunidades/total-info`);
+            const subunidades = await response.json();
+            return subunidades.data;
+        } catch(error) {
+            console.error("Erro ao tentar carregar as SUBUNIDADES: ", error);
+        }
+    }
+
     // Função para carregar usuários cadastrados
     async function carregarUsuarios() {
         try {
@@ -55,7 +66,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
         try {
             const response = await fetch(`${apiUrl}/predios/total-info`);
             const predios = await response.json();
-
             return predios.data;
         } catch (error) {
             console.log(`Erro ao tentar listar todas as informações dos prédios: ${error}`);
@@ -245,6 +255,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
         const dialogPainel = document.querySelector(".dialogPainel");
         const listaUnidades = document.querySelector(".listaUnidades");
         
+        carregarSubunidadesTotalInfo();
 
         // Adição de Listeners
         btnAdicionar.addEventListener("click", function(event) {
@@ -299,7 +310,46 @@ document.addEventListener("DOMContentLoaded", function(event) {
             const formData = new FormData(frmUnidade);
             const objDados = Object.fromEntries(formData.entries());
             console.log(JSON.stringify(objDados));
-        })
+            cadastrarSubunidade(objDados);
+        });
+
+        // Função para Cadastrar nova SUBUNIDADE
+        async function cadastrarSubunidade(dados) {
+            listaUnidades.innerHTML = ""; // Limpa a lista de dados para renderizar novamente
+            
+            console.log(dados);
+
+            if (!dados.nome || !dados.codigo) {
+                alert("Os campos Código da Subunidade e Nome da Subunidade devem ser preenchidos!");
+                return;
+            }
+
+            await fetch(`${apiUrl}/subunidades`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(dados)
+            }).then((response) => {
+                if (!response.ok) {
+                    throw new Error(`Erro ao tentar cadastrar nova subunidade: ${response.error}`);
+                }
+                return response.json();
+            }).then((data) => {
+                console.log(data);
+            }).catch((error) => {
+                console.log(`Ocorreu um erro ao tentar cadastrar nova subunidade: ${error}`);
+            });
+        }
+
+        async function carregarSubunidadesTotalInfo() {
+            await fetch(`${apiUrl}/subunidades/totalinfo`)
+        }
+
+        // Função para mostrar a lista de SUBUNIDADES
+        async function renderizarSubunidadesTotal() {
+            listaUnidades.innerHTML = "";
+
+            carregarSub
+        }
     }
 
     // Rotina para a gestão de prédios

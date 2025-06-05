@@ -60,6 +60,18 @@ router.get("/", async (req, res) => {
     }
 });
 
+// Rota para listar as subunidades com mais detalhes de outras tabelas
+router.get("/total-info", async(req, res) => {
+    const result = await pool.query("select * from subunidades inner join unidades on subunidades.unidade_id = unidades.unidade_id inner join predios on subunidades.predio_id = predios.predio_id inner join users order by subunidades.nome");
+
+    res.status(200).json({
+        status: "success",
+        message: "",
+        data: result.rows
+    });
+});
+
+// Rota para atualizar a subunidade pelo ID
 router.put("/:idsubunidade", async (req, res) => {
     // Fazer a regra de negócio para atualização da unidade
     const subunidade_id = req.params.idsubunidade;
