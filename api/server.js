@@ -71,7 +71,6 @@ app.get("/*", (req, res) => {
                 status: "error",
                 message: "Página não encontrada!"}
             );
-            // res.status(404).send("Página não encontrada!");
         }
     });
 });

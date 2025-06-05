@@ -255,7 +255,37 @@ document.addEventListener("DOMContentLoaded", function(event) {
         const dialogPainel = document.querySelector(".dialogPainel");
         const listaUnidades = document.querySelector(".listaUnidades");
         
-        carregarSubunidadesTotalInfo();
+        carregarSubunidadesTotalInfo().then((subunidades) => {
+            console.log(subunidades);
+        });
+
+        // Função para mostrar a lista de SUBUNIDADES
+        async function renderizarSubunidades() {
+            carregarSubunidadesTotalInfo().then((subunidades) => {
+                listaUnidades.innerHTML = "";
+
+                subunidades.forEach((subunidade) => {
+                    const divElement  = document.createElement("div");
+                    divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
+                    divElement.innerHTML = `
+                        <div class="dado flex flex--2">${subunidade.codigo}</div>
+                        <div class="dado flex flex--8">${subunidade.subunidade_nome}</div>
+                        <div class="dado flex flex--2">${subunidade.subunidade_sigla}</div>
+                        <div class="dado flex flex--2">${subunidade.unidade_sigla}</div>
+                        <div class="dado flex flex--4">${subunidade.chefe}</div>
+                        <div class="dado flex flex--2">${subunidade.predio}</div>
+                        <div class="dado flex flex--1 font--size--20">
+                            <i class="bi bi-pencil-square editar" title="Editar" data-id="${subunidade.subunidade_id}" data-subunidade="${subunidade.subunidade_nome}" data-unidade_id="${subunidade.unidade_id}"></i>
+                            <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
+                        </div>
+                    `;
+
+                    listaUnidades.appendChild(divElement);
+                });
+            })
+        }
+
+        renderizarSubunidades();    
 
         // Adição de Listeners
         btnAdicionar.addEventListener("click", function(event) {
@@ -339,17 +369,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 console.log(`Ocorreu um erro ao tentar cadastrar nova subunidade: ${error}`);
             });
         }
-
-        async function carregarSubunidadesTotalInfo() {
-            await fetch(`${apiUrl}/subunidades/totalinfo`)
-        }
-
-        // Função para mostrar a lista de SUBUNIDADES
-        async function renderizarSubunidadesTotal() {
-            listaUnidades.innerHTML = "";
-
-            carregarSub
-        }
     }
 
     // Rotina para a gestão de prédios
@@ -365,8 +384,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
         // Função para mostrar a lista de PRÉDIOS
         async function renderizarPredios() {
-            // let prediosCarregadosTotalInfo = carregarPrediosTotalInfo();
-
             carregarPrediosTotalInfo().then((predios) => {
                 listaUnidades.innerHTML = "";
     
@@ -378,9 +395,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
                         <div class="dado flex flex--10">${predio.descricao}</div>
                         <div class="dado flex flex--2">${predio.sigla}</div>
                         <div class="dado flex flex--1 font--size--20">
-                                <i class="bi bi-pencil-square editar" title="Editar" data-id="${predio.predio_id}" data-predio="${predio.predio}" data-descricao="${predio.descricao}" data-unidade="${predio.unidade}" data-unidade_id="${predio.unidade_id}"></i>
-                                <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
-                            </div>
+                            <i class="bi bi-pencil-square editar" title="Editar" data-id="${predio.predio_id}" data-predio="${predio.predio}" data-descricao="${predio.descricao}" data-unidade="${predio.unidade}" data-unidade_id="${predio.unidade_id}"></i>
+                            <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
+                        </div>
                     `;
     
                     listaUnidades.appendChild(divElement);

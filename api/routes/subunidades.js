@@ -62,7 +62,7 @@ router.get("/", async (req, res) => {
 
 // Rota para listar as subunidades com mais detalhes de outras tabelas
 router.get("/total-info", async(req, res) => {
-    const result = await pool.query("select * from subunidades join unidades on subunidades.unidade_id = unidades.unidade_id join predios on subunidades.predio_id = predios.predio_id order by subunidades.nome");
+    const result = await pool.query("select * from subunidades inner join unidades on subunidades.unidade_id = unidades.unidade_id inner join predios on subunidades.predio_id = predios.predio_id order by subunidades.subunidade_nome");
 
     res.status(200).json({
         status: "success",
