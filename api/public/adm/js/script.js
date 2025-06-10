@@ -129,7 +129,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     divElement.innerHTML = `
                         <div class="dado flex flex--2">${unidade.codigo}</div>
                         <div class="dado flex flex--10">${unidade.unidade}</div>
-                        <div class="dado flex flex--2">${unidade.sigla}</div>
+                        <div class="dado flex flex--2">${unidade.unidade_sigla}</div>
                         <div class="dado flex flex--1 font--size--20">
                             <i class="bi bi-pencil-square editar" title="Editar" data-id="${unidade.unidade_id}" data-codigo="${unidade.codigo}" data-unidade="${unidade.unidade}" data-sigla="${unidade.sigla}"></i>
                             <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
@@ -231,7 +231,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 document.querySelector("#txtIdUnidade").value = event.target.getAttribute("data-id");
                 document.querySelector("#txtCodigoUnidade").value = event.target.getAttribute("data-codigo");
                 document.querySelector("#txtUnidade").value = event.target.getAttribute("data-unidade");
-                document.querySelector("#txtSigla").value = event.target.getAttribute("data-sigla");
+                document.querySelector("#txtSigla").value = event.target.getAttribute("data-unidade_sigla");
                 // Pensar em como pegar o id_Unidade e enviar para atualizar
                 const id_unidade = event.target.getAttribute("data-id");
                 dialogPainel.showModal();
@@ -239,6 +239,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
             if (event.target.classList.contains("info")) {
                 alert("Funcionalidade em fase de implementação!");
+                return;
             }
         });
     }
@@ -254,9 +255,29 @@ document.addEventListener("DOMContentLoaded", function(event) {
         const btnCancelarUnidade = document.querySelector(".cancelarUnidade");
         const dialogPainel = document.querySelector(".dialogPainel");
         const listaUnidades = document.querySelector(".listaUnidades");
-        
-        carregarSubunidadesTotalInfo().then((subunidades) => {
-            console.log(subunidades);
+
+        // Abrir modal para atualizar os dados da SUBUNIDADE
+        listaUnidades.addEventListener("click", function(event) {
+            if (event.target.classList.contains("editar")) {
+                btnCadastrarUnidade.style.display = "none";
+                btnAtualizarUnidade.style.display = "inline-block";
+                document.querySelector(".dialogPainel fieldset legend").textContent = "Editar subunidade";
+                // Aplicar os values nos campos de formulário com os valores da subunidade
+                document.querySelector("#idSubUnidade").value = event.target.getAttribute("data-subunidade_id")
+                document.querySelector("#codigo").value = event.target.getAttribute("data-subunidade_codigo");
+                document.querySelector("#nome").value = event.target.getAttribute("data-subunidade_nome");
+                document.querySelector("#sigla").value = event.target.getAttribute("data-subunidade_sigla");
+                document.querySelector("#chefe").value = event.target.getAttribute("data-subunidade_chefe");
+                document.querySelector("#unidade_id").value = event.target.getAttribute("data-unidade_id");
+                document.querySelector("#predio_id").value = event.target.getAttribute("data-predio_id");
+
+                dialogPainel.showModal();
+            }
+
+            if (event.target.classList.contains("info")) {
+                alert("Funcionalidade em fase de implementação!");
+                return;
+            }
         });
 
         // Função para mostrar a lista de SUBUNIDADES
@@ -275,7 +296,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                         <div class="dado flex flex--4">${subunidade.chefe}</div>
                         <div class="dado flex flex--2">${subunidade.predio}</div>
                         <div class="dado flex flex--1 font--size--20">
-                            <i class="bi bi-pencil-square editar" title="Editar" data-id="${subunidade.subunidade_id}" data-subunidade="${subunidade.subunidade_nome}" data-unidade_id="${subunidade.unidade_id}"></i>
+                            <i class="bi bi-pencil-square editar" title="Editar" data-subunidade_id="${subunidade.subunidade_id}" data-subunidade_codigo="${subunidade.codigo}" data-subunidade_nome="${subunidade.subunidade_nome}" data-subunidade_sigla="${subunidade.subunidade_sigla}" data-subunidade_chefe="${subunidade.chefe}" data-unidade_id="${subunidade.unidade_id}" data-predio_id="${subunidade.predio_id}"></i>
                             <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
                         </div>
                     `;
