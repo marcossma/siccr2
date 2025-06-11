@@ -75,9 +75,9 @@ router.get("/total-info", async(req, res) => {
 router.put("/:idsubunidade", async (req, res) => {
     // Fazer a regra de negócio para atualização da unidade
     const subunidade_id = req.params.idsubunidade;
-    const { codigo, nome, sigla, unidade_id, predio_id, email, chefe } = req.body;
+    const { codigo, subunidade_nome, subunidade_sigla, unidade_id, predio_id, email, chefe } = req.body;
 
-    const result = await pool.query("update unidades set codigo = $1, nome = $2, sigla = $3, unidade_id = $4, predio_id = $5, email = $6, chefe = $7 where subunidade_id = $8 returning *", [codigo, nome, sigla, unidade_id, predio_id, email, chefe, subunidade_id]);
+    const result = await pool.query("update unidades set codigo = $1, subunidade_nome = $2, subunidade_sigla = $3, unidade_id = $4, predio_id = $5, email = $6, chefe = $7 where subunidade_id = $8 returning *", [codigo, subunidade_nome, subunidade_sigla, unidade_id, predio_id, email, chefe, subunidade_id]);
     
     res.status(200).json({
         status: "success",

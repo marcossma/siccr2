@@ -259,6 +259,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
         // Abrir modal para atualizar os dados da SUBUNIDADE
         listaUnidades.addEventListener("click", function(event) {
             if (event.target.classList.contains("editar")) {
+                let selectChefe = document.querySelector("#chefe");
+                let selectUnidade = document.querySelector("#unidade_id");
+                let selectPredio = document.querySelector("#predio_id");
                 btnCadastrarUnidade.style.display = "none";
                 btnAtualizarUnidade.style.display = "inline-block";
                 document.querySelector(".dialogPainel fieldset legend").textContent = "Editar subunidade";
@@ -270,6 +273,38 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 document.querySelector("#chefe").value = event.target.getAttribute("data-subunidade_chefe");
                 document.querySelector("#unidade_id").value = event.target.getAttribute("data-unidade_id");
                 document.querySelector("#predio_id").value = event.target.getAttribute("data-predio_id");
+
+                // Listando usuários para seleção de CHEFIA
+                carregarUsuarios().then((usuarios) => {
+                    usuarios.forEach((usuario) => {
+                        selectChefe.innerHTML += `
+                            <option value="${usuario.usuer_id}">${usuario.nome}</option>
+                        `;
+                    })
+                });
+
+                // Listando unidades para a seleção da UNIDADE
+                carregarUnidades().then((unidades) => {
+                    unidades.forEach((unidade) => {
+                        selectUnidade.innerHTML += `
+                            <option value="${unidade.unidade_id}">${unidade.unidade}</option>
+                        `;
+                    });
+                });
+
+                carregarPredios().then((predios) => {
+                    predios.forEach((predio) => {
+                        selectPredio.innerHTML += `
+                            <option value="${predio.predio_id}">${predio.predio}</option>
+                        `;
+                    });
+                });
+
+                btnAtualizarUnidade.addEventListener("click", function(event) {
+                    event.preventDefault();
+                    console.log("Clicado!")
+
+                });
 
                 dialogPainel.showModal();
             }
@@ -346,6 +381,11 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     });
                 });
 
+                btnAtualizarUnidade.addEventListener("click", function(event) {
+                    event.preventDefault();
+                    console.log("Clicou!");
+                });
+
                 dialogPainel.showModal();
             }
         });
@@ -388,6 +428,24 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 console.log(data);
             }).catch((error) => {
                 console.log(`Ocorreu um erro ao tentar cadastrar nova subunidade: ${error}`);
+            });
+        }
+
+        // Função para atualizar SUBUNIDADE
+        async function updateSubunidade(dados) {
+            await fetch(`${apiUrl}/subunidades/:${dados.subunidade_id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json "},
+                body: JSON.stringify(dados)
+            }).then((response) => {
+                if (!response.ok) {
+                    throw new Error(`Erro ao tentar atualiar a Subunidade: ${response.error}`);
+                }
+                return response.json();
+            }).then((data) => {
+                console.log(data);
+            }).catch((error) => {
+                console.log(`Ocorreu um erro ao tentar atualiar a Subunidade: ${error}`);
             });
         }
     }
