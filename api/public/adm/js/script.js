@@ -270,17 +270,16 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 document.querySelector("#codigo").value = event.target.getAttribute("data-subunidade_codigo");
                 document.querySelector("#nome").value = event.target.getAttribute("data-subunidade_nome");
                 document.querySelector("#sigla").value = event.target.getAttribute("data-subunidade_sigla");
-                document.querySelector("#chefe").value = event.target.getAttribute("data-subunidade_chefe");
-                document.querySelector("#unidade_id").value = event.target.getAttribute("data-unidade_id");
-                document.querySelector("#predio_id").value = event.target.getAttribute("data-predio_id");
-
+                
                 // Listando usuários para seleção de CHEFIA
                 carregarUsuarios().then((usuarios) => {
                     usuarios.forEach((usuario) => {
                         selectChefe.innerHTML += `
-                            <option value="${usuario.usuer_id}">${usuario.nome}</option>
+                            <option value="${usuario.user_id}">${usuario.nome}</option>
                         `;
                     })
+
+                    document.querySelector("#chefe").value = event.target.getAttribute("data-subunidade_chefe");
                 });
 
                 // Listando unidades para a seleção da UNIDADE
@@ -290,6 +289,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
                             <option value="${unidade.unidade_id}">${unidade.unidade}</option>
                         `;
                     });
+
+                    document.querySelector("#unidade_id").value = event.target.getAttribute("data-unidade_id");
                 });
 
                 carregarPredios().then((predios) => {
@@ -298,12 +299,13 @@ document.addEventListener("DOMContentLoaded", function(event) {
                             <option value="${predio.predio_id}">${predio.predio}</option>
                         `;
                     });
+
+                    document.querySelector("#predio_id").value = event.target.getAttribute("data-predio_id");
                 });
 
                 btnAtualizarUnidade.addEventListener("click", function(event) {
                     event.preventDefault();
-                    console.log("Clicado!")
-
+                    console.log("Clicado!");
                 });
 
                 dialogPainel.showModal();
