@@ -19,10 +19,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
         try {
             const response = await fetch(`${apiUrl}/subunidades`);
             const subunidades = await response.json();
-
             return subunidades.data;
         } catch (error) {
-            console.error("Erro aoo tentar carregar as SUBUNIDADES: ", error);
+            console.error("Erro ao tentar carregar as SUBUNIDADES: ", error);
         }
     }
 
@@ -652,28 +651,32 @@ document.addEventListener("DOMContentLoaded", function(event) {
             });
         });
 
-        carregarUsuarios().then((usuarios) => {
-            usuarios.forEach((usuario) => {
-                console.log(usuario);
-                const divElement = document.createElement("div");
-                divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
-                divElement.innerHTML += `
-                    <div class="dado flex flex--3">${usuario.nome}</div>
-                    <div class="dado flex flex--3">${usuario.email}</div>
-                    <div class="dado flex flex--2">${usuario.siape}</div>
-                    <div class="dado flex flex--3">${usuario.data_nascimento}</div>
-                    <div class="dado flex flex--2">${usuario.subunidade_id}</div>
-                    <div class="dado flex flex--2">${usuario.whatsapp}</div>
-                    <div class="dado flex flex--4">${usuario.permissao}</div>
-                    <div class="dado flex flex--2 font--size--20">
-                        <i class="bi bi-pencil-square editar" title="Editar" data-id="${usuario.user_id}" data-nome="${usuario.nome}" data-email="${usuario.email}" data-siape="${usuario.siape} data-data_nascimento="${usuario.data_nascimento} data-subunidade_id="${usuario.subunidade_id} data-whatsapp="${usuario.whatsapp} data-siape="${usuario.permissao}"></i>
-                        <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
-                    </div>
-                `;
-
-                listaUnidades.appendChild(divElement);
+        function renderizarUsuarios() {
+            carregarUsuarios().then((usuarios) => {
+                usuarios.forEach((usuario) => {
+                    console.log(usuario);
+                    const divElement = document.createElement("div");
+                    divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
+                    divElement.innerHTML += `
+                        <div class="dado flex flex--3">${usuario.nome}</div>
+                        <div class="dado flex flex--3">${usuario.email}</div>
+                        <div class="dado flex flex--2">${usuario.siape}</div>
+                        <div class="dado flex flex--3">${usuario.data_nascimento}</div>
+                        <div class="dado flex flex--2">${usuario.subunidade_id}</div>
+                        <div class="dado flex flex--2">${usuario.whatsapp}</div>
+                        <div class="dado flex flex--4">${usuario.permissao}</div>
+                        <div class="dado flex flex--2 font--size--20">
+                            <i class="bi bi-pencil-square editar" title="Editar" data-id="${usuario.user_id}" data-nome="${usuario.nome}" data-email="${usuario.email}" data-siape="${usuario.siape}" data-data_nascimento="${usuario.data_nascimento}" data-subunidade_id="${usuario.subunidade_id}" data-whatsapp="${usuario.whatsapp}" data-permissao="${usuario.permissao}"></i>
+                            <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
+                        </div>
+                    `;
+    
+                    listaUnidades.appendChild(divElement);
+                });
             });
-        });
+        }
+
+        renderizarUsuarios();
 
         // Listener dos botões USUÁRIOS
         btnAdicionar.addEventListener("click", function(event) {
@@ -697,6 +700,13 @@ document.addEventListener("DOMContentLoaded", function(event) {
             event.preventDefault();
             frmUnidade.reset();
             dialogPainel.close();
+        });
+
+        listaUnidades.addEventListener("click", function(event) {
+            if (event.target.classList.contains("editar")) {
+                const dadosEl = event.target.dataset;
+                console.log(dadosEl.permissao);
+            }
         });
     }
 });

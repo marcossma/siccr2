@@ -5,11 +5,11 @@ const router = express.Router();
 
 // Rota para adicionar nova Subunidade
 router.post("/", async (req, res) => {
-    const {codigo, nome, sigla, unidade_id, predio_id, email, chefe } = req.body;
+    const {codigo, subunidade_nome, subunidade_sigla, unidade_id, predio_id, email, chefe } = req.body;
 
     try {
         // Verifica se não está faltando nenhum campo
-        if (!codigo || !nome || !unidade_id) {
+        if (!codigo || !subunidade_nome || !unidade_id) {
             return res.status(400).json({
                 status: "error",
                 message: "Os campos CÓDIGO, SUBUNIDADE e UNIDADE devem ser preenchidos.",
@@ -18,8 +18,8 @@ router.post("/", async (req, res) => {
         }
 
         // Prepara a query para cadastrar a subunidade
-        const query = "insert into subunidades (codigo, nome, sigla, unidade_id, predio_id, email, chefe) values ($1, $2, $3, $4, $5, $6, $7) returning *";
-        const values = [codigo, nome, sigla, unidade_id, predio_id, email, chefe];
+        const query = "insert into subunidades (codigo, subunidade_nome, sigla, unidade_id, predio_id, email, chefe) values ($1, $2, $3, $4, $5, $6, $7) returning *";
+        const values = [codigo, subunidade_nome, subunidade_sigla, unidade_id, predio_id, email, chefe];
 
         // Cadastra a unidade
         const result = await pool.query(query, values);
@@ -44,7 +44,7 @@ router.post("/", async (req, res) => {
 // Rota para listar as subunidades
 router.get("/", async (req, res) => {
     try {
-        const result = await pool.query("select * from subunidades order by nome");
+        const result = await pool.query("select * from subunidades order by subunidade_nome");
         res.status(200).json({
             status: "success",
             message: "",
