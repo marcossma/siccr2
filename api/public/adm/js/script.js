@@ -88,7 +88,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
             const dadosAtualizar = {
                 codigo: codigoUnidade,
                 unidade: unidade,
-                sigla: sigla
+                unidade_sigla: sigla
             };
 
             try {
@@ -130,7 +130,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                         <div class="dado flex flex--10">${unidade.unidade}</div>
                         <div class="dado flex flex--2">${unidade.unidade_sigla}</div>
                         <div class="dado flex flex--1 font--size--20">
-                            <i class="bi bi-pencil-square editar" title="Editar" data-id="${unidade.unidade_id}" data-codigo="${unidade.codigo}" data-unidade="${unidade.unidade}" data-sigla="${unidade.sigla}"></i>
+                            <i class="bi bi-pencil-square editar" title="Editar" data-id="${unidade.unidade_id}" data-codigo="${unidade.codigo}" data-unidade="${unidade.unidade}" data-unidade_sigla="${unidade.unidade_sigla}"></i>
                             <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
                         </div>
                     `;
@@ -182,7 +182,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
             const unidadeNova = {
                 codigo: codigo.value,
                 unidade: unidade.value,
-                sigla: sigla.value
+                unidade_sigla: sigla.value
             }
 
             fetch(`${apiUrl}/unidades`, {
