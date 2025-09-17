@@ -155,6 +155,7 @@ class ResponsiveMenu extends HTMLElement {
               </ul>
             </li>
             <li><a href="/contato">Contato</a></li>
+            <li><a href="/sair">Sair</a></li>
           </ul>
           <div class="menu-toggle">☰</div>
         </nav>
