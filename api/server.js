@@ -69,8 +69,8 @@ app.get("/*", (req, res) => {
         if (error) {
             res.status(404).json({
                 status: "error",
-                message: "Página não encontrada!"}
-            );
+                message: "Página não encontrada!"
+            });
         }
     });
 });
