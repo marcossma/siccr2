@@ -641,11 +641,11 @@ document.addEventListener("DOMContentLoaded", function(event) {
         selectSubunidades.innerHTML = "<option>Selecione a subunidade de lotação...</option>";
 
         // Carregamento dos options da lista de subunidades do formulário de cadastro de usuário
-        carregarSubunidades().then((subunidades) => {
+        carregarSubunidadesTotalInfo().then((subunidades) => {
             subunidades.forEach((subunidade) => {
                 const optUnidade = document.createElement("option");
                 optUnidade.value = `${subunidade.subunidade_id}`;
-                optUnidade.textContent = `${subunidade.nome}`;
+                optUnidade.textContent = `${subunidade.subunidade_nome}`;
     
                 selectSubunidades.appendChild(optUnidade);
             });
@@ -706,6 +706,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
             if (event.target.classList.contains("editar")) {
                 const dadosEl = event.target.dataset;
                 console.log(dadosEl.permissao);
+                dialogPainel.showModal();
             }
         });
     }
