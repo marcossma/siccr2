@@ -57,6 +57,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
                 document.querySelector("#frmLogin").reset();
                 dialogLogin.close();
+                window.location.href = "/"; // Redireciona para a página principal para atualizar o menu
                 return;
             }
         })
@@ -75,4 +76,5 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
     const dados = JSON.parse(localStorage.getItem("siccr"));
     console.log(dados);
+
 });

@@ -155,7 +155,7 @@ class ResponsiveMenu extends HTMLElement {
               </ul>
             </li>
             <li><a href="/contato">Contato</a></li>
-            <li><a href="/sair">Sair</a></li>
+            <li><a href="#" id="logout">Sair</a></li>
           </ul>
           <div class="menu-toggle">☰</div>
         </nav>
@@ -170,6 +170,7 @@ class ResponsiveMenu extends HTMLElement {
       // Referências aos elementos
       const menuToggle = shadow.querySelector('.menu-toggle');
       const menu = shadow.querySelector('.menu');
+      const btnLogout = shadow.querySelector("#logout");
   
       // Exibir ou ocultar a barra de navegação
       if (token) {
@@ -209,7 +210,17 @@ class ResponsiveMenu extends HTMLElement {
       });
 
       console.log("Menu responsivo Initialized!");
+
+      btnLogout.addEventListener("click", function(event) {
+        localStorage.removeItem("siccr");
+        localStorage.removeItem("siccr_token");
+        window.location.href = "/"; // Redireciona para a página principal para atualizar o menu
+        console.log("Logout OK!");
+      });
+
     }
+
+    
 
   }
   
