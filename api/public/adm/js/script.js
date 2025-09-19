@@ -473,7 +473,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     divElement.innerHTML = `
                         <div class="dado flex flex--2">${predio.predio}</div>
                         <div class="dado flex flex--10">${predio.descricao}</div>
-                        <div class="dado flex flex--2">${predio.sigla}</div>
+                        <div class="dado flex flex--2">${predio.unidade_sigla}</div>
                         <div class="dado flex flex--1 font--size--20">
                             <i class="bi bi-pencil-square editar" title="Editar" data-id="${predio.predio_id}" data-predio="${predio.predio}" data-descricao="${predio.descricao}" data-unidade="${predio.unidade}" data-unidade_id="${predio.unidade_id}"></i>
                             <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
@@ -537,7 +537,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
                     return response.json();
                 }).then((data) => {
-                    // console.log(data);
+                    // Após realizar a atualização do prédio, renderiza novamente a lista
+                    renderizarPredios();
                 }).catch((error) => {
                     console.error(`Erro ao tentar atualizar prédio: ${error}`);
                 })
