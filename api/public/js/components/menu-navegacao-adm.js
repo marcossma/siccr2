@@ -8,6 +8,8 @@ class MenuNavegacaoAdm extends HTMLElement {
       // Template HTML + CSS do componente
       shadow.innerHTML = `
         <style>
+        @import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css");
+
         * {
           margin: 0px;
           padding: 0px;
@@ -23,16 +25,82 @@ class MenuNavegacaoAdm extends HTMLElement {
           align-items: center;
           list-style: none;
         }
+
+        i {
+          font-size: 30px;
+          transition: .5s;
+        }
+
+        .btn-menu-nav-adm {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          flex-direction: column;
+          cursor: pointer;
+        }
+
+        .btn-menu-nav-adm p {
+          color: white;
+          transition: .5s;
+        }
+
+        .btn-menu-nav-adm:hover p {
+          color: green;
+        }
+
+        a {
+          text-decoration: none;
+          color: black;
+        }
+
+        a:hover {
+          color: green;
+        }
           
         </style>
   
         <nav class="navbar">
           <ul>
-            <li>Menu 1</li>
-            <li>Menu 2</li>
-            <li>Menu 3</li>
-            <li>Menu 4</li>
-            <li>Menu 5</li>
+            <li>
+              <a href="/adm/unidades">
+                <div class="btn-menu-nav-adm">
+                  <i class="bi bi-globe"></i>
+                  <p>Unidades</p>
+                </div>
+              </a>
+            </li>
+            <li>
+              <a href="/adm/subunidades">
+                <div class="btn-menu-nav-adm">
+                  <i class="bi bi-globe-americas"></i>
+                  <p>Subunidades</p>
+                </div>
+              </a>
+            </li>
+            <li>
+              <a href="/adm/usuarios">
+                <div class="btn-menu-nav-adm">
+                  <i class="bi bi-people"></i>
+                  <p>Usuários</p>
+                </div>
+              </a>
+            </li>
+            <li>
+              <a href="/adm/predios">
+                <div class="btn-menu-nav-adm">
+                  <i class="bi bi-buildings"></i>
+                  <p>Prédios</p>
+                </div>
+              </a>
+            </li>
+            <li>
+              <a href="/adm/salas">
+                <div class="btn-menu-nav-adm">
+                  <i class="bi bi-door-closed"></i>
+                  <p>Salas</p>
+                </div>
+              </a>
+            </li>
           </ul>
         </nav>
       `;
