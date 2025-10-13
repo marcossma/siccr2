@@ -5,7 +5,8 @@ const router = express.Router();
 
 // Rota para adicionar nova Subunidade
 router.post("/", async (req, res) => {
-    const {codigo, subunidade_nome, subunidade_sigla, unidade_id, predio_id, email, chefe } = req.body;
+    const { codigo, subunidade_nome, subunidade_sigla, unidade_id, predio_id, email, chefe } = req.body;
+    console.log(codigo);
 
     try {
         // Verifica se não está faltando nenhum campo
@@ -18,7 +19,7 @@ router.post("/", async (req, res) => {
         }
 
         // Prepara a query para cadastrar a subunidade
-        const query = "insert into subunidades (codigo, subunidade_nome, sigla, unidade_id, predio_id, email, chefe) values ($1, $2, $3, $4, $5, $6, $7) returning *";
+        const query = "insert into subunidades (codigo, subunidade_nome, subunidade_sigla, unidade_id, predio_id, email, chefe) values ($1, $2, $3, $4, $5, $6, $7) returning *";
         const values = [codigo, subunidade_nome, subunidade_sigla, unidade_id, predio_id, email, chefe];
 
         // Cadastra a unidade

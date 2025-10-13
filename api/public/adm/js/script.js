@@ -72,7 +72,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
     }
 
+    // =================================
     // Rotina para o gestão de unidades
+    // =================================
     if (urlParam === "/adm/unidades") {
         // Seleção de elementos
         const btnAdicionar = document.querySelector(".btn_adicionar");
@@ -126,7 +128,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     const divElement = document.createElement("div");
                     divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
                     divElement.innerHTML = `
-                        <div class="dado flex flex--2">${unidade.codigo}</div>
+                        <div class="dado flex flex--2">${unidade.unidade_codigo}</div>
                         <div class="dado flex flex--10">${unidade.unidade}</div>
                         <div class="dado flex flex--2">${unidade.unidade_sigla}</div>
                         <div class="dado flex flex--1 font--size--20">
@@ -243,7 +245,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
         });
     }
 
+    // ====================================
     // Rotina para a gestão de subunidades
+    // ====================================
     if (urlParam === "/adm/subunidades") {
         console.log("Subunidades"); //<-- Apenas para debug apagar depois...
         // Seleção de elementos
@@ -325,7 +329,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     const divElement  = document.createElement("div");
                     divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
                     divElement.innerHTML = `
-                        <div class="dado flex flex--2">${subunidade.codigo}</div>
+                        <div class="dado flex flex--2">${subunidade.subunidade_codigo}</div>
                         <div class="dado flex flex--8">${subunidade.subunidade_nome}</div>
                         <div class="dado flex flex--2">${subunidade.subunidade_sigla}</div>
                         <div class="dado flex flex--2">${subunidade.unidade_sigla}</div>
@@ -411,7 +415,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
             
             console.log(dados);
 
-            if (!dados.nome || !dados.codigo) {
+            if (!dados.subunidade_nome || !dados.codigo) {
                 alert("Os campos Código da Subunidade e Nome da Subunidade devem ser preenchidos!");
                 return;
             }
@@ -427,6 +431,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 return response.json();
             }).then((data) => {
                 console.log(data);
+                frmUnidade.reset();
+                renderizarSubunidades();
+                dialogPainel.close();
             }).catch((error) => {
                 console.log(`Ocorreu um erro ao tentar cadastrar nova subunidade: ${error}`);
             });
@@ -451,7 +458,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
         }
     }
 
+    // ================================
     // Rotina para a gestão de prédios
+    // ================================
     if (urlParam === "/adm/predios") {
         const btnAdicionar = document.querySelector(".btn_adicionar");
         const frmUnidade = document.querySelector(".frmUnidade");
@@ -538,6 +547,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     return response.json();
                 }).then((data) => {
                     // Após realizar a atualização do prédio, renderiza novamente a lista
+                    console.log(data);
                     renderizarPredios();
                 }).catch((error) => {
                     console.error(`Erro ao tentar atualizar prédio: ${error}`);
@@ -585,7 +595,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
             event.preventDefault();
             const formData = new FormData(frmUnidade);
             const objDados = Object.fromEntries(formData.entries());
-            cadastrarPredio(objDados.txtPredio, objDados.txtPredioDescricao, objDados.txtUnidade);
+            cadastrarPredio(objDados.predio, objDados.descricao, objDados.unidade_id);
         });
 
         btnAtualizarUnidade.addEventListener("click", function(event) {
