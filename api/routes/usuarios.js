@@ -13,12 +13,30 @@ router.get("/", async (req, res) => {
             status: "success",
             message: "",
             data: result.rows
-        })
+        });
     } catch(error) {
         console.error(`Erro ao tentar listar os usuários: ${error}`);
         res.status(500).json({
             status: "error",
             message: "Erro ao tentar listar os usuários.",
+            data: ""
+        });
+    }
+});
+
+router.get("/usuariosTotalInfo", async (req, res) => {
+    try {
+        const result = await pool.query("select * from users inner join subunidades on subunidades.subunidade_id = users.subunidade_id");
+        res.status(200).json({
+            status: "success",
+            message: "",
+            data: result.rows
+        });
+    } catch (error) {
+        console.error(`Erro ao tentar listar todos as informações dos usuários: ${error}`);
+        res.status(500).json({
+            status: "error",
+            message: "Erro ao tentar listar todas as informações dos usuários.",
             data: ""
         });
     }

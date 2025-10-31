@@ -48,6 +48,18 @@ document.addEventListener("DOMContentLoaded", function(event) {
         }
     }
 
+    //Função para carregar usuários totalInfo
+    async function carregarUsuariosTotalInfo() {
+        try {
+            const response = await fetch(`${apiUrl}/usuarios/usuariosTotalInfo`);
+            const usuarios = await response.json();
+    
+            return usuarios.data;
+        } catch(error) {
+            console.error(`Erro ao tentar carregar Usuários totalInfo: ${error}`);
+        }
+    } 
+
     // Função para carregar PRÉDIOS
     async function carregarPredios() {
         try {
@@ -663,17 +675,23 @@ document.addEventListener("DOMContentLoaded", function(event) {
         });
 
         function renderizarUsuarios() {
-            carregarUsuarios().then((usuarios) => {
+            carregarUsuariosTotalInfo().then((usuarios) => {
                 usuarios.forEach((usuario) => {
                     console.log(usuario);
+                    
+                    // Formatando data em dd/mm/aaaa
+                    const data = new Date(usuario.data_nascimento);
+                    const dataFormatada = data.toLocaleDateString("pt-BR");
+
                     const divElement = document.createElement("div");
                     divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
                     divElement.innerHTML += `
                         <div class="dado flex flex--3">${usuario.nome}</div>
                         <div class="dado flex flex--3">${usuario.email}</div>
                         <div class="dado flex flex--2">${usuario.siape}</div>
-                        <div class="dado flex flex--3">${usuario.data_nascimento}</div>
-                        <div class="dado flex flex--2">${usuario.subunidade_id}</div>
+                        <!--div class="dado flex flex--3">${usuario.data_nascimento}</div-->
+                        <div class="dado flex flex--3">${dataFormatada}</div>
+                        <div class="dado flex flex--2">${usuario.subunidade_nome}</div>
                         <div class="dado flex flex--2">${usuario.whatsapp}</div>
                         <div class="dado flex flex--4">${usuario.permissao}</div>
                         <div class="dado flex flex--2 font--size--20">
