@@ -64,6 +64,7 @@
                 <div class="cabecalho flex">
                     <div class="titulo flex flex--2">Cód.</div>
                     <div class="titulo flex flex--8">Subunidade</div>
+                    <div class="titulo flex flex--6">E-Mail</div>
                     <div class="titulo flex flex--2">Sigla</div>
                     <div class="titulo flex flex--2">Unidade</div>
                     <div class="titulo flex flex--4">Chefia</div>
@@ -88,7 +89,7 @@
 
             <form class="frmCadastroPainel frmUnidade flex flex--column gap--15" name="">
                 <div class="row">
-                    <input type="hidden" name="idSubUnidade" id="idSubUnidade">
+                    <input type="hidden" name="subunidade_id" id="subunidade_id">
                     <input type="text" name="codigo" id="codigo" class="formInput width--100" placeholder="Digite o código da subunidade">
                     <label class="painelLabel" for="codigo">Ex.: 03.36</label>
                 </div>
@@ -97,6 +98,11 @@
                     <label class="painelLabel" for="subunidade_nome">Ex.: Departamento de Fitotecnia</label>
                 </div>
                 
+                <div class="row">
+                    <input type="text" name="subunidade_email" id="subunidade_email" class="formInput width--100" placeholder="Digite o e-mail da subunidade">
+                    <label class="painelLabel" for="subunidade_email">E-mail da subunidade</label>
+                </div>
+
                 <div class="row">
                     <input type="text" name="subunidade_sigla" id="subunidade_sigla" class="formInput width--100" placeholder="Digite a sigla da subunidade">
                     <label class="painelLabel" for="subunidade_sigla">Ex.: DFT</label>

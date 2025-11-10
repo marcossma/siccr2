@@ -24,6 +24,7 @@ router.get("/", async (req, res) => {
     }
 });
 
+// Rota para listar os usuários com todas as informações
 router.get("/usuariosTotalInfo", async (req, res) => {
     try {
         const result = await pool.query("select * from users inner join subunidades on subunidades.subunidade_id = users.subunidade_id");
@@ -44,7 +45,19 @@ router.get("/usuariosTotalInfo", async (req, res) => {
 
 // Rota para adicionar novo usuário
 router.post("/", async (req, res) => {
-    const { nome, email, siape, senha, data_nascimento, subunidade_id, whatsapp, permissoes, createdat, updatedat, updatedforuser } = req.body;
+    const { nome, email, siape, senha, data_nascimento, subunidade_id, whatsapp, permissao, createdat } = req.body;
+
+    console.log(`Dados:
+        ${nome}
+        ${email}
+        ${siape}
+        ${senha}
+        ${data_nascimento}
+        ${subunidade_id}
+        ${whatsapp}
+        ${permissao}
+        ${createdat}
+        `);
 
     try {
         // Verificar se todos os campos necessários foram preenchidos
@@ -71,8 +84,8 @@ router.post("/", async (req, res) => {
         const hashedPassword = await bcrypt.hash(senha, 10);
 
         // 2 - Inserir o novo usuário no banco de dados
-        const query = "insert into users (nome, email, siape, senha, data_nascimento, subunidade_id, whatsapp, permissao, createdat, updatedat, updatedForUser) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning *";
-        const values = [nome, email, siape, hashedPassword, data_nascimento, subunidade_id, whatsapp, permissoes, createdat, updatedat, updatedforuser];
+        const query = "insert into users (nome, email, siape, senha, data_nascimento, subunidade_id, whatsapp, permissao, createdat) values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning *";
+        const values = [nome, email, siape, hashedPassword, data_nascimento, subunidade_id, whatsapp, permissao, createdat];
         const result = await pool.query(query, values);
 
         // Retorna o usuário cadastrado

@@ -5,11 +5,11 @@ const router = express.Router();
 
 // Rota para adicionar nova unidade
 router.post("/", async (req, res) => {
-    const {codigo, unidade, unidade_sigla} = req.body;
+    const {unidade_codigo, unidade, unidade_sigla} = req.body;
 
     try {
         // Verifica se não está faltando nenhum campo
-        if (!codigo || !unidade || !unidade_sigla) {
+        if (!unidade_codigo || !unidade || !unidade_sigla) {
             return res.status(400).json({
                 status: "error",
                 message: "Todos os campos devem ser preenchidos.",
@@ -18,8 +18,8 @@ router.post("/", async (req, res) => {
         }
 
         // Prepara a query para cadastrar a unidade
-        const query = "insert into unidades (codigo, unidade, unidade_sigla) values ($1, $2, $3) returning *";
-        const values = [codigo, unidade, unidade_sigla];
+        const query = "insert into unidades (unidade_codigo, unidade, unidade_sigla) values ($1, $2, $3) returning *";
+        const values = [unidade_codigo, unidade, unidade_sigla];
 
         // Cadastra a unidade
         const result = await pool.query(query, values);
@@ -63,9 +63,9 @@ router.get("/", async (req, res) => {
 router.put("/:idunidade", async (req, res) => {
     // Fazer a regra de negócio para atualização da unidade
     const unidade_id = req.params.idunidade;
-    const { codigo, unidade, unidade_sigla } = req.body;
+    const { unidade_codigo, unidade, unidade_sigla } = req.body;
 
-    const result = await pool.query("update unidades set codigo = $1, unidade = $2, unidade_sigla = $3 where unidade_id = $4 returning *", [codigo, unidade, unidade_sigla, unidade_id]);
+    const result = await pool.query("update unidades set unidade_codigo = $1, unidade = $2, unidade_sigla = $3 where unidade_id = $4 returning *", [unidade_codigo, unidade, unidade_sigla, unidade_id]);
     
     res.status(200).json({
         status: "success",

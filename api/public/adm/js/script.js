@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
         try {
             const response = await fetch(`${apiUrl}/subunidades/total-info`);
             const subunidades = await response.json();
+            console.log(subunidades.data);
             return subunidades.data;
         } catch(error) {
             console.error("Erro ao tentar carregar as SUBUNIDADES: ", error);
@@ -99,8 +100,14 @@ document.addEventListener("DOMContentLoaded", function(event) {
         
         // Função para atualizar informações da Unidade
         async function updateUnidade(idUnidade, codigoUnidade, unidade, sigla) {
+
+            // Verificar se o código está escrito com . caso contrário atribuir . ao código
+            if (codigoUnidade.split(",").length > 1) {
+                codigoUnidade = codigoUnidade.replace(",", ".");
+            }
+            
             const dadosAtualizar = {
-                codigo: codigoUnidade,
+                unidade_codigo: codigoUnidade,
                 unidade: unidade,
                 unidade_sigla: sigla
             };
@@ -144,7 +151,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                         <div class="dado flex flex--10">${unidade.unidade}</div>
                         <div class="dado flex flex--2">${unidade.unidade_sigla}</div>
                         <div class="dado flex flex--1 font--size--20">
-                            <i class="bi bi-pencil-square editar" title="Editar" data-id="${unidade.unidade_id}" data-codigo="${unidade.codigo}" data-unidade="${unidade.unidade}" data-unidade_sigla="${unidade.unidade_sigla}"></i>
+                            <i class="bi bi-pencil-square editar" title="Editar" data-id="${unidade.unidade_id}" data-codigo="${unidade.unidade_codigo}" data-unidade="${unidade.unidade}" data-unidade_sigla="${unidade.unidade_sigla}"></i>
                             <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
                         </div>
                     `;
@@ -176,30 +183,31 @@ document.addEventListener("DOMContentLoaded", function(event) {
             dialogPainel.close();
         });
 
-        btnCadastrarUnidade.addEventListener("click", function(event) {
+        btnCadastrarUnidade.addEventListener("click", async function(event) {
             event.preventDefault();
-            const codigo = document.querySelector("#txtCodigoUnidade");
-            const unidade = document.querySelector("#txtUnidade");
-            const sigla = document.querySelector("#txtSigla");
+            const unidade_id = document.querySelector("#unidade_id").value;
+            let unidade_codigo = document.querySelector("#unidade_codigo").value;
+            const unidade = document.querySelector("#unidade").value;
+            const unidade_sigla = document.querySelector("#unidade_sigla").value;
 
             // Verifica se todos os campos estão preenchidos
-            if (!codigo.value || !unidade.value || !sigla.value) {
+            if (!unidade_codigo || !unidade || !unidade_sigla) {
                 alert("Todos os campos devem ser preenchidos.");
                 return;
             }
 
             //Validar o campo Codigo da Unidade para garantir que esteja com "."
-            if (codigo.value.split(",").length > 1) {
-                codigo.value = codigo.value.replace(",", ".");
+            if (unidade_codigo.split(",").length > 1) {
+                unidade_codigo = unidade_codigo.replace(",", ".");
             }
 
             const unidadeNova = {
-                codigo: codigo.value,
-                unidade: unidade.value,
-                unidade_sigla: sigla.value
+                unidade_codigo,
+                unidade,
+                unidade_sigla
             }
 
-            fetch(`${apiUrl}/unidades`, {
+            await fetch(`${apiUrl}/unidades`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -210,9 +218,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     console.error("Ocorreu um erro: ", response.error);
                 }
 
-                return response;
+                return response.json();
             }).then((data) => {
-                console.log(data);
+                //console.log(data);
+                // Fazer retorno visual para informar sucesso ou erro no cadastro da unidade
                 renderizarUnidades();
             }).catch((error) => {
                 console.error("Ocorreu um erro em catch: ", error);
@@ -225,11 +234,11 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
         btnAtualizarUnidade.addEventListener("click", function(event) {
             event.preventDefault();
-            const idUnidade = document.querySelector("#txtIdUnidade").value;
-            const codigoUnidade = document.querySelector("#txtCodigoUnidade").value;
-            const unidade = document.querySelector("#txtUnidade").value;
-            const sigla = document.querySelector("#txtSigla").value;
-            updateUnidade(idUnidade, codigoUnidade, unidade, sigla);
+            const unidade_id = document.querySelector("#unidade_id").value;
+            const unidade_codigo = document.querySelector("#unidade_codigo").value;
+            const unidade = document.querySelector("#unidade").value;
+            const unidade_sigla = document.querySelector("#unidade_sigla").value;
+            updateUnidade(unidade_id, unidade_codigo, unidade, unidade_sigla);
             frmUnidade.reset();
             dialogPainel.close();
         });
@@ -241,12 +250,12 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 btnAtualizarUnidade.style.display = "inline-block";
                 document.querySelector(".dialogPainel fieldset legend").textContent = "Editar unidade";
                 // Aplicar os values nos campos de formulário com os valore da unidade
-                document.querySelector("#txtIdUnidade").value = event.target.getAttribute("data-id");
-                document.querySelector("#txtCodigoUnidade").value = event.target.getAttribute("data-codigo");
-                document.querySelector("#txtUnidade").value = event.target.getAttribute("data-unidade");
-                document.querySelector("#txtSigla").value = event.target.getAttribute("data-unidade_sigla");
+                document.querySelector("#unidade_id").value = event.target.getAttribute("data-id");
+                document.querySelector("#unidade_codigo").value = event.target.getAttribute("data-codigo");
+                document.querySelector("#unidade").value = event.target.getAttribute("data-unidade");
+                document.querySelector("#unidade_sigla").value = event.target.getAttribute("data-unidade_sigla");
                 // Pensar em como pegar o id_Unidade e enviar para atualizar
-                const id_unidade = event.target.getAttribute("data-id");
+                const unidade_id = event.target.getAttribute("data-id");
                 dialogPainel.showModal();
             }
 
@@ -281,10 +290,11 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 btnAtualizarUnidade.style.display = "inline-block";
                 document.querySelector(".dialogPainel fieldset legend").textContent = "Editar subunidade";
                 // Aplicar os values nos campos de formulário com os valores da subunidade
-                document.querySelector("#idSubUnidade").value = event.target.getAttribute("data-subunidade_id")
+                document.querySelector("#subunidade_id").value = event.target.getAttribute("data-subunidade_id")
                 document.querySelector("#codigo").value = event.target.getAttribute("data-subunidade_codigo");
-                document.querySelector("#nome").value = event.target.getAttribute("data-subunidade_nome");
-                document.querySelector("#sigla").value = event.target.getAttribute("data-subunidade_sigla");
+                document.querySelector("#subunidade_nome").value = event.target.getAttribute("data-subunidade_nome");
+                document.querySelector("#subunidade_email").value = event.target.getAttribute("data-subunidade_email");
+                document.querySelector("#subunidade_sigla").value = event.target.getAttribute("data-subunidade_sigla");
                 
                 // Listando usuários para seleção de CHEFIA
                 carregarUsuarios().then((usuarios) => {
@@ -318,9 +328,18 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     document.querySelector("#predio_id").value = event.target.getAttribute("data-predio_id");
                 });
 
+
+
                 btnAtualizarUnidade.addEventListener("click", function(event) {
                     event.preventDefault();
                     console.log("Clicado!");
+
+                    const formData = new FormData(frmUnidade);
+                    const objData = Object.fromEntries(formData.entries());
+                    // atualizarSubunidade(JSON.stringify(objData));
+                    atualizarSubunidade(objData);
+
+            
                 });
 
                 dialogPainel.showModal();
@@ -343,12 +362,13 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     divElement.innerHTML = `
                         <div class="dado flex flex--2">${subunidade.subunidade_codigo}</div>
                         <div class="dado flex flex--8">${subunidade.subunidade_nome}</div>
+                        <div class="dado flex flex--6">${subunidade.email}</div>
                         <div class="dado flex flex--2">${subunidade.subunidade_sigla}</div>
                         <div class="dado flex flex--2">${subunidade.unidade_sigla}</div>
-                        <div class="dado flex flex--4">${subunidade.chefe}</div>
+                        <div class="dado flex flex--4">${subunidade.nome}</div>
                         <div class="dado flex flex--2">${subunidade.predio}</div>
                         <div class="dado flex flex--1 font--size--20">
-                            <i class="bi bi-pencil-square editar" title="Editar" data-subunidade_id="${subunidade.subunidade_id}" data-subunidade_codigo="${subunidade.codigo}" data-subunidade_nome="${subunidade.subunidade_nome}" data-subunidade_sigla="${subunidade.subunidade_sigla}" data-subunidade_chefe="${subunidade.chefe}" data-unidade_id="${subunidade.unidade_id}" data-predio_id="${subunidade.predio_id}"></i>
+                            <i class="bi bi-pencil-square editar" title="Editar" data-subunidade_id="${subunidade.subunidade_id}" data-subunidade_codigo="${subunidade.subunidade_codigo}" data-subunidade_nome="${subunidade.subunidade_nome}" data-subunidade_email="${subunidade.email}" data-subunidade_sigla="${subunidade.subunidade_sigla}" data-subunidade_chefe="${subunidade.chefe}" data-unidade_id="${subunidade.unidade_id}" data-predio_id="${subunidade.predio_id}"></i>
                             <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
                         </div>
                     `;
@@ -356,6 +376,46 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     listaUnidades.appendChild(divElement);
                 });
             })
+        }
+
+        async function atualizarSubunidade(dados) {
+            const dadosAtualizar = {
+                subunidade_id,
+                subunidade_nome,
+                codigo,
+                predio_id,
+                subunidade_email,
+                unidade_id,
+                subunidade_sigla,
+                chefe
+            };
+
+            //console.log(dados);
+            console.log(dados.subunidade_id);
+
+            try {
+                await fetch(`${apiUrl}/subunidades/${dados.subunidade_id}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(dados)
+                }).then((response) => {
+                    if (!response.ok) {
+                        console.error(`Erro ao tentar atualizar Subunidade: ${response.error}`);
+                    }
+
+                    return response.json();
+                }).then((data) => {
+                    // Após realizar a atualização da Subunidade, renderiza novamente a lista
+                    console.log(data);
+                    renderizarSubunidades();
+                }).catch((error) => {
+                    console.error(`Erro ao tentar atualizar Subunidade: ${error}`);
+                })
+            } catch (error) {
+                console.log(`Erro ao tentar atualizar Subunidade: ${error}`);
+            }
         }
 
         renderizarSubunidades();    
@@ -448,24 +508,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 dialogPainel.close();
             }).catch((error) => {
                 console.log(`Ocorreu um erro ao tentar cadastrar nova subunidade: ${error}`);
-            });
-        }
-
-        // Função para atualizar SUBUNIDADE
-        async function updateSubunidade(dados) {
-            await fetch(`${apiUrl}/subunidades/:${dados.subunidade_id}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json "},
-                body: JSON.stringify(dados)
-            }).then((response) => {
-                if (!response.ok) {
-                    throw new Error(`Erro ao tentar atualiar a Subunidade: ${response.error}`);
-                }
-                return response.json();
-            }).then((data) => {
-                console.log(data);
-            }).catch((error) => {
-                console.log(`Ocorreu um erro ao tentar atualiar a Subunidade: ${error}`);
             });
         }
     }
@@ -651,6 +693,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
         });
     }
 
+    // ================================
+    // Rotina para a gestão de Usuários
+    // ================================
     if (urlParam === "/adm/usuarios") {
         const btnAdicionar = document.querySelector(".btn_adicionar");
         const frmUnidade = document.querySelector(".frmUnidade");
@@ -659,9 +704,31 @@ document.addEventListener("DOMContentLoaded", function(event) {
         const btnCancelarUnidade = document.querySelector(".cancelarUnidade");
         const dialogPainel = document.querySelector(".dialogPainel");
         const listaUnidades = document.querySelector(".listaUnidades");
-        const selectSubunidades = document.querySelector("#subunidade");
+        const selectSubunidades = document.querySelector("#subunidade_id");
         
         selectSubunidades.innerHTML = "<option>Selecione a subunidade de lotação...</option>";
+
+        // Função para adicionar novo usuário
+        function cadastrarUsuario(usuario) {
+            fetch(`${apiUrl}/usuarios`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                }, 
+                body: usuario
+            }).then((response) => {
+                if (!response.ok) {
+                    console.error(`Erro ao tentar cadastrar usuário: ${response.error}`);
+                }
+
+                return response.json();
+            }).then((data) => {
+                console.log(data);
+                renderizarUsuarios();
+            }).catch((error) => {
+                console.error(`Ocorreu um erro: ${error}`);
+            });
+        }
 
         // Carregamento dos options da lista de subunidades do formulário de cadastro de usuário
         carregarSubunidadesTotalInfo().then((subunidades) => {
@@ -676,8 +743,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
         function renderizarUsuarios() {
             carregarUsuariosTotalInfo().then((usuarios) => {
+                console.log(usuarios);
                 usuarios.forEach((usuario) => {
-                    console.log(usuario);
+                    // console.log(usuario);
                     
                     // Formatando data em dd/mm/aaaa
                     const data = new Date(usuario.data_nascimento);
@@ -714,12 +782,15 @@ document.addEventListener("DOMContentLoaded", function(event) {
             dialogPainel.showModal();
         });
 
+        // Cadastrar usuário no banco
         btnCadastrarUnidade.addEventListener("click", function(event) {
             event.preventDefault();
             const formData = new FormData(frmUnidade);
             const dados = Object.fromEntries(formData.entries());
-            dados.permissoes = formData.getAll("permissoes");
-            console.log(dados);
+            // dados.permissoes = formData.getAll("permissoes");
+            console.log(JSON.stringify(dados));
+
+            cadastrarUsuario(JSON.stringify(dados));
 
             frmUnidade.reset();
             dialogPainel.close();
