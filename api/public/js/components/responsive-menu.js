@@ -121,7 +121,8 @@ class ResponsiveMenu extends HTMLElement {
               <a href="#" class="dropdown-toggle"><span>Administrativo ⤵<span></a>
               <ul class="dropdown-menu">
                 <li><a href="https://siccr.guiadigitalsm.com.br/salas" target="_blank">Abrir agendamento</a></li>
-                <li><a href="/solicitacoes-de-agendamento">Solicitações de agendamento</a></li>
+                <li><a href="/solicitar-agendamento">Solicitar agendamento</a></li>
+                <li class="diretor"><a href="/solicitacoes-de-agendamento">Solicitações de agendamento</a></li>
                 <hr>
                 <li><a href="/gerenciamento-de-usuarios">Gerenciamento de usuários</a></li>
               </ul>
