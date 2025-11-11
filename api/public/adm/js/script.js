@@ -171,7 +171,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
             event.preventDefault();
             if (event.target.classList.contains("unidade")) {
                 btnAtualizarUnidade.style.display = "none";
-                btnAtualizarUnidade.setAttribute("disabled", true);
+                btnAtualizarUnidade.disabled = true;
+                btnCadastrarUnidade.disabled = false;
                 btnCadastrarUnidade.style.display = "inline-block";
                 document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastrar unidade";
                 dialogPainel.showModal();
@@ -248,7 +249,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
         listaUnidades.addEventListener("click", function(event) {
             if (event.target.classList.contains("editar")) {
                 btnCadastrarUnidade.style.display = "none";
-                btnCadastrarUnidade.setAttribute("disabled", true);
+                btnCadastrarUnidade.disabled = true;
+                btnAtualizarUnidade.disabled = false;
                 btnAtualizarUnidade.style.display = "inline-block";
                 document.querySelector(".dialogPainel fieldset legend").textContent = "Editar unidade";
                 // Aplicar os values nos campos de formulário com os valore da unidade
@@ -289,7 +291,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 let selectUnidade = document.querySelector("#unidade_id");
                 let selectPredio = document.querySelector("#predio_id");
                 btnCadastrarUnidade.style.display = "none";
-                btnCadastrarUnidade.setAttribute("disabled", true);
+                btnCadastrarUnidade.disabled = true;
+                btnAtualizarUnidade.disabled = false;
                 btnAtualizarUnidade.style.display = "inline-block";
                 document.querySelector(".dialogPainel fieldset legend").textContent = "Editar subunidade";
                 // Aplicar os values nos campos de formulário com os valores da subunidade
@@ -433,7 +436,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 selectUnidades.innerHTML = "<option value=''>Selecione a unidade...</option>";
                 selectPredios.innerHTML = "<option value=''>Selecione o prédio...</option>";
                 btnAtualizarUnidade.style.display = "none";
-                btnAtualizarUnidade.setAttribute("disabled", true);
+                btnAtualizarUnidade.disabled = true;
+                btnCadastrarUnidade.disabled = false;
                 btnCadastrarUnidade.style.display = "inline-block";
 
                 console.log(selectUsuarios);
@@ -625,7 +629,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
             if (event.target.classList.contains("predio")) {
                 selectUnidades.innerHTML = `<option value="">Selecinone a unidade...</option>`
                 btnAtualizarUnidade.style.display = "none";
-                btnAtualizarUnidade.setAttribute("disabled", true);
+                btnAtualizarUnidade.disabled = true;
+                btnCadastrarUnidade.disabled = false;
                 btnCadastrarUnidade.style.display = "inline-block";
                 document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastro de prédio";
 
@@ -671,7 +676,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
         listaUnidades.addEventListener("click", function(event) {
             if (event.target.classList.contains("editar")) {
                 btnCadastrarUnidade.style.display = "none";
-                btnCadastrarUnidade.setAttribute("disabled", true);
+                btnCadastrarUnidade.disabled = true;
+                btnAtualizarUnidade.disabled = false;
                 btnAtualizarUnidade.style.display = "inline-block";
                 
                 selectUnidades.innerHTML = `<option value=''>Selecione a unidade...</option>`;
