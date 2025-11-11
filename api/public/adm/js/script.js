@@ -30,7 +30,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
         try {
             const response = await fetch(`${apiUrl}/subunidades/total-info`);
             const subunidades = await response.json();
-            console.log(subunidades.data);
             return subunidades.data;
         } catch(error) {
             console.error("Erro ao tentar carregar as SUBUNIDADES: ", error);
@@ -297,13 +296,14 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 document.querySelector(".dialogPainel fieldset legend").textContent = "Editar subunidade";
                 // Aplicar os values nos campos de formulário com os valores da subunidade
                 document.querySelector("#subunidade_id").value = event.target.getAttribute("data-subunidade_id")
-                document.querySelector("#codigo").value = event.target.getAttribute("data-subunidade_codigo");
+                document.querySelector("#subunidade_codigo").value = event.target.getAttribute("data-subunidade_codigo");
                 document.querySelector("#subunidade_nome").value = event.target.getAttribute("data-subunidade_nome");
                 document.querySelector("#subunidade_email").value = event.target.getAttribute("data-subunidade_email");
                 document.querySelector("#subunidade_sigla").value = event.target.getAttribute("data-subunidade_sigla");
                 
                 // Listando usuários para seleção de CHEFIA
                 carregarUsuarios().then((usuarios) => {
+                    selectChefe.innerHTML = "";
                     usuarios.forEach((usuario) => {
                         selectChefe.innerHTML += `
                             <option value="${usuario.user_id}">${usuario.nome}</option>
@@ -315,6 +315,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
                 // Listando unidades para a seleção da UNIDADE
                 carregarUnidades().then((unidades) => {
+                    selectUnidade.innerHTML = "";
                     unidades.forEach((unidade) => {
                         selectUnidade.innerHTML += `
                             <option value="${unidade.unidade_id}">${unidade.unidade}</option>
@@ -325,6 +326,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 });
 
                 carregarPredios().then((predios) => {
+                    selectPredio.innerHTML = "";
                     predios.forEach((predio) => {
                         selectPredio.innerHTML += `
                             <option value="${predio.predio_id}">${predio.predio}</option>
@@ -366,12 +368,12 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     const divElement  = document.createElement("div");
                     divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
                     divElement.innerHTML = `
-                        <div class="dado flex flex--2">${subunidade.subunidade_codigo}</div>
-                        <div class="dado flex flex--8">${subunidade.subunidade_nome}</div>
+                        <div class="dado flex flex--1">${subunidade.subunidade_codigo}</div>
+                        <div class="dado flex flex--6">${subunidade.subunidade_nome}</div>
                         <div class="dado flex flex--6">${subunidade.email}</div>
-                        <div class="dado flex flex--2">${subunidade.subunidade_sigla}</div>
+                        <div class="dado flex flex--3">${subunidade.subunidade_sigla}</div>
                         <div class="dado flex flex--2">${subunidade.unidade_sigla}</div>
-                        <div class="dado flex flex--4">${subunidade.nome}</div>
+                        <div class="dado flex flex--3">${subunidade.nome}</div>
                         <div class="dado flex flex--2">${subunidade.predio}</div>
                         <div class="dado flex flex--1 font--size--20">
                             <i class="bi bi-pencil-square editar" title="Editar" data-subunidade_id="${subunidade.subunidade_id}" data-subunidade_codigo="${subunidade.subunidade_codigo}" data-subunidade_nome="${subunidade.subunidade_nome}" data-subunidade_email="${subunidade.email}" data-subunidade_sigla="${subunidade.subunidade_sigla}" data-subunidade_chefe="${subunidade.chefe}" data-unidade_id="${subunidade.unidade_id}" data-predio_id="${subunidade.predio_id}"></i>
@@ -388,16 +390,13 @@ document.addEventListener("DOMContentLoaded", function(event) {
             const dadosAtualizar = {
                 subunidade_id,
                 subunidade_nome,
-                codigo,
+                subunidade_codigo,
                 predio_id,
                 subunidade_email,
                 unidade_id,
                 subunidade_sigla,
                 chefe
             };
-
-            //console.log(dados);
-            console.log(dados.subunidade_id);
 
             try {
                 await fetch(`${apiUrl}/subunidades/${dados.subunidade_id}`, {
@@ -416,6 +415,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     // Após realizar a atualização da Subunidade, renderiza novamente a lista
                     console.log(data);
                     renderizarSubunidades();
+                    frmUnidade.reset();
+                    dialogPainel.close();
                 }).catch((error) => {
                     console.error(`Erro ao tentar atualizar Subunidade: ${error}`);
                 })
@@ -485,7 +486,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
             event.preventDefault();
             const formData = new FormData(frmUnidade);
             const objDados = Object.fromEntries(formData.entries());
-            console.log(JSON.stringify(objDados));
+            // console.log(JSON.stringify(objDados));
             cadastrarSubunidade(objDados);
         });
 
@@ -493,9 +494,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
         async function cadastrarSubunidade(dados) {
             listaUnidades.innerHTML = ""; // Limpa a lista de dados para renderizar novamente
             
-            console.log(dados);
+            if (isNaN(dados.chefe)) dados.chefe = null;
 
-            if (!dados.subunidade_nome || !dados.codigo) {
+            if (!dados.subunidade_nome || !dados.subunidade_codigo) {
                 alert("Os campos Código da Subunidade e Nome da Subunidade devem ser preenchidos!");
                 return;
             }

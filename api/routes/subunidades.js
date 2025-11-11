@@ -5,12 +5,11 @@ const router = express.Router();
 
 // Rota para adicionar nova Subunidade
 router.post("/", async (req, res) => {
-    const { codigo, subunidade_nome, subunidade_sigla, unidade_id, predio_id, email, chefe } = req.body;
-    console.log(codigo);
+    let { subunidade_codigo, subunidade_nome, subunidade_sigla, unidade_id, predio_id, subunidade_email, chefe } = req.body;
 
     try {
         // Verifica se não está faltando nenhum campo
-        if (!codigo || !subunidade_nome || !unidade_id) {
+        if (!subunidade_codigo || !subunidade_nome || !unidade_id) {
             return res.status(400).json({
                 status: "error",
                 message: "Os campos CÓDIGO, SUBUNIDADE e UNIDADE devem ser preenchidos.",
@@ -18,9 +17,14 @@ router.post("/", async (req, res) => {
             });
         }
 
+        // Formata o código da unidade com . ao invés de , caso seja necessário.
+        if (subunidade_codigo.split(",").length > 1) {
+            subunidade_codigo = subunidade_codigo.replace(",", ".");
+        }
+
         // Prepara a query para cadastrar a subunidade
-        const query = "insert into subunidades (codigo, subunidade_nome, subunidade_sigla, unidade_id, predio_id, email, chefe) values ($1, $2, $3, $4, $5, $6, $7) returning *";
-        const values = [codigo, subunidade_nome, subunidade_sigla, unidade_id, predio_id, email, chefe];
+        const query = "insert into subunidades (subunidade_codigo, subunidade_nome, subunidade_sigla, unidade_id, predio_id, email, chefe) values ($1, $2, $3, $4, $5, $6, $7) returning *";
+        const values = [subunidade_codigo, subunidade_nome, subunidade_sigla, unidade_id, predio_id, subunidade_email, chefe];
 
         // Cadastra a unidade
         const result = await pool.query(query, values);
@@ -63,7 +67,7 @@ router.get("/", async (req, res) => {
 
 // Rota para listar as subunidades com mais detalhes de outras tabelas
 router.get("/total-info", async(req, res) => {
-    const result = await pool.query(`select * from subunidades inner join unidades on subunidades.unidade_id = unidades.unidade_id inner join predios on subunidades.predio_id = predios.predio_id inner join users on subunidades.chefe = users.user_id order by subunidades.subunidade_nome`);
+    const result = await pool.query(`select * from subunidades inner join unidades on subunidades.unidade_id = unidades.unidade_id inner join predios on subunidades.predio_id = predios.predio_id order by subunidades.subunidade_nome`);
 
     res.status(200).json({
         status: "success",
@@ -76,9 +80,9 @@ router.get("/total-info", async(req, res) => {
 router.put("/:idsubunidade", async (req, res) => {
     // Fazer a regra de negócio para atualização da unidade
     const subunidade_id = req.params.idsubunidade;
-    const { codigo, subunidade_nome, subunidade_sigla, unidade_id, predio_id, subunidade_email, chefe } = req.body;
+    const { subunidade_codigo, subunidade_nome, subunidade_sigla, unidade_id, predio_id, subunidade_email, chefe } = req.body;
 
-    const result = await pool.query("update subunidades set subunidade_codigo = $1, subunidade_nome = $2, subunidade_sigla = $3, unidade_id = $4, predio_id = $5, email = $6, chefe = $7 where subunidade_id = $8 returning *", [codigo, subunidade_nome, subunidade_sigla, unidade_id, predio_id, subunidade_email, chefe, subunidade_id]);
+    const result = await pool.query("update subunidades set subunidade_codigo = $1, subunidade_nome = $2, subunidade_sigla = $3, unidade_id = $4, predio_id = $5, email = $6, chefe = $7 where subunidade_id = $8 returning *", [subunidade_codigo, subunidade_nome, subunidade_sigla, unidade_id, predio_id, subunidade_email, chefe, subunidade_id]);
     
     res.status(200).json({
         status: "success",
