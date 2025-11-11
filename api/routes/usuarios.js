@@ -112,7 +112,7 @@ router.post("/", async (req, res) => {
 // Rota para Atualizar usuário
 router.put("/:id", async (req, res) => {
     const user_id = req.params.id;
-    const { nome, email, siape, data_nascimento, subunidade_id, whatsapp, permissao, updatedat, updatedforuser } = req.body;
+    const { nome, email, siape, data_nascimento, subunidade_id, whatsapp, permissao } = req.body;
 
     try {
         const userExist = await pool.query("select * from users where user_id = $1", [user_id]);
@@ -124,8 +124,8 @@ router.put("/:id", async (req, res) => {
             });
         }
 
-        const query = "update users set nome = $1, email = $2, siape = $3, data_nascimento = $4, subunidade_id = $5, whatsapp = $6, permissao = $7, updatedat = $8, updatedforuser = $9 where user_id = $10 returning *";
-        const values = [nome, email, siape, data_nascimento, subunidade_id, whatsapp, permissao, updatedat, updatedforuser, user_id];
+        const query = "update users set nome = $1, email = $2, siape = $3, data_nascimento = $4, subunidade_id = $5, whatsapp = $6, permissao = $7 where user_id = $8 returning *";
+        const values = [nome, email, siape, data_nascimento, subunidade_id, whatsapp, permissao, user_id];
         const result = await pool.query(query, values);
 
         return res.status(201).json({

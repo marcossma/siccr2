@@ -346,8 +346,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     const objData = Object.fromEntries(formData.entries());
                     // atualizarSubunidade(JSON.stringify(objData));
                     atualizarSubunidade(objData);
-
-            
                 });
 
                 dialogPainel.showModal();
@@ -736,7 +734,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
                 return response.json();
             }).then((data) => {
-                console.log(data);
                 renderizarUsuarios();
             }).catch((error) => {
                 console.error(`Ocorreu um erro: ${error}`);
@@ -756,9 +753,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
         function renderizarUsuarios() {
             carregarUsuariosTotalInfo().then((usuarios) => {
-                console.log(usuarios);
+                listaUnidades.innerHTML = "";
                 usuarios.forEach((usuario) => {
-                    // console.log(usuario);
                     
                     // Formatando data em dd/mm/aaaa
                     const data = new Date(usuario.data_nascimento);
@@ -767,16 +763,16 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     const divElement = document.createElement("div");
                     divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
                     divElement.innerHTML += `
-                        <div class="dado flex flex--3">${usuario.nome}</div>
-                        <div class="dado flex flex--3">${usuario.email}</div>
+                        <div class="dado flex flex--5">${usuario.nome}</div>
+                        <div class="dado flex flex--4">${usuario.email}</div>
                         <div class="dado flex flex--2">${usuario.siape}</div>
                         <!--div class="dado flex flex--3">${usuario.data_nascimento}</div-->
                         <div class="dado flex flex--3">${dataFormatada}</div>
-                        <div class="dado flex flex--2">${usuario.subunidade_nome}</div>
+                        <div class="dado flex flex--2">${usuario.subunidade_sigla}</div>
                         <div class="dado flex flex--2">${usuario.whatsapp}</div>
                         <div class="dado flex flex--4">${usuario.permissao}</div>
                         <div class="dado flex flex--2 font--size--20">
-                            <i class="bi bi-pencil-square editar" title="Editar" data-id="${usuario.user_id}" data-nome="${usuario.nome}" data-email="${usuario.email}" data-siape="${usuario.siape}" data-data_nascimento="${usuario.data_nascimento}" data-subunidade_id="${usuario.subunidade_id}" data-whatsapp="${usuario.whatsapp}" data-permissao="${usuario.permissao}"></i>
+                            <i class="bi bi-pencil-square editar" title="Editar" data-user_id="${usuario.user_id}" data-nome="${usuario.nome}" data-email="${usuario.email}" data-siape="${usuario.siape}" data-data_nascimento="${usuario.data_nascimento}" data-subunidade_id="${usuario.subunidade_id}" data-whatsapp="${usuario.whatsapp}" data-permissao="${usuario.permissao}"></i>
                             <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
                         </div>
                     `;
@@ -786,12 +782,44 @@ document.addEventListener("DOMContentLoaded", function(event) {
             });
         }
 
+        async function atualizarUsuario(dados) {
+            try {
+                await fetch(`${apiUrl}/usuarios/${dados.user_id}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(dados)
+                }).then((response) => {
+                    if (!response.ok) {
+                        console.error(`Erro ao tentar atualizar Usuário: ${response.error}`);
+                    }
+
+                    return response.json();
+                }).then((data) => {
+                    // Após realizar a atualização da Subunidade, renderiza novamente a lista
+                    renderizarUsuarios();
+                    frmUnidade.reset();
+                    dialogPainel.close();
+                }).catch((error) => {
+                    console.error(`Erro ao tentar atualizar Usuário: ${error}`);
+                })
+            } catch (error) {
+                console.log(`Erro ao tentar atualizar Usuário: ${error}`);
+            }
+        }
+
         renderizarUsuarios();
 
         // Listener dos botões USUÁRIOS
         btnAdicionar.addEventListener("click", function(event) {
             event.preventDefault();
             document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastrar novo usuário";
+            btnCadastrarUnidade.style.display = "inline-block";
+            btnCadastrarUnidade.disabled = false;
+            btnAtualizarUnidade.style.display = "none";
+            btnAtualizarUnidade.disabled = true;
+            document.querySelector(".senha").style.display = "block";
             dialogPainel.showModal();
         });
 
@@ -818,7 +846,41 @@ document.addEventListener("DOMContentLoaded", function(event) {
         listaUnidades.addEventListener("click", function(event) {
             if (event.target.classList.contains("editar")) {
                 const dadosEl = event.target.dataset;
-                console.log(dadosEl.permissao);
+
+                document.querySelector(".dialogPainel fieldset legend").textContent = "Editar usuário";
+                btnCadastrarUnidade.style.display = "none";
+                btnCadastrarUnidade.disabled = true;
+                btnAtualizarUnidade.style.display = "inline-block";
+                btnAtualizarUnidade.disabled = false;
+
+                document.querySelector("#user_id").value = dadosEl.user_id;
+                document.querySelector("#nome").value = dadosEl.nome;
+                document.querySelector("#email").value = dadosEl.email;
+                document.querySelector("#siape").value = dadosEl.siape;
+                document.querySelector(".senha").style.display = "none";
+                document.querySelector("#data_nascimento").value = dadosEl.data_nascimento.split("T")[0]; // Formata a data de nascimento para poder inserir no campo
+                document.querySelector("#whatsapp").value = dadosEl.whatsapp;
+                document.querySelector("#subunidade_id").value = dadosEl.subunidade_id;
+                
+                // Aqui obetemos todos os input radio permissao para fazermos um loop e marcarmos o correspondente 
+                const radioPermissaoEl = document.querySelectorAll("input[name='permissao']");
+
+                radioPermissaoEl.forEach((radio) => {
+                    if (radio.value === dadosEl.permissao) {
+                        radio.checked = true;
+                    }
+                });
+
+                btnAtualizarUnidade.addEventListener("click", function(event) {
+                    event.preventDefault();
+                    console.log("Clicado!");
+
+                    const formData = new FormData(frmUnidade);
+                    const objData = Object.fromEntries(formData.entries());
+                    // atualizarSubunidade(JSON.stringify(objData));
+                    atualizarUsuario(objData);
+                });
+
                 dialogPainel.showModal();
             }
         });
