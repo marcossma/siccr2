@@ -124,7 +124,7 @@ class ResponsiveMenu extends HTMLElement {
                 <li><a href="/solicitar-agendamento">Solicitar agendamento</a></li>
                 <li class="diretor"><a href="/solicitacoes-de-agendamento">Solicitações de agendamento</a></li>
                 <hr>
-                <li><a href="/gerenciamento-de-usuarios">Gerenciamento de usuários</a></li>
+                <li class="diretor-chefe"><a href="/gerenciamento-de-usuarios">Gerenciamento de usuários</a></li>
               </ul>
             </li>
             <li class="dropdown">
@@ -167,6 +167,8 @@ class ResponsiveMenu extends HTMLElement {
 
       // Obtém o token caso exista (usuário logado)
       const token = localStorage.getItem("siccr_token");
+      const permissao = localStorage.getItem("permissao");
+      console.log("Permissão: ", permissao);
 
       // Referências aos elementos
       const menuToggle = shadow.querySelector('.menu-toggle');
@@ -179,6 +181,19 @@ class ResponsiveMenu extends HTMLElement {
       } else {
         navbar.style.display = "none";
       }
+
+      const diretorEl = shadow.querySelectorAll(".diretor");
+      const diretor_chefeEl = shadow.querySelectorAll(".diretor-chefe");
+      console.log(diretorEl);
+      console.log(diretor_chefeEl);
+
+      diretorEl.forEach((elemento) => {
+        if (permissao !== "diretor") elemento.style.display = "none";
+      });
+
+      diretor_chefeEl.forEach((elemento) => {
+        if ((permissao !== "diretor") && (permissao !== "chefe")) elemento.style.display = "none";
+      });
 
       // Alterna o menu responsivo ao clicar no botão ☰
       menuToggle.addEventListener('click', () => {
