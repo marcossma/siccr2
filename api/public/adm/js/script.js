@@ -267,7 +267,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 return;
             }
         });
-    }
+    } // Fim /adm/unidades
 
     // ====================================
     // Rotina para a gestão de subunidades
@@ -517,7 +517,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 console.log(`Ocorreu um erro ao tentar cadastrar nova subunidade: ${error}`);
             });
         }
-    }
+    } // Fim /adm/subunidades
 
     // ================================
     // Rotina para a gestão de prédios
@@ -702,11 +702,12 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 dialogPainel.showModal();
             }
         });
-    }
+    } // Fim /adm/predios
 
     // ================================
     // Rotina para a gestão de Usuários
     // ================================
+    
     if (urlParam === "/adm/usuarios") {
         const btnAdicionar = document.querySelector(".btn_adicionar");
         const frmUnidade = document.querySelector(".frmUnidade");
@@ -884,5 +885,42 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 dialogPainel.showModal();
             }
         });
-    }
+    } // Fim /adm/usuarios
+
+    // ================================
+    // Rotina para a gestão de Usuários
+    // ================================
+    if (urlParam === "/adm/salas") {
+        console.log("Salas");
+
+        const btnAdicionar = document.querySelector(".btn_adicionar");
+        const frmUnidade = document.querySelector(".frmUnidade");
+        const btnCadastrarUnidade = document.querySelector(".cadastrarUnidade");
+        const btnAtualizarUnidade = document.querySelector(".atualizarUnidade");
+        const btnCancelarUnidade = document.querySelector(".cancelarUnidade");
+        const dialogPainel = document.querySelector(".dialogPainel");
+        const listaUnidades = document.querySelector(".listaUnidades");
+        const selectSubunidades = document.querySelector("#subunidade_id");
+
+        btnAdicionar.addEventListener("click", function(event) {
+            event.preventDefault();
+            document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastrar nova sala";
+            btnCadastrarUnidade.style.display = "inline-block";
+            btnCadastrarUnidade.disabled = false;
+            btnAtualizarUnidade.style.display = "none";
+            btnAtualizarUnidade.disabled = true;
+            dialogPainel.showModal();
+        });
+
+        btnCancelarUnidade.addEventListener("click", function(event) {
+            event.preventDefault();
+            console.log("Cancelar");
+            frmUnidade.reset();
+            dialogPainel.close();
+        })
+
+
+    } // Fim /adm/salas
+
+
 });
