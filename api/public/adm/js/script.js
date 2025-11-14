@@ -84,6 +84,18 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
     }
 
+    // Função para carregar SALAS
+    async function carregarSalas() {
+        try {
+            const response = await fetch(`${apiUrl}/salas`);
+            const salas = await response.json();
+
+            return salas.data;
+        } catch(error) {
+            console.error(`Erro ao tentar carregar as salas: ${error}`);
+        }
+    }
+
     // =================================
     // Rotina para o gestão de unidades
     // =================================
@@ -887,9 +899,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
         });
     } // Fim /adm/usuarios
 
-    // ================================
-    // Rotina para a gestão de Usuários
-    // ================================
+    // =============================
+    // Rotina para a gestão de Salas
+    // =============================
     if (urlParam === "/adm/salas") {
         console.log("Salas");
 
@@ -902,6 +914,34 @@ document.addEventListener("DOMContentLoaded", function(event) {
         const listaUnidades = document.querySelector(".listaUnidades");
         const selectSubunidades = document.querySelector("#subunidade_id");
 
+        // Função para renderizar Salas
+        function renderizarSalas() {
+            carregarSalas().then((salas) => {
+                listaUnidades.innerHTML = "";
+                salas.forEach((sala) => {
+
+                    const divElement = document.createElement("div");
+                    divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
+                    divElement.innerHTML += `
+                        <div class="dado flex flex--2">${sala.sala_nome}</div>
+                        <div class="dado flex flex--2">${sala.predio_id}</div>
+                        <div class="dado flex flex--4">${sala.subunidade_id}</div>
+                        <div class="dado flex flex--4">${sala.sala_descricao}</div>
+                        <div class="dado flex flex--2">${!sala.is_agendavel ? "Não": "Sim"}</div>
+                        <div class="dado flex flex--2 font--size--20">
+                            <i class="bi bi-pencil-square editar" title="Editar" data-sala_id="${sala.sala_id}" data-sala_nome="${sala.sala_nome}" data-predio_id="${sala.predio_id}" data-subunidade_id="${sala.subunidade_id}" data-sala_descricao="${sala.sala_descricao}" data-is_agendavel="${sala.is_agendavel}"></i>
+                            <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
+                        </div>
+                    `;
+    
+                    listaUnidades.appendChild(divElement);
+                });
+            });
+        }
+
+        renderizarSalas();
+
+        // Botão canto superior direito da tela "Abre formulário de cadastro de sala"
         btnAdicionar.addEventListener("click", function(event) {
             event.preventDefault();
             document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastrar nova sala";
@@ -912,12 +952,36 @@ document.addEventListener("DOMContentLoaded", function(event) {
             dialogPainel.showModal();
         });
 
+        // Botão para "Cancelar" do form de Cadastro/Atualização de sala
         btnCancelarUnidade.addEventListener("click", function(event) {
             event.preventDefault();
             console.log("Cancelar");
             frmUnidade.reset();
             dialogPainel.close();
-        })
+        });
+
+        listaUnidades.addEventListener("click", function(event) {
+            if (event.target.classList.contains("editar")) {
+                const dadosEl = event.target.dataset;
+                
+                document.querySelector(".dialogPainel fieldset legend").textContent = "Editar sala";
+                btnCadastrarUnidade.style.display = "none";
+                btnCadastrarUnidade.disabled = true;
+                btnAtualizarUnidade.style.display = "inline-block";
+                btnAtualizarUnidade.disabled = false;
+
+                document.querySelector("#sala_id").value = dadosEl.sala_id;
+                document.querySelector("#sala_nome").value = dadosEl.sala_nome;
+                document.querySelector("#predio_id").value = dadosEl.predio_id;
+                document.querySelector("#subunidade_id").value = dadosEl.subunidade_id;
+                document.querySelector("#sala_descricao").value = dadosEl.sala_descricao;
+                // document.querySelector("is_agendavel").value = dadosEl.is_agendavel;
+
+                dialogPainel.showModal();
+            }
+        });
+
+        
 
 
     } // Fim /adm/salas

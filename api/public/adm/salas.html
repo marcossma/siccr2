@@ -66,14 +66,15 @@
                     <div class="titulo flex flex--2">Sala</div>
                     <div class="titulo flex flex--2">Prédio</div>
                     <div class="titulo flex flex--4">Departamento</div>
+                    <div class="titulo flex flex--4">Descrição</div>
                     <div class="titulo flex flex--2">Agendável</div>
                     <div class="titulo flex flex--2">Ações</div>
                 </div>
-            </section>
 
-            <div class="listaUnidades">
-                <!-- As salas serã carregadas dinamicamente do banco de dados -->
-            </div>
+                <div class="listaUnidades">
+                    <!-- As salas serã carregadas dinamicamente do banco de dados -->
+                </div>
+            </section>
             
         </main>
         <footer>Rodapé</footer>
@@ -87,32 +88,36 @@
             <form class="frmCadastroPainel frmUnidade flex flex--column gap--15">
                 <div class="row">
                     <input type="hidden" name="sala_id" id="sala_id">
-                    <input type="text" name="sala" id="sala" class="formInput width--100" placeholder="Digite a identificação da sala">
-                    <label class="painelLabel" for="nome">Ex.: 106, 4303-A</label>
+                    <input type="text" name="sala_nome" id="sala_nome" class="formInput width--100" placeholder="Digite a identificação da sala">
+                    <label class="painelLabel" for="sala_nome">Ex.: 106, 4303-A</label>
                 </div>
 
                 <div class="row">
-                    <select name="predio" id="predio" class="formInput width--100">
+                    <select name="predio_id" id="predio_id" class="formInput width--100">
                         <!-- Options serão adicionados dinamicamente -->
                     </select>
-                    <label class="painelLabel" for="predio">Selecione o prédio...</label>
+                    <label class="painelLabel" for="predio_id">Selecione o prédio...</label>
                 </div>
 
                 <div class="row">
-                    <select name="departamento" id="departamento" class="formInput width--100">
+                    <select name="subunidade_id" id="subunidade_id" class="formInput width--100">
                         <!-- Options serão adicionados dinamicamente -->
                     </select>
-                    <label class="painelLabel" for="predio">Selecione o departamento...</label>
+                    <label class="painelLabel" for="subunidade_id">Selecione a subunidade...</label>
+                </div>
+
+                <div class="row">
+                    <textarea name="sala_descricao" id="sala_descricao" class="formInput width--100" placeholder="Digite alguma observação/descrição sobre a sala... (opcional)"></textarea>
                 </div>
 
                 <div class="row flex justify--content--center align--items--center gap--10">
                     <label for="" class="formLabel">Sala agendável: </label>
                     <div class="flex align--items--center justify--content--center gap--20">
                         <span>
-                            <input type="radio" name="agendavel" value="0" checked> Não
+                            <input type="radio" name="is_agendavel" value="0" checked> Não
                         </span>
                         <span>
-                            <input type="radio" name="agendavel" value="1"> Sim
+                            <input type="radio" name="is_agendavel" value="1"> Sim
                         </span>
                     </div>
                 </div>
