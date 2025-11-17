@@ -372,18 +372,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     document.querySelector("#predio_id").value = event.target.getAttribute("data-predio_id");
                 });
 
-
-
-                btnAtualizarUnidade.addEventListener("click", function(event) {
-                    event.preventDefault();
-                    console.log("Clicado!");
-
-                    const formData = new FormData(frmUnidade);
-                    const objData = Object.fromEntries(formData.entries());
-                    // atualizarSubunidade(JSON.stringify(objData));
-                    atualizarSubunidade(objData);
-                });
-
                 dialogPainel.showModal();
             }
 
@@ -404,8 +392,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     divElement.innerHTML = `
                         <div class="dado flex flex--1">${subunidade.subunidade_codigo}</div>
                         <div class="dado flex flex--6">${subunidade.subunidade_nome}</div>
-                        <div class="dado flex flex--6">${subunidade.email}</div>
-                        <div class="dado flex flex--3">${subunidade.subunidade_sigla}</div>
+                        <div class="dado flex flex--6">${subunidade.subunidade_email}</div>
+                        <div class="dado flex flex--3">${subunidade.subunidade_sigla.toUpperCase()}</div>
                         <div class="dado flex flex--2">${subunidade.unidade_sigla}</div>
                         <div class="dado flex flex--3">${subunidade.nome}</div>
                         <div class="dado flex flex--2">${subunidade.predio}</div>
@@ -421,17 +409,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
         }
 
         async function atualizarSubunidade(dados) {
-            const dadosAtualizar = {
-                subunidade_id,
-                subunidade_nome,
-                subunidade_codigo,
-                predio_id,
-                subunidade_email,
-                unidade_id,
-                subunidade_sigla,
-                chefe
-            };
-
             try {
                 await fetch(`${apiUrl}/subunidades/${dados.subunidade_id}`, {
                     method: "PUT",
@@ -520,8 +497,17 @@ document.addEventListener("DOMContentLoaded", function(event) {
             event.preventDefault();
             const formData = new FormData(frmUnidade);
             const objDados = Object.fromEntries(formData.entries());
-            // console.log(JSON.stringify(objDados));
             cadastrarSubunidade(objDados);
+        });
+
+        btnAtualizarUnidade.addEventListener("click", function(event) {
+            event.preventDefault();
+            console.log("Clicado!");
+
+            const formData = new FormData(frmUnidade);
+            const objData = Object.fromEntries(formData.entries());
+            console.log(objData);
+            atualizarSubunidade(objData);
         });
 
         // Função para Cadastrar nova SUBUNIDADE
@@ -790,9 +776,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
         function renderizarUsuarios() {
             carregarUsuariosTotalInfo().then((usuarios) => {
+                console.log("Começando...");
+                console.log(usuarios);
                 listaUnidades.innerHTML = "";
                 usuarios.forEach((usuario) => {
-                    
                     // Formatando data em dd/mm/aaaa
                     const data = new Date(usuario.data_nascimento);
                     const dataFormatada = data.toLocaleDateString("pt-BR");
@@ -807,7 +794,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                         <div class="dado flex flex--3">${dataFormatada}</div>
                         <div class="dado flex flex--2">${usuario.subunidade_sigla}</div>
                         <div class="dado flex flex--2">${usuario.whatsapp}</div>
-                        <div class="dado flex flex--4">${usuario.permissao}</div>
+                        <div class="dado flex flex--4">${usuario.permissao.toUpperCase()}</div>
                         <div class="dado flex flex--2 font--size--20">
                             <i class="bi bi-pencil-square editar" title="Editar" data-user_id="${usuario.user_id}" data-nome="${usuario.nome}" data-email="${usuario.email}" data-siape="${usuario.siape}" data-data_nascimento="${usuario.data_nascimento}" data-subunidade_id="${usuario.subunidade_id}" data-whatsapp="${usuario.whatsapp}" data-permissao="${usuario.permissao}"></i>
                             <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
@@ -950,7 +937,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                         <div class="dado flex flex--2">${sala.sala_nome}</div>
                         <div class="dado flex flex--2">${sala.predio}</div>
                         <div class="dado flex flex--4">${sala.subunidade_nome}</div>
-                        <div class="dado flex flex--4">${sala.sala_tipo_nome}</div>
+                        <div class="dado flex flex--4">${sala.sala_tipo_nome.toUpperCase()}</div>
                         <div class="dado flex flex--4">${sala.sala_descricao}</div>
                         <div class="dado flex flex--2">${!sala.is_agendavel ? "Não": "Sim"}</div>
                         <div class="dado flex flex--2 font--size--20">
@@ -1008,7 +995,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
     
                     return response.json();
                 }).then((data) => {
-                    console.log(data);
                     renderizarSalas();
                     frmUnidade.reset();
                     dialogPainel.close();
@@ -1051,7 +1037,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 selectSalasTipo.innerHTML = `<option value="">Selecione o tipo de sala...</option>`;
                 salas_tipo.forEach((sala_tipo) => {
                     selectSalasTipo.innerHTML += `
-                        <option value="${sala_tipo.sala_tipo_id}">${sala_tipo.sala_tipo_nome}</option>
+                        <option value="${sala_tipo.sala_tipo_id}">${sala_tipo.sala_tipo_nome.toUpperCase()}</option>
                     `;
                 });
             });
@@ -1170,7 +1156,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
                     divElement.innerHTML += `
                         <div class="dado flex flex--2">${sala_tipo.sala_tipo_id}</div>
-                        <div class="dado flex flex--10">${sala_tipo.sala_tipo_nome}</div>
+                        <div class="dado flex flex--10">${sala_tipo.sala_tipo_nome.toUpperCase()}</div>
                         
                         <div class="dado flex flex--2 font--size--20">
                             <i class="bi bi-pencil-square editar" title="Editar" data-sala_tipo_id="${sala_tipo.sala_tipo_id}" data-sala_tipo_nome="${sala_tipo.sala_tipo_nome}"></i>

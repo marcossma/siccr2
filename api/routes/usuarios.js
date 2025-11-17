@@ -28,6 +28,7 @@ router.get("/", async (req, res) => {
 router.get("/usuariosTotalInfo", async (req, res) => {
     try {
         const result = await pool.query("select * from users inner join subunidades on subunidades.subunidade_id = users.subunidade_id");
+        console.log(result.rows);
         res.status(200).json({
             status: "success",
             message: "",
