@@ -108,6 +108,18 @@ document.addEventListener("DOMContentLoaded", function(event) {
         }
     }
 
+    // Função para carregar os TIPOS de SALAS
+    async function carregarSalasTipo() {
+        try {
+            const response = await fetch(`${apiUrl}/salas-tipo`);
+            const salas_tipo = await response.json();
+    
+            return salas_tipo.data;
+        } catch(error) {
+            console.error(`Erro ao tentar carregar os tipos de sala: ${error}`);
+        }
+    }
+
     // =================================
     // Rotina para o gestão de unidades
     // =================================
@@ -938,10 +950,11 @@ document.addEventListener("DOMContentLoaded", function(event) {
                         <div class="dado flex flex--2">${sala.sala_nome}</div>
                         <div class="dado flex flex--2">${sala.predio}</div>
                         <div class="dado flex flex--4">${sala.subunidade_nome}</div>
+                        <div class="dado flex flex--4">${sala.sala_tipo_nome}</div>
                         <div class="dado flex flex--4">${sala.sala_descricao}</div>
                         <div class="dado flex flex--2">${!sala.is_agendavel ? "Não": "Sim"}</div>
                         <div class="dado flex flex--2 font--size--20">
-                            <i class="bi bi-pencil-square editar" title="Editar" data-sala_id="${sala.sala_id}" data-sala_nome="${sala.sala_nome}" data-predio_id="${sala.predio_id}" data-subunidade_id="${sala.subunidade_id}" data-sala_descricao="${sala.sala_descricao}" data-is_agendavel="${sala.is_agendavel}"></i>
+                            <i class="bi bi-pencil-square editar" title="Editar" data-sala_id="${sala.sala_id}" data-sala_nome="${sala.sala_nome}" data-predio_id="${sala.predio_id}" data-subunidade_id="${sala.subunidade_id}" data-sala_descricao="${sala.sala_descricao}" data-is_agendavel="${sala.is_agendavel}" data-sala_tipo_id="${sala.sala_tipo_id}"></i>
                             <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
                         </div>
                     `;
@@ -979,6 +992,32 @@ document.addEventListener("DOMContentLoaded", function(event) {
             }
         }
 
+        // Função para cadastrar nova sala
+        async function cadastrarNovaSala(dados) {
+            try {
+                await fetch(`${apiUrl}/salas`, {
+                    method: "POST",
+                    headers: {
+                        "Content-type": "application/json"
+                    },
+                    body: JSON.stringify(dados)
+                }).then((response) => {
+                    if (!response.ok) {
+                        console.error(`Erro ao tentar cadastrar nova sala: ${error}`);
+                    }
+    
+                    return response.json();
+                }).then((data) => {
+                    console.log(data);
+                    renderizarSalas();
+                    frmUnidade.reset();
+                    dialogPainel.close();
+                })
+            } catch (error) {
+                console.error(`Erro ao tentar cadastrar nova sala (catch): ${error}`);
+            }
+        }
+
         renderizarSalas();
 
         // Botão canto superior direito da tela "Abre formulário de cadastro de sala"
@@ -989,7 +1028,44 @@ document.addEventListener("DOMContentLoaded", function(event) {
             btnCadastrarUnidade.disabled = false;
             btnAtualizarUnidade.style.display = "none";
             btnAtualizarUnidade.disabled = true;
+
+            carregarPrediosTotalInfo().then((predios) => {
+                selectPredios.innerHTML = `<option value="">Selecione o prédio onde se encontra a sala...</option>`;
+                predios.forEach((predio) => {
+                    selectPredios.innerHTML += `
+                        <option value="${predio.predio_id}">${predio.predio}</option>
+                    `;
+                });
+            });
+
+            carregarSubunidadesTotalInfo().then((subunidades) => {
+                selectSubunidades.innerHTML = `<option value="">Selecione o departamento responsável pela sala...</option>`;
+                subunidades.forEach((subunidade) => {
+                    selectSubunidades.innerHTML += `
+                        <option value="${subunidade.subunidade_id}">${subunidade.subunidade_nome}</option>
+                    `;
+                });
+            });
+
+            carregarSalasTipo().then((salas_tipo) => {
+                selectSalasTipo.innerHTML = `<option value="">Selecione o tipo de sala...</option>`;
+                salas_tipo.forEach((sala_tipo) => {
+                    selectSalasTipo.innerHTML += `
+                        <option value="${sala_tipo.sala_tipo_id}">${sala_tipo.sala_tipo_nome}</option>
+                    `;
+                });
+            });
+
             dialogPainel.showModal();
+        });
+
+        // Botão para Cadastrar a nova Sala
+        btnCadastrarUnidade.addEventListener("click", function(event) {
+            event.preventDefault();
+            const formData = new FormData(frmUnidade);
+            const objData = Object.fromEntries(formData.entries());
+
+            cadastrarNovaSala(objData);
         });
 
         // Botão para "Cancelar" do form de Cadastro/Atualização de sala
@@ -1041,7 +1117,17 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     });
                     // Manter o prédio que foi selecionado na atualização
                     selectPredios.value = event.target.getAttribute("data-predio_id");
-                })
+                });
+
+                carregarSalasTipo().then((salas_tipo) => {
+                    selectSalasTipo.innerHTML = "<option value=''>Selecione o tipo de sala...</option>";
+                    salas_tipo.forEach((sala_tipo) => {
+                        selectSalasTipo.innerHTML += `
+                            <option value="${sala_tipo.sala_tipo_id}">${sala_tipo.sala_tipo_nome}</option>
+                        `;
+                    });
+                    selectSalasTipo.value = event.target.getAttribute("data-sala_tipo_id");
+                });
 
                 document.querySelector("#sala_id").value = dadosEl.sala_id;
                 document.querySelector("#sala_nome").value = dadosEl.sala_nome;
@@ -1066,6 +1152,139 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
 
     } // Fim /adm/salas
+
+    if (urlParam === "/adm/salas-tipo") {
+        const btnAdicionar = document.querySelector(".btn_adicionar");
+        const frmUnidade = document.querySelector(".frmUnidade");
+        const btnCadastrarUnidade = document.querySelector(".cadastrarUnidade");
+        const btnAtualizarUnidade = document.querySelector(".atualizarUnidade");
+        const btnCancelarUnidade = document.querySelector(".cancelarUnidade");
+        const dialogPainel = document.querySelector(".dialogPainel");
+        const listaUnidades = document.querySelector(".listaUnidades");
+
+        function renderizarSalasTipo() {
+            carregarSalasTipo().then((salas_tipo) => {
+                listaUnidades.innerHTML = "";
+                salas_tipo.forEach((sala_tipo) => {
+                    const divElement = document.createElement("div");
+                    divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
+                    divElement.innerHTML += `
+                        <div class="dado flex flex--2">${sala_tipo.sala_tipo_id}</div>
+                        <div class="dado flex flex--10">${sala_tipo.sala_tipo_nome}</div>
+                        
+                        <div class="dado flex flex--2 font--size--20">
+                            <i class="bi bi-pencil-square editar" title="Editar" data-sala_tipo_id="${sala_tipo.sala_tipo_id}" data-sala_tipo_nome="${sala_tipo.sala_tipo_nome}"></i>
+                            <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
+                        </div>
+                    `;
+    
+                    listaUnidades.appendChild(divElement);
+                });
+            });
+        }
+
+        async function cadastrarTipoSala(dados) {
+            try {
+                await fetch(`${apiUrl}/salas-tipo`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(dados)
+                }).then((response) => {
+                    if (!response.ok) {
+                        console.error(`Erro ao tentar cadastrar novo tipo de sala: ${response.error}`);
+                    }
+    
+                    return response.json();
+                }).then((data) => {
+                    renderizarSalasTipo();
+                    console.log(data);
+                    frmUnidade.reset();
+                    dialogPainel.close();
+                });
+            } catch (error) {
+                console.error(`Erro ao tentar cadastrar novo tipo de sala (catch): ${error}`);
+            }
+        }
+
+        async function atualizarSalaTipo(dados) {
+            try {
+                await fetch(`${apiUrl}/salas-tipo/${dados.sala_tipo_id}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(dados)
+                }).then((response) => {
+                    if (!response.ok) {
+                        console.error(`Erro ao tentar atualizar o tipo de sala: ${response.error}`);
+                    }
+    
+                    return response.json();
+                }).then((data) => {
+                    renderizarSalasTipo();
+                    console.log(data);
+                    frmUnidade.reset();
+                    dialogPainel.close();
+                })
+            } catch (error) {
+                console.error(`Erro ao tentar atualizar o tipo de sala (catch): ${error}`);
+            }
+        }
+
+        renderizarSalasTipo();
+        
+        btnAdicionar.addEventListener("click", function(event) {
+            event.preventDefault();
+            document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastro de tipo de sala";
+            btnAtualizarUnidade.disabled = true;
+            btnAtualizarUnidade.style.display = "none";
+            btnCadastrarUnidade.disabled = false;
+            btnCadastrarUnidade.style.display = "inline-block";
+            dialogPainel.showModal();
+        });
+
+        btnCancelarUnidade.addEventListener("click", function(event) {
+            event.preventDefault();
+            frmUnidade.reset();
+            dialogPainel.close();
+        });
+
+        btnCadastrarUnidade.addEventListener("click", function(event) {
+            event.preventDefault();
+            const formData = new FormData(frmUnidade);
+            const objData = Object.fromEntries(formData.entries());
+
+            console.log(objData);
+            cadastrarTipoSala(objData);
+        });
+
+        btnAtualizarUnidade.addEventListener("click", function(event) {
+            event.preventDefault();
+            const formData = new FormData(frmUnidade);
+            const objData = Object.fromEntries(formData.entries());
+
+            atualizarSalaTipo(objData);
+
+        });
+
+        listaUnidades.addEventListener("click", function(event) {
+            if (event.target.classList.contains("editar")) {
+                document.querySelector(".dialogPainel fieldset legend").textContent = "Atualizar tipo de sala";
+                btnCadastrarUnidade.disabled = true;
+                btnCadastrarUnidade.style.display = "none";
+                btnAtualizarUnidade.disabled = false;
+                btnAtualizarUnidade.style.display = "inline-block";
+
+                document.querySelector("#sala_tipo_id").value = event.target.getAttribute("data-sala_tipo_id");
+                document.querySelector("#sala_tipo_nome").value = event.target.getAttribute("data-sala_tipo_nome");
+    
+                dialogPainel.showModal();
+            }
+        })
+
+    } // Fim /adm/salas-tipo
 
 
 });

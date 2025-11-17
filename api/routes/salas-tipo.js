@@ -3,23 +3,23 @@ const pool = require("../config/database.js");
 
 const router = express.Router();
 
-// Rota para adicionar nova SALA
+// Rota para adicionar nova SALa
 router.post("/", async (req, res) => {
-    const { sala_nome, sala_descricao, predio_id, subunidade_id, is_agendavel, sala_tipo_id } = req.body;
+    const { sala_tipo_nome } = req.body;
 
     try {
         // Verifica se não estão faltando campos obrigatórios
-        if (!sala_nome || !predio_id) {
+        if (!sala_tipo_nome) {
             return res.status(400).json({
                 status: "error",
-                message: "Os campos de IDENTIFICAÇÃO DA SALA e PRÉDIO devem ser preenchidos.",
+                message: "Os campos de IDENTIFICAÇÃO DO TIPO DE SALA deve ser preenchido.",
                 data: ""
             });
         }
 
         // Prepara a query para cadastrar o PRÉDIO
-        const query = "insert into salas (sala_nome, sala_descricao, predio_id, subunidade_id, is_agendavel, sala_tipo_id) values ($1, $2, $3, $4, $5, $6) returning *";
-        const values = [sala_nome, sala_descricao, predio_id, subunidade_id, is_agendavel, sala_tipo_id];
+        const query = "insert into salas_tipo (sala_tipo_nome) values ($1) returning *";
+        const values = [sala_tipo_nome];
 
         // Cadastra a unidade
         const result = await pool.query(query, values);
@@ -27,14 +27,14 @@ router.post("/", async (req, res) => {
         // Retorna os dados da operação
         res.status(201).json({
             status: "success",
-            message: "Sala Cadastrada com sucesso.",
+            message: "Tipo de Sala cadastrada com sucesso.",
             data: result.rows
         });
     } catch(error) {
         console.log(`Ocorreu um erro: ${error}`);
         res.status(500).json({
             status: "error",
-            message: "Erro ao tentar cadastrar sala.",
+            message: "Erro ao tentar cadastrar tipo de sala.",
             data: ""
         });
     }
@@ -44,26 +44,27 @@ router.post("/", async (req, res) => {
 // Rota para listar os SALAS
 router.get("/", async (req, res) => {
     try {
-        const result = await pool.query("select * from salas order by sala_nome");
+        const result = await pool.query("select * from salas_tipo order by sala_tipo_nome");
         res.status(200).json({
             status: "success",
             message: "",
             data: result.rows
         });
     } catch (error) {
-        console.log(`Erro ao tentar listar as salas: ${error}`);
+        console.log(`Erro ao tentar listar os tipos de salas: ${error}`);
         res.status(500).json({
             status: "error",
-            message: "Erro ao tentar listar as salas.",
+            message: "Erro ao tentar listar os tipos de salas.",
             data: ""
         });
     }
 });
 
 // Rota para listar os SALAS E DADOS DAS SUBUNIDADES E PRÉDIOS
+// INATIVO POR ENQUANTO ATÉ HAVER NECESSIDADE E ADAPTAR AOS TIPOS DE SALAS
 router.get("/total-info", async(req, res) => {
     try {
-        const result = await pool.query("select * from salas inner join subunidades on salas.subunidade_id = subunidades.subunidade_id inner join predios on salas.predio_id = predios.predio_id inner join salas_tipo on salas_tipo.sala_tipo_id = salas.sala_tipo_id order by salas.sala_nome");
+        const result = await pool.query("select * from salas inner join subunidades on salas.subunidade_id = subunidades.subunidade_id inner join predios on salas.predio_id = predios.predio_id order by salas.sala_nome");
         res.status(200).json({
             status: "success",
             message: "",
@@ -79,16 +80,16 @@ router.get("/total-info", async(req, res) => {
     }
 });
 
-router.put("/:sala_id", async (req, res) => {
+router.put("/:sala_tipo_id", async (req, res) => {
     // Fazer a regra de negócio para atualização do PRÉDIO
-    const sala_id = req.params.sala_id;
-    const { sala_nome, predio_id, subunidade_id, is_agendavel, sala_descricao, sala_tipo_id } = req.body;
+    const sala_tipo_id = req.params.sala_tipo_id;
+    const { sala_tipo_nome } = req.body;
 
-    const result = await pool.query("update salas set sala_nome = $1, sala_descricao = $2, subunidade_id = $3, predio_id = $4, is_agendavel = $5, sala_tipo_id = $6 where sala_id = $7 returning *", [sala_nome, sala_descricao, subunidade_id, predio_id, is_agendavel, sala_tipo_id, sala_id]);
+    const result = await pool.query("update salas_tipo set sala_tipo_nome = $1 where sala_tipo_id = $2 returning *", [sala_tipo_nome, sala_tipo_id]);
     
     res.status(200).json({
         status: "success",
-        message: "Informações da sala atualizadas",
+        message: "Informações do tipo de sala atualizadas",
         data: result.rows
     });
 });

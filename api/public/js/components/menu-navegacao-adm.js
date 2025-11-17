@@ -101,6 +101,14 @@ class MenuNavegacaoAdm extends HTMLElement {
                 </div>
               </a>
             </li>
+            <li>
+              <a href="/adm/salas-tipo">
+                <div class="btn-menu-nav-adm">
+                  <i class="bi bi-building-gear"></i>
+                  <p>Tipos de sala</p>
+                </div>
+              </a>
+            </li>
           </ul>
         </nav>
       `;
