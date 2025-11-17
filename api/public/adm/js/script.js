@@ -924,6 +924,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
         const listaUnidades = document.querySelector(".listaUnidades");
         const selectSubunidades = document.querySelector("#subunidade_id");
         const selectPredios = document.querySelector("#predio_id");
+        const selectSalasTipo = document.querySelector("#sala_tipo_id");
 
         // Função para renderizar Salas
         function renderizarSalas() {
@@ -1010,6 +1011,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
             if (event.target.classList.contains("editar")) {
                 const dadosEl = event.target.dataset;
                 
+                // ########################################################################
+                // Criar rota para Salas_tipo e funções respectivas para frontend e backend
+                // ########################################################################
+
                 document.querySelector(".dialogPainel fieldset legend").textContent = "Editar sala";
                 btnCadastrarUnidade.style.display = "none";
                 btnCadastrarUnidade.disabled = true;
