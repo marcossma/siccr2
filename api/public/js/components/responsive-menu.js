@@ -168,7 +168,6 @@ class ResponsiveMenu extends HTMLElement {
       // Obtém o token caso exista (usuário logado)
       const token = localStorage.getItem("siccr_token");
       const permissao = localStorage.getItem("permissao");
-      console.log("Permissão: ", permissao);
 
       // Referências aos elementos
       const menuToggle = shadow.querySelector('.menu-toggle');
@@ -184,9 +183,7 @@ class ResponsiveMenu extends HTMLElement {
 
       const diretorEl = shadow.querySelectorAll(".diretor");
       const diretor_chefeEl = shadow.querySelectorAll(".diretor-chefe");
-      console.log(diretorEl);
-      console.log(diretor_chefeEl);
-
+      
       diretorEl.forEach((elemento) => {
         if (permissao !== "diretor") elemento.style.display = "none";
       });
@@ -224,8 +221,6 @@ class ResponsiveMenu extends HTMLElement {
           }
         });
       });
-
-      console.log("Menu responsivo Initialized!");
 
       btnLogout.addEventListener("click", function(event) {
         localStorage.removeItem("siccr");

@@ -96,6 +96,18 @@ document.addEventListener("DOMContentLoaded", function(event) {
         }
     }
 
+    // Função para carregar SALAS com informações dos prédios e das subunidades
+    async function carregarSalasTotalInfo() {
+        try {
+            const response = await fetch(`${apiUrl}/salas/total-info`);
+            const salas = await response.json();
+
+            return salas.data;
+        } catch(error) {
+            console.error(`Erro ao tentar carregar as salas e suas informações: ${error}`);
+        }
+    }
+
     // =================================
     // Rotina para o gestão de unidades
     // =================================
@@ -886,7 +898,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
                 btnAtualizarUnidade.addEventListener("click", function(event) {
                     event.preventDefault();
-                    console.log("Clicado!");
 
                     const formData = new FormData(frmUnidade);
                     const objData = Object.fromEntries(formData.entries());
@@ -903,7 +914,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
     // Rotina para a gestão de Salas
     // =============================
     if (urlParam === "/adm/salas") {
-        console.log("Salas");
 
         const btnAdicionar = document.querySelector(".btn_adicionar");
         const frmUnidade = document.querySelector(".frmUnidade");
@@ -913,10 +923,11 @@ document.addEventListener("DOMContentLoaded", function(event) {
         const dialogPainel = document.querySelector(".dialogPainel");
         const listaUnidades = document.querySelector(".listaUnidades");
         const selectSubunidades = document.querySelector("#subunidade_id");
+        const selectPredios = document.querySelector("#predio_id");
 
         // Função para renderizar Salas
         function renderizarSalas() {
-            carregarSalas().then((salas) => {
+            carregarSalasTotalInfo().then((salas) => {
                 listaUnidades.innerHTML = "";
                 salas.forEach((sala) => {
 
@@ -924,8 +935,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
                     divElement.innerHTML += `
                         <div class="dado flex flex--2">${sala.sala_nome}</div>
-                        <div class="dado flex flex--2">${sala.predio_id}</div>
-                        <div class="dado flex flex--4">${sala.subunidade_id}</div>
+                        <div class="dado flex flex--2">${sala.predio}</div>
+                        <div class="dado flex flex--4">${sala.subunidade_nome}</div>
                         <div class="dado flex flex--4">${sala.sala_descricao}</div>
                         <div class="dado flex flex--2">${!sala.is_agendavel ? "Não": "Sim"}</div>
                         <div class="dado flex flex--2 font--size--20">
@@ -937,6 +948,34 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     listaUnidades.appendChild(divElement);
                 });
             });
+        }
+
+        // Função para atualizar sala
+        async function atualizarSala(dados) {
+            try {
+                await fetch(`${apiUrl}/salas/${dados.sala_id}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(dados)
+                }).then((response) => {
+                    if (!response.ok) {
+                        console.error(`Erro ao tentar atualizar Sala: ${response.error}`);
+                    }
+
+                    return response.json();
+                }).then((data) => {
+                    // Após realizar a atualização da Subunidade, renderiza novamente a lista
+                    renderizarSalas();
+                    frmUnidade.reset();
+                    dialogPainel.close();
+                }).catch((error) => {
+                    console.error(`Erro ao tentar atualizar sala (Catch): ${error}`);
+                })
+            } catch (error) {
+                console.log(`Erro ao tentar atualizar Sala: ${error}`);
+            }
         }
 
         renderizarSalas();
@@ -955,9 +994,16 @@ document.addEventListener("DOMContentLoaded", function(event) {
         // Botão para "Cancelar" do form de Cadastro/Atualização de sala
         btnCancelarUnidade.addEventListener("click", function(event) {
             event.preventDefault();
-            console.log("Cancelar");
             frmUnidade.reset();
             dialogPainel.close();
+        });
+
+        btnAtualizarUnidade.addEventListener("click", function(event) {
+            event.preventDefault();
+            const formData = new FormData(frmUnidade); // Captura todos os campos do formulário de forma automática
+            const objData = Object.fromEntries(formData.entries()); // Transforma os dados do formulário em um objeto
+
+            atualizarSala(objData);
         });
 
         listaUnidades.addEventListener("click", function(event) {
@@ -970,12 +1016,42 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 btnAtualizarUnidade.style.display = "inline-block";
                 btnAtualizarUnidade.disabled = false;
 
+                carregarSubunidades().then((subunidades) => {
+                    selectSubunidades.innerHTML = "<option value=''>Selecione o departamento responsável pela sala...</option>";
+                    subunidades.forEach((subunidade) => {
+                        selectSubunidades.innerHTML += `
+                            <option value="${subunidade.subunidade_id}">${subunidade.subunidade_nome}</option>
+                        `;
+                    });
+                    // Mantém a subunidade que foi selecionada na atualização
+                    selectSubunidades.value = event.target.getAttribute("data-subunidade_id");
+                });
+
+                carregarPredios().then((predios) => {
+                    selectPredios.innerHTML = "<option value=''>Selecione o prédio onde se encontra a sala...</option>";
+                    predios.forEach((predio) => {
+                        selectPredios.innerHTML += `
+                            <option value="${predio.predio_id}">${predio.predio}</option>
+                        `;
+                    });
+                    // Manter o prédio que foi selecionado na atualização
+                    selectPredios.value = event.target.getAttribute("data-predio_id");
+                })
+
                 document.querySelector("#sala_id").value = dadosEl.sala_id;
                 document.querySelector("#sala_nome").value = dadosEl.sala_nome;
                 document.querySelector("#predio_id").value = dadosEl.predio_id;
                 document.querySelector("#subunidade_id").value = dadosEl.subunidade_id;
                 document.querySelector("#sala_descricao").value = dadosEl.sala_descricao;
-                // document.querySelector("is_agendavel").value = dadosEl.is_agendavel;
+                
+                const radioAgendavel = document.querySelectorAll("input[name='is_agendavel']");
+
+                // Verifica o valor atual do radio button e mantém
+                radioAgendavel.forEach((radio) => {
+                    if (radio.value === dadosEl.is_agendavel) {
+                        radio.checked = true;
+                    }
+                });
 
                 dialogPainel.showModal();
             }
