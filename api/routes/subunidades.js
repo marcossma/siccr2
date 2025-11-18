@@ -68,7 +68,8 @@ router.get("/", async (req, res) => {
 // Rota para listar as subunidades com mais detalhes de outras tabelas
 router.get("/total-info", async(req, res) => {
     const result = await pool.query(`
-        select subunidades.subunidade_id,
+        select
+        subunidades.subunidade_id,
         subunidades.subunidade_nome,
         subunidades.subunidade_codigo,
         subunidades.predio_id,
@@ -86,7 +87,8 @@ router.get("/total-info", async(req, res) => {
         users.siape,
         users.data_nascimento,
         users.whatsapp,
-        users.permissao
+        users.permissao,
+        count(*) over() as total_subunidades 
         FROM subunidades left join unidades on subunidades.unidade_id = unidades.unidade_id left join predios on subunidades.predio_id = predios.predio_id left join users on subunidades.chefe = users.user_id order by subunidades.subunidade_nome`);
 
     res.status(200).json({

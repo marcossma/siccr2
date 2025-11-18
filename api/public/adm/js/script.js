@@ -310,6 +310,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
     // ====================================
     if (urlParam === "/adm/subunidades") {
         // Seleção de elementos
+        const titulo = document.querySelector(".titulo_painel h1");
         const btnAdicionar = document.querySelector(".btn_adicionar");
         const frmUnidade = document.querySelector(".frmUnidade");
         const btnCadastrarUnidade = document.querySelector(".cadastrarUnidade");
@@ -403,6 +404,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                         </div>
                     `;
 
+                    titulo.textContent = `Painel Administrativo - Subunidades (${subunidade.total_subunidades})`;
                     listaUnidades.appendChild(divElement);
                 });
             })
