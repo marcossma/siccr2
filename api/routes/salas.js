@@ -63,7 +63,7 @@ router.get("/", async (req, res) => {
 // Rota para listar os SALAS E DADOS DAS SUBUNIDADES E PRÉDIOS
 router.get("/total-info", async(req, res) => {
     try {
-        const result = await pool.query("select * from salas inner join subunidades on salas.subunidade_id = subunidades.subunidade_id inner join predios on salas.predio_id = predios.predio_id inner join salas_tipo on salas_tipo.sala_tipo_id = salas.sala_tipo_id order by salas.sala_nome");
+        const result = await pool.query("select * from salas left join subunidades on salas.subunidade_id = subunidades.subunidade_id left join predios on salas.predio_id = predios.predio_id left join salas_tipo on salas_tipo.sala_tipo_id = salas.sala_tipo_id order by salas.sala_nome");
         res.status(200).json({
             status: "success",
             message: "",

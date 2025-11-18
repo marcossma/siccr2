@@ -51,7 +51,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
     //Função para carregar usuários totalInfo
     async function carregarUsuariosTotalInfo() {
         try {
-            const response = await fetch(`${apiUrl}/usuarios/usuariosTotalInfo`);
+            const response = await fetch(`${apiUrl}/usuarios/total-info`);
             const usuarios = await response.json();
     
             return usuarios.data;
@@ -309,7 +309,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
     // Rotina para a gestão de subunidades
     // ====================================
     if (urlParam === "/adm/subunidades") {
-        console.log("Subunidades"); //<-- Apenas para debug apagar depois...
         // Seleção de elementos
         const btnAdicionar = document.querySelector(".btn_adicionar");
         const frmUnidade = document.querySelector(".frmUnidade");
@@ -387,6 +386,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 listaUnidades.innerHTML = "";
 
                 subunidades.forEach((subunidade) => {
+                    console.log(subunidade);
                     const divElement  = document.createElement("div");
                     divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
                     divElement.innerHTML = `
@@ -398,7 +398,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                         <div class="dado flex flex--3">${subunidade.nome}</div>
                         <div class="dado flex flex--2">${subunidade.predio}</div>
                         <div class="dado flex flex--1 font--size--20">
-                            <i class="bi bi-pencil-square editar" title="Editar" data-subunidade_id="${subunidade.subunidade_id}" data-subunidade_codigo="${subunidade.subunidade_codigo}" data-subunidade_nome="${subunidade.subunidade_nome}" data-subunidade_email="${subunidade.email}" data-subunidade_sigla="${subunidade.subunidade_sigla}" data-subunidade_chefe="${subunidade.chefe}" data-unidade_id="${subunidade.unidade_id}" data-predio_id="${subunidade.predio_id}"></i>
+                            <i class="bi bi-pencil-square editar" title="Editar" data-subunidade_id="${subunidade.subunidade_id}" data-subunidade_codigo="${subunidade.subunidade_codigo}" data-subunidade_nome="${subunidade.subunidade_nome}" data-subunidade_email="${subunidade.subunidade_email}" data-subunidade_sigla="${subunidade.subunidade_sigla}" data-subunidade_chefe="${subunidade.chefe}" data-unidade_id="${subunidade.unidade_id}" data-predio_id="${subunidade.predio_id}"></i>
                             <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
                         </div>
                     `;
@@ -409,6 +409,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
         }
 
         async function atualizarSubunidade(dados) {
+            console.log(dados);
             try {
                 await fetch(`${apiUrl}/subunidades/${dados.subunidade_id}`, {
                     method: "PUT",
@@ -764,7 +765,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
         }
 
         // Carregamento dos options da lista de subunidades do formulário de cadastro de usuário
-        carregarSubunidadesTotalInfo().then((subunidades) => {
+        carregarSubunidades().then((subunidades) => {
             subunidades.forEach((subunidade) => {
                 const optUnidade = document.createElement("option");
                 optUnidade.value = `${subunidade.subunidade_id}`;
@@ -776,8 +777,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
         function renderizarUsuarios() {
             carregarUsuariosTotalInfo().then((usuarios) => {
-                console.log("Começando...");
-                console.log(usuarios);
                 listaUnidades.innerHTML = "";
                 usuarios.forEach((usuario) => {
                     // Formatando data em dd/mm/aaaa
@@ -792,7 +791,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                         <div class="dado flex flex--2">${usuario.siape}</div>
                         <!--div class="dado flex flex--3">${usuario.data_nascimento}</div-->
                         <div class="dado flex flex--3">${dataFormatada}</div>
-                        <div class="dado flex flex--2">${usuario.subunidade_sigla}</div>
+                        <div class="dado flex flex--2">${usuario.subunidade_sigla.toUpperCase()}</div>
                         <div class="dado flex flex--2">${usuario.whatsapp}</div>
                         <div class="dado flex flex--4">${usuario.permissao.toUpperCase()}</div>
                         <div class="dado flex flex--2 font--size--20">

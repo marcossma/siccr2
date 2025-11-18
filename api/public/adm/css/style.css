@@ -91,6 +91,7 @@ h1 {
     transition: 0.3s ease;
     padding: 5px;
     border-radius: 5px;
+    font-size: 16px;
 }
 
 .dado i:hover {

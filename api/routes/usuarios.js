@@ -25,9 +25,9 @@ router.get("/", async (req, res) => {
 });
 
 // Rota para listar os usuários com todas as informações
-router.get("/usuariosTotalInfo", async (req, res) => {
+router.get("/total-info", async (req, res) => {
     try {
-        const result = await pool.query("select * from users inner join subunidades on subunidades.subunidade_id = users.subunidade_id");
+        const result = await pool.query("select * from users left join subunidades on users.subunidade_id = subunidades.subunidade_id");
         console.log(result.rows);
         res.status(200).json({
             status: "success",
