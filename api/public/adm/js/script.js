@@ -387,7 +387,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 listaUnidades.innerHTML = "";
 
                 subunidades.forEach((subunidade) => {
-                    console.log(subunidade);
                     const divElement  = document.createElement("div");
                     divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
                     divElement.innerHTML = `
