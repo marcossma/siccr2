@@ -104,8 +104,6 @@ router.put("/:idsubunidade", async (req, res) => {
     const subunidade_id = req.params.idsubunidade;
     const { subunidade_codigo, subunidade_nome, subunidade_sigla, unidade_id, predio_id, subunidade_email, chefe } = req.body;
 
-    console.log("E-mail: ", subunidade_email);
-
     const result = await pool.query("update subunidades set subunidade_codigo = $1, subunidade_nome = $2, subunidade_sigla = $3, unidade_id = $4, predio_id = $5, subunidade_email = $6, chefe = $7 where subunidade_id = $8 returning *", [subunidade_codigo, subunidade_nome, subunidade_sigla, unidade_id, predio_id, subunidade_email, chefe, subunidade_id]);
     
     res.status(200).json({
