@@ -51,7 +51,7 @@ router.post("/login", async (req, res) => {
         }
 
         const token = jwt.sign({
-            id: user.id, nome: user.nome, siape: user.siape, email: user.email, whatsapp: user.whatsapp, permissao: user.permissao, subunidade: user.subunidade_id
+            id: user.user_id, nome: user.nome, siape: user.siape, email: user.email, whatsapp: user.whatsapp, permissao: user.permissao, subunidade: user.subunidade_id, data_nascimento: user.data_nascimento
         }, "jwt-chave-super-secreta-full", {expiresIn: "1h"});
 
         console.log(`Usuário ${user.rows[0].nome} autenticado`);

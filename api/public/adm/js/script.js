@@ -504,11 +504,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
         btnAtualizarUnidade.addEventListener("click", function(event) {
             event.preventDefault();
-            console.log("Clicado!");
 
             const formData = new FormData(frmUnidade);
             const objData = Object.fromEntries(formData.entries());
-            console.log(objData);
             atualizarSubunidade(objData);
         });
 
