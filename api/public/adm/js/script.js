@@ -936,8 +936,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     divElement.innerHTML += `
                         <div class="dado flex flex--2">${sala.sala_nome}</div>
                         <div class="dado flex flex--2">${sala.predio}</div>
-                        <div class="dado flex flex--4">${sala.subunidade_nome}</div>
-                        <div class="dado flex flex--4">${sala.sala_tipo_nome.toUpperCase()}</div>
+                        <div class="dado flex flex--3">${sala.subunidade_nome}</div>
+                        <div class="dado flex flex--2">${sala.sala_tipo_nome.toUpperCase()}</div>
                         <div class="dado flex flex--4">${sala.sala_descricao}</div>
                         <div class="dado flex flex--2">${!sala.is_agendavel ? "Não": "Sim"}</div>
                         <div class="dado flex flex--2 font--size--20">
