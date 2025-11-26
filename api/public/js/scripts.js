@@ -34,27 +34,19 @@ document.addEventListener("DOMContentLoaded", function(event) {
         .then((data) => { 
             // console.log(data);
             if (data.status === "success") {
-                const dados = `{
-                    user_id: "${data.data[0].user_id}",
-                    nome: "${data.data[0].nome}",
-                    data_nascimento: "${data.data[0].data_nascimento}",
-                    whatsapp: "${data.data[0].whatsapp}",
-                    subunidade_id: "${data.data[0].subunidade_id}",
-                    permissao: "${data.data[0].permissao}",
-                    token: "${data.token}"
-                }`
-
+                const dados = {
+                    user_id: data.data[0].user_id,
+                    nome: data.data[0].nome,
+                    data_nascimento: data.data[0].data_nascimento,
+                    whatsapp: data.data[0].whatsapp,
+                    subunidade_id: data.data[0].subunidade_id,
+                    permissao: data.data[0].permissao,
+                    token: data.token
+                };
 
                 localStorage.setItem("siccr", JSON.stringify(dados));
                 localStorage.setItem("siccr_token", data.token);
                 localStorage.setItem("permissao", data.data[0].permissao);
-                // localStorage.setItem("siccr_nome", data.data[0].nome);
-                // localStorage.setItem("siccr_email", data.data[0].email);
-                // localStorage.setItem("siccr_data_nascimento", data.data[0].data_nascimento);
-                // localStorage.setItem("siccr_whatsapp", data.data[0].whatsapp);
-                // localStorage.setItem("siccr_subunidade_id", data.data[0].subunidade_id);
-                // localStorage.setItem("permissao", data.data[0].permissao);
-                // localStorage.setItem("siccr_token", data.token)
 
                 document.querySelector("#frmLogin").reset();
                 dialogLogin.close();
@@ -77,5 +69,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
     const dados = JSON.parse(localStorage.getItem("siccr"));
     console.log(dados);
+    console.log(dados.permissao); // <-- Aqui retorna undefined
+
 
 });
