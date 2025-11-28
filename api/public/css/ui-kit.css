@@ -1,0 +1,192 @@
+.flex {
+    display: flex;
+}
+
+.flex--column {
+    flex-direction: column;
+}
+
+.flex--row {
+    flex-direction: row;
+}
+
+.justify--content--start {
+    justify-content: flex-start;
+}
+
+.justify--content--center {
+    justify-content: center;
+}
+
+.justify--content--end {
+    justify-content: flex-end;
+}
+
+.justify--space--around {
+    justify-content: space-around;
+}
+
+.justify--space--between {
+    justify-content: space-between;
+}
+
+.justify--space--evenly {
+    justify-content: space-evenly;
+}
+
+.align--items--start {
+    align-items: flex-start;
+}
+
+.align--items--center {
+    align-items: center;
+}
+
+.align--items--end {
+    align-items: flex-end;
+}
+
+.wrap {
+    flex-wrap: wrap;
+}
+
+.flex--1 {
+    flex: 1;
+}
+
+.flex--2 {
+    flex: 2;
+}
+
+.flex--3 {
+    flex: 3;
+}
+
+.flex--4 {
+    flex: 4;
+}
+
+.flex--5 {
+    flex: 5;
+}
+
+.flex--6 {
+    flex: 6;
+}
+
+.flex--7 {
+    flex: 7;
+}
+
+.flex--8 {
+    flex: 8;
+}
+
+.flex--10 {
+    flex: 10;
+}
+
+.width--50 {
+    width: 50%;
+}
+
+.width--70 {
+    width: 70%;
+}
+
+.width--100 {
+    width: 100%;
+}
+
+.gap--5 {
+    gap: 5px;
+}
+
+.gap--10 {
+    gap: 10px;
+}
+
+.gap--15 {
+    gap: 15px;
+}
+
+.gap--20 {
+    gap: 20px;
+}
+
+.gap--30 {
+    gap: 30px;
+}
+
+.font--size--10 {
+    font-size: 10px;
+}
+
+.font--size--12 {
+    font-size: 12px;
+}
+
+.font--size--20 {
+    font-size: 20px;
+}
+
+.font--size--30 {
+    font-size: 30px;
+}
+
+.font--size--40 {
+    font-size: 40px;
+}
+
+/* CURSOR */
+
+.cursor--pointer {
+    cursor: pointer;
+}
+
+.cursor--block {
+    cursor: not-allowed;
+}
+
+/* PADDING */
+.p--5 {
+    padding: 5px;
+}
+
+.p--10 {
+    padding: 10px;
+}
+
+.p--20 {
+    padding: 20px;
+}
+
+.p--30 {
+    padding: 30px;
+}
+
+/* BORDER */
+
+.border {
+    border-style: solid;
+}
+
+.border--black {
+    border-color: black;
+}
+
+.border--silver {
+    border-color: #ccc;
+}
+
+.border--1 {
+    border-width: 1px;
+}
+
+.border--r--5 {
+    border-radius: 5px;
+}
+
+.border--r--10 {
+    border-radius: 10px;
+}

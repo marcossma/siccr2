@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SICCR - Sistema Integrado Centro de Ciências Rurais</title>
     <link rel="shortcut icon" href="./img/favicon.png" type="image/x-icon">
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/dialogs.css">
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/dialogs.css">
+    <link rel="stylesheet" href="css/ui-kit.css">
     <script type="module" src="js/scripts.js"></script>
 </head>
 <body>
@@ -22,9 +23,31 @@
         <div>
             <responsive-menu></responsive-menu>
         </div>
-        <main>
-            <section>
-                <h3>Solicitar agendamento</h3>
+        <main class="flex flex--column flex--center">
+            <section class="titulo_secao flex justify--content--evenly">
+                <h1>Solicitar agendamento de sala</h1>
+            </section>
+
+            <section class="divFrmSolicitarAgendamento ">
+                <fieldset class="p--10 flex justify--content--center">
+                    <legend class="border border--1 border--silver border--r--5 p--5">Preencha o formulário abaixo</legend>
+
+                    <form id="frmSolicitarAgendamento" name="frmSolicitarAgendamento" class="width--50 flex flex--column gap--10">
+                        <div>
+                            <label for="solicitante">Solicitante</label>
+                            <input type="text" name="solicitante" id="solicitante" class="width--100 border border--1 border--silver border--r--5 p--5 cursor--block" placeholder="Solicitante" disabled>
+                        </div>
+                        <div>
+                            <label for="sala_id"> Selecione a sala</label>
+                            <select name="sala_id" id="sala_id" class="width--100 border border--1 border--silver border--r--5 p--5">
+                                <option value="teste 1">Teste 1</option>
+                                <option value="teste 2">Teste 2</option>
+                                <option value="teste 3">Teste 3</option>
+                                <option value="teste 4">Teste 4</option>
+                            </select>
+                        </div>
+                    </form>
+                </fieldset>
             </section>
         </main>
         <footer>Rodapé</footer>

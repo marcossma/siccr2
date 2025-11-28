@@ -5,6 +5,7 @@
     margin: 0px;
     box-sizing: border-box;
     font-family: verdana;
+    font-size: 12px;
 }
 
 .container {
@@ -19,6 +20,18 @@ header {
     align-items: center;
     padding: 5px 20px;
     border-bottom: 1px solid #009536;
+}
+
+.titulo_secao {
+    border-bottom: 2px solid #009536;
+    padding: 10px;
+    margin-bottom: 20px;
+    margin-top: 20px;
+}
+
+.titulo_secao h1 {
+    color: #009536;
+    font-size: 16px;
 }
 
 header img {
