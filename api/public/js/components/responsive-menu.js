@@ -130,9 +130,12 @@ class ResponsiveMenu extends HTMLElement {
             <li class="dropdown">
               <a href="#" class="dropdown-toggle"><span>Financeiro ⤵<span></a>
               <ul class="dropdown-menu">
-                <li class="diretor"><a href="#">Tipos de recursos</a></li>
-                <li class="diretor"><a href="#">Tipos de despesas</a></li>
-                <li class="diretor-chefe"><a href="#">Previsão de despesas</a></li>
+                <li class="diretor"><a href="/tipos-recursos">Tipos de recursos</a></li>
+                <li class="diretor"><a href="/adicionar-recurso">Adicionar recurso</a></li>
+                <li class="diretor"><a href="/tipos-despesas">Tipos de despesas</a></li>
+                <li class="diretor"><a href="/adicionar-despesas">Adicionar despesa</a></li>
+                <li class="diretor-chefe"><a href="/previsao-despesas">Previsão de despesas</a></li>
+                <li class="diretor-chefe"><a href="/relatorios">Relatórios</a></li>
               </ul>
             </li>
             <li class="dropdown">
