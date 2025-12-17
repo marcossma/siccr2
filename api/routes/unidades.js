@@ -60,8 +60,8 @@ router.get("/", async (req, res) => {
     }
 });
 
+// Rota para atualizar a unidade
 router.put("/:idunidade", async (req, res) => {
-    // Fazer a regra de negócio para atualização da unidade
     const unidade_id = req.params.idunidade;
     const { unidade_codigo, unidade, unidade_sigla } = req.body;
 
