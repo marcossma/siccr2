@@ -1069,11 +1069,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
         listaUnidades.addEventListener("click", function(event) {
             if (event.target.classList.contains("editar")) {
-                const dadosEl = event.target.dataset;
-                
-                // ########################################################################
-                // Criar rota para Salas_tipo e funções respectivas para frontend e backend
-                // ########################################################################
+                const dadosEl = event.target.dataset; // Obtém todos as informações do tipo data-* desse componente.
 
                 document.querySelector(".dialogPainel fieldset legend").textContent = "Editar sala";
                 btnCadastrarUnidade.style.display = "none";

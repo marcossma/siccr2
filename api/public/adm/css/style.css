@@ -41,7 +41,8 @@ h1 {
 
 .botao_painel:hover {
     color: #009536;
-    transform: scale(1.1);
+    /* transform: scale(1.1); */
+    transform: translateY(-4px);
 }
 
 .btn_adicionar {

@@ -8,7 +8,7 @@ const router = express.Router();
 // Rota para listar os usuários
 router.get("/", async (req, res) => {
     try {
-        const result = await pool.query("select * from users");
+        const result = await pool.query("select * from users order by nome");
         res.status(200).json({
             status: "success",
             message: "",
@@ -27,7 +27,7 @@ router.get("/", async (req, res) => {
 // Rota para listar os usuários com todas as informações
 router.get("/total-info", async (req, res) => {
     try {
-        const result = await pool.query("select * from users left join subunidades on users.subunidade_id = subunidades.subunidade_id");
+        const result = await pool.query("select * from users left join subunidades on users.subunidade_id = subunidades.subunidade_id order by users.nome");
         
         res.status(200).json({
             status: "success",
