@@ -96,8 +96,13 @@ h1 {
     font-size: 16px;
 }
 
-.dado i:hover {
+.dado i.editar:hover {
     background-color: #009536;
+    color: white;
+}
+
+.dado i.excluir:hover {
+    background-color: red;
     color: white;
 }
 
