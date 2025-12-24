@@ -14,10 +14,12 @@ document.addEventListener("DOMContentLoaded", function(event) {
             listaTiposRecursos : document.querySelector(".listaTiposRecursos"),
             btnAdicionar :  document.querySelector(".btn_adicionar"),
             dialogPainel : document.querySelector(".dialogPainel"),
+            fieldsetLegend : document.querySelector(".dialogPainel fieldset legend"),
             btnCadastrar : document.querySelector(".cadastrarUnidade"),
             btnCancelar : document.querySelector(".cancelarUnidade"),
             btnAtualizar : document.querySelector(".atualizarUnidade"),
             frmUnidade : document.querySelector(".frmUnidade"),
+            listaSelect : document.querySelectorAll(".listaSelect") || null,
         };
 
         return elements;
@@ -64,16 +66,16 @@ document.addEventListener("DOMContentLoaded", function(event) {
     // ----------------------
 
     // Função para carregar tipos de recursos
-        async function carregarTiposRecursos() {
-            try {
-                const response = await fetch(`${apiUrl}/tipos-recursos`);
-                const tiposRecursos = await response.json();
+    async function carregarTiposRecursos() {
+        try {
+            const response = await fetch(`${apiUrl}/tipos-recursos`);
+            const tiposRecursos = await response.json();
 
-                return tiposRecursos.data;
-            } catch (error) {
-                console.error("Erro ao tentar listar os tipos de recursos: ", error);
-            }
+            return tiposRecursos.data;
+        } catch (error) {
+            console.error("Erro ao tentar listar os tipos de recursos: ", error);
         }
+    }
 
     // Botão para exibir o formulário de login
     // =======================================
@@ -422,6 +424,39 @@ document.addEventListener("DOMContentLoaded", function(event) {
         });
 
         renderizarTiposDespesas();
+    }
+
+    // Rotinas para a página adicionar-recurso.html
+    // --------------------------------------------
+    if (urlParam === "/adicionar-recurso") {
+        console.log(`Página: ${urlParam}`);
+        const elements = getDomElements();
+        carregarDados("tipos-recursos").then((recursos) => {
+            console.log(recursos);
+            elements.listaSelect[0].innerHTML = "<option>Selecione o tipo de recurso...</option>";
+            recursos.forEach((recurso) => {
+                elements.listaSelect[0].innerHTML += `
+                <option value="${recurso.id_tipo_recurso}">${recurso.tipo_recurso.toUpperCase()}</option>
+                `;
+            });
+        });
+        
+        elements.btnAdicionar.addEventListener("click", function(event) {
+            event.preventDefault();
+            elements.fieldsetLegend.textContent = "Adicionar Recurso";
+            elements.btnAtualizar.style.display = "none";
+            elements.btnAtualizar.disabled = true;
+            elements.btnCadastrar.style.display = "inline-block";
+            elements.btnCadastrar.disabled = false;
+
+            elements.dialogPainel.showModal();
+        });
+
+        elements.btnCancelar.addEventListener("click", function(event) {
+            event.preventDefault();
+            elements.frmUnidade.reset();
+            elements.dialogPainel.close();
+        });
     }
 
     
