@@ -3,6 +3,16 @@ document.addEventListener("DOMContentLoaded", function(event) {
     const urlParam = window.location.pathname;
     
     console.log("Initialized...");
+
+    function verificaLogin() {
+        if (localStorage.getItem("siccr_token")) {
+            // document.querySelector(".acesso").setAttribute("hidden", "");
+            document.querySelector(".acesso").style.display = "none";
+        }
+    }
+
+    verificaLogin();
+
     const btnEntrar = document.querySelector("#btnEntrar");
     const btnLogin = document.querySelector("#btnLogin");
     const btnCancelarLogin = document.querySelector("#btnCancelarLogin");
@@ -25,8 +35,21 @@ document.addEventListener("DOMContentLoaded", function(event) {
         return elements;
     }
 
-    // Função para carregar dados
-    // --------------------------
+    /**
+     * Função para carregar dados de um endpoint da API
+     * @param {string} endpoint - Nome do endpoint (ex: "usuarios", "posts", "produtos")
+     * @returns {Promise<Array|Object|null>} Dados ou null em caso de erro
+     * @throws {Error} Loga o erro no console se a requisição falhar
+     * 
+     * @example
+     * const usuarios = carregarDados("users");
+     * if (usuarios) {
+     *  console.log("Dados carregados: ", usuarios);
+     * } else {
+     *  console.log("Falha a carregar dados.");
+     * }
+     */
+    
     async function carregarDados(endpoint) {
         try {
             const response = await fetch(`${apiUrl}/${endpoint}`, {
@@ -150,6 +173,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
         const btnCancelar = document.querySelector(".cancelarUnidade");
         const btnAtualizar = document.querySelector(".atualizarUnidade");
         const frmUnidade = document.querySelector(".frmUnidade");
+
+        verificaLogin();
 
         // # Funções Auxiliares
         // Função para atualizar os dados
@@ -336,6 +361,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
         // Obtém os elementos da página através da factory function getDomElements()
         const elements = getDomElements();
 
+        verificaLogin();
+
         // Função para listar os tipos de despesas
         // ---------------------------------------
         function renderizarTiposDespesas() {
@@ -429,8 +456,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
     // Rotinas para a página adicionar-recurso.html
     // --------------------------------------------
     if (urlParam === "/adicionar-recurso") {
-        console.log(`Página: ${urlParam}`);
         const elements = getDomElements();
+
+        verificaLogin();
+
         carregarDados("tipos-recursos").then((recursos) => {
             console.log(recursos);
             elements.listaSelect[0].innerHTML = "<option>Selecione o tipo de recurso...</option>";

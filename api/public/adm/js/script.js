@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
         try {
             const response = await fetch(`${apiUrl}/usuarios/total-info`);
             const usuarios = await response.json();
-    
+
             return usuarios.data;
         } catch(error) {
             console.error(`Erro ao tentar carregar Usuários totalInfo: ${error}`);
@@ -410,7 +410,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
         }
 
         async function atualizarSubunidade(dados) {
-            console.log(dados);
             try {
                 await fetch(`${apiUrl}/subunidades/${dados.subunidade_id}`, {
                     method: "PUT",
@@ -426,7 +425,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     return response.json();
                 }).then((data) => {
                     // Após realizar a atualização da Subunidade, renderiza novamente a lista
-                    console.log(data);
                     renderizarSubunidades();
                     frmUnidade.reset();
                     dialogPainel.close();
@@ -453,8 +451,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 btnAtualizarUnidade.disabled = true;
                 btnCadastrarUnidade.disabled = false;
                 btnCadastrarUnidade.style.display = "inline-block";
-
-                console.log(selectUsuarios);
 
                 carregarUnidades().then((unidade) => {
                     unidade.forEach((uni) => {
@@ -630,7 +626,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     return response.json();
                 }).then((data) => {
                     // Após realizar a atualização do prédio, renderiza novamente a lista
-                    console.log(data);
                     renderizarPredios();
                 }).catch((error) => {
                     console.error(`Erro ao tentar atualizar prédio: ${error}`);
@@ -743,13 +738,14 @@ document.addEventListener("DOMContentLoaded", function(event) {
         selectSubunidades.innerHTML = "<option>Selecione a subunidade de lotação...</option>";
 
         // Função para adicionar novo usuário
-        function cadastrarUsuario(usuario) {
-            fetch(`${apiUrl}/usuarios`, {
+        async function cadastrarUsuario(usuario) {
+
+            await fetch(`${apiUrl}/usuarios`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 }, 
-                body: usuario
+                body: JSON.stringify(usuario)
             }).then((response) => {
                 if (!response.ok) {
                     console.error(`Erro ao tentar cadastrar usuário: ${response.error}`);
@@ -790,7 +786,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                         <div class="dado flex flex--2">${usuario.siape}</div>
                         <!--div class="dado flex flex--3">${usuario.data_nascimento}</div-->
                         <div class="dado flex flex--3">${dataFormatada}</div>
-                        <div class="dado flex flex--2">${usuario.subunidade_sigla.toUpperCase()}</div>
+                        <div class="dado flex flex--2">${usuario.subunidade_sigla}</div>
                         <div class="dado flex flex--2">${usuario.whatsapp}</div>
                         <div class="dado flex flex--4">${usuario.permissao.toUpperCase()}</div>
                         <div class="dado flex flex--2 font--size--20">
@@ -851,10 +847,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
             const formData = new FormData(frmUnidade);
             const dados = Object.fromEntries(formData.entries());
             // dados.permissoes = formData.getAll("permissoes");
-            console.log(JSON.stringify(dados));
 
-            cadastrarUsuario(JSON.stringify(dados));
-
+            // cadastrarUsuario(JSON.stringify(dados));
+            cadastrarUsuario(dados);
+            
             frmUnidade.reset();
             dialogPainel.close();
         });

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICCR - Sistema Integrado Centro de Ciências Rurais</title>
+    <link rel="shortcut icon" href="./img/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/dialogs.css">
+    <link rel="stylesheet" href="./adm/css/style.css">
+    <link rel="stylesheet" href="./adm/css/dialogs.css">
+    <link rel="stylesheet" href="./css/ui-kit.css">
+    <script type="module" src="./js/scripts.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/">
+                <img src="./img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo">
+            </a>
+            <div class="acesso">
+                <a href="#" id="btnEntrar" class="">Entrar</a>
+            </div>
+        </header>
+        <div>
+            <responsive-menu></responsive-menu>
+        </div>
+        <main class="flex flex--column flex--center">
+            
+            <section class="titulo_secao flex justify--space--between align--items--center">
+                <h1>Pedido Almoxarifado</h1>
+
+                <button class="btn_adicionar">+ Adicionar</button>
+            </section>
+
+            <section class="divListaTiposRecursos informacoes_painel">
+                <div class="cabecalho flex">
+                    <div class="titulo flex flex--2">Código</div>
+                    <div class="titulo flex flex--3">Recurso</div>
+                    <div class="titulo flex flex--10">Descrição</div>
+                    <div class="titulo flex flex--2">Ações</div>
+                </div>
+
+                <div class="listaTiposRecursos">
+                    <!-- Tipos de recursos serão carregados dinamicamente -->
+                </div>
+            </section>
+
+        </main>
+        <footer>Rodapé</footer>
+    </div>
+
+
+    <!-- Formulário de Login DIALOG -->
+    <dialog id="dialogLogin">
+        <fieldset>
+            <legend>Login</legend>
+
+            <form id="frmLogin">
+                <div class="row">
+                    <input type="text" name="txtLogin" id="txtLogin" class="formInput" placeholder="Digite o seu login">
+                </div>
+                <div class="row">
+                    <input type="password" name="txtSenha" id="txtSenha" class="formInput" placeholder="Digite a sua senha">
+                </div>
+                <div class="row">
+                    <button id="btnLogin">Entrar</button>
+                    <button id="btnCancelarLogin">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+    <!-- Fim formulário de Login DIALOG -->
+
+    <!-- Formulário cadastro Unidade -->
+    <dialog class="dialogPainel unidades">
+        <fieldset>
+            <legend>Cadastro de Tipo de Recurso</legend>
+
+            <form class="frmCadastroPainel frmUnidade flex flex--column gap--15">
+                <div class="row">
+                    <input type="hidden" name="id_tipo_recurso" id="id_tipo_recurso">
+                    <input type="text" name="tipo_recurso" id="tipo_recurso" class="formInput width--100" placeholder="Digite o tipo de recurso">
+                    <label class="painelLabel" for="tipo_recurso">Ex.: Consumo, Permanente...</label>
+                </div>
+
+                <div class="row">
+                    <textarea name="descricao_recurso" id="descricao_recurso" class="formInput width--100" placeholder="Digite alguma descrição sobre o recurso..."></textarea>
+                </div>
+
+                <div class="row">
+                    <button class="btnPainelFormulario cadastrarUnidade">Cadastrar</button>
+                    <button class="btnPainelFormulario atualizarUnidade">Atualizar</button>
+                    <button class="btnPainelFormulario cancelarUnidade">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+    <!-- Fim formulário cadastro Unidade -->
+
+    <script type="module" src="./js/components/index.js"></script>
+</body>
+</html>

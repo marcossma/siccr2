@@ -48,6 +48,8 @@ router.get("/total-info", async (req, res) => {
 router.post("/", async (req, res) => {
     const { nome, email, siape, senha, data_nascimento, subunidade_id, whatsapp, permissao, createdat } = req.body;
 
+    console.log("Nome: ", nome);
+
     try {
         // Verificar se todos os campos necessários foram preenchidos
         if (!nome || !siape || !senha) {
