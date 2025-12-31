@@ -174,8 +174,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
         const btnAtualizar = document.querySelector(".atualizarUnidade");
         const frmUnidade = document.querySelector(".frmUnidade");
 
-        verificaLogin();
-
         // # Funções Auxiliares
         // Função para atualizar os dados
         async function atualizarTipoRecurso(dados) {
@@ -361,8 +359,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
         // Obtém os elementos da página através da factory function getDomElements()
         const elements = getDomElements();
 
-        verificaLogin();
-
         // Função para listar os tipos de despesas
         // ---------------------------------------
         function renderizarTiposDespesas() {
@@ -458,8 +454,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
     if (urlParam === "/adicionar-recurso") {
         const elements = getDomElements();
 
-        verificaLogin();
-
         carregarDados("tipos-recursos").then((recursos) => {
             console.log(recursos);
             elements.listaSelect[0].innerHTML = "<option>Selecione o tipo de recurso...</option>";
@@ -481,6 +475,52 @@ document.addEventListener("DOMContentLoaded", function(event) {
             elements.dialogPainel.showModal();
         });
 
+        elements.btnCancelar.addEventListener("click", function(event) {
+            event.preventDefault();
+            elements.frmUnidade.reset();
+            elements.dialogPainel.close();
+        });
+    }
+
+    // Rotinar para a página registrar-despesa.html
+    // --------------------------------------------
+    if (urlParam === "/registrar-despesa") {
+        const elements = getDomElements();
+
+        // Preencher o Select de subunidades
+        carregarDados("subunidades").then((subunidades) => {
+            elements.listaSelect[0].innerHTML = "<option>Selecione a subunidade...</option>";
+            subunidades.forEach((subunidade) => {
+                elements.listaSelect[0].innerHTML += `
+                    <option value="${subunidade.subunidade_id}">${subunidade.subunidade_nome}</option>
+                `;
+            });
+        });
+
+        // Preencher o Select de tipos de despesas
+        carregarDados("tipos-despesas").then((despesas) => {
+            elements.listaSelect[1].innerHTML = "<option>Selecione o tipo de despesa...</option>";
+            despesas.forEach((despesa) => {
+                elements.listaSelect[1].innerHTML += `
+                    <option value="${despesa.id_tipo_despesa}">${despesa.tipo_despesa}</option>
+                `;
+            });
+        });
+
+        // Botão Adicionar topo - direita
+        // ------------------------------
+        elements.btnAdicionar.addEventListener("click", function(event) {
+            event.preventDefault();
+
+            elements.fieldsetLegend.textContent = "Registrar nova despesa";
+            elements.btnAtualizar.disabled = true;
+            elements.btnAtualizar.style.display = "none";
+            elements.btnCadastrar.disabled = false;
+            elements.btnCadastrar.style.display = "inline-block";
+            elements.dialogPainel.showModal();
+        });
+
+        // Botão Cancelar
         elements.btnCancelar.addEventListener("click", function(event) {
             event.preventDefault();
             elements.frmUnidade.reset();

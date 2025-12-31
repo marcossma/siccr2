@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICCR - Sistema Integrado Centro de Ciências Rurais</title>
+    <link rel="shortcut icon" href="./img/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/dialogs.css">
+    <link rel="stylesheet" href="./adm/css/style.css">
+    <link rel="stylesheet" href="./adm/css/dialogs.css">
+    <link rel="stylesheet" href="./css/ui-kit.css">
+    <script type="module" src="./js/scripts.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/">
+                <img src="./img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo">
+            </a>
+            <div class="acesso">
+                <a href="#" id="btnEntrar" class="">Entrar</a>
+            </div>
+        </header>
+        <div>
+            <responsive-menu></responsive-menu>
+        </div>
+        <main class="flex flex--column flex--center">
+            
+            <section class="titulo_secao flex justify--space--between align--items--center">
+                <h1>Registro de despesas</h1>
+
+                <button class="btn_adicionar">+ Adicionar</button>
+            </section>
+
+            <section class="divListaTiposRecursos informacoes_painel">
+                <div class="cabecalho flex">
+                    <div class="titulo flex flex--2">Subunidade</div>
+                    <div class="titulo flex flex--3">Despesa</div>
+                    <div class="titulo flex flex--2">Valor</div>
+                    <div class="titulo flex flex--3">Data</div>
+                    <div class="titulo flex flex--3">Num. Doc.</div>
+                    <div class="titulo flex flex--10">Observações</div>
+                    <div class="titulo flex flex--2">Ações</div>
+                </div>
+
+                <div class="listaTiposRecursos">
+                    <!-- Tipos de recursos serão carregados dinamicamente -->
+                </div>
+            </section>
+
+        </main>
+        <footer>Rodapé</footer>
+    </div>
+
+
+    <!-- Formulário de Login DIALOG -->
+    <dialog id="dialogLogin">
+        <fieldset>
+            <legend>Login</legend>
+
+            <form id="frmLogin">
+                <div class="row">
+                    <input type="text" name="txtLogin" id="txtLogin" class="formInput" placeholder="Digite o seu login">
+                </div>
+                <div class="row">
+                    <input type="password" name="txtSenha" id="txtSenha" class="formInput" placeholder="Digite a sua senha">
+                </div>
+                <div class="row">
+                    <button id="btnLogin">Entrar</button>
+                    <button id="btnCancelarLogin">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+    <!-- Fim formulário de Login DIALOG -->
+
+    <!-- Formulário cadastro Unidade -->
+    <dialog class="dialogPainel unidades">
+        <fieldset>
+            <legend>Registrar nova despesa</legend>
+
+            <form class="frmCadastroPainel frmUnidade flex flex--column gap--15">
+                <div class="row">
+                    <input type="hidden" name="id_despesa" id="id_despesa">
+                    <select name="id_subunidade" id="id_subunidade" class="listaSelect formInput width--100">
+                        <option>Selecione a subunidade...</option>
+                    </select>
+                </div>
+
+                <div class="row">
+                    <select name="id_tipo_despesa" id="id_tipo_despesa" class="listaSelect formInput width--100">
+                        <option>Selecione o tipo de despesa...</option>
+                    </select>
+                </div>
+
+                <div class="row">
+                    <input type="text" name="valor_despesa" id="valor_despesa" class="formInput width--100" placeholder="Digite o valor da despesa">
+                    <label class="painelLabel" for="valor_despesa">Ex.: 3000,87 ou 5789,70</label>
+                </div>
+
+                <div class="row">
+                    <input type="date" name="data_despesa" id="data_despesa" class="formInput width--100">
+                    <label for="data_despesa" class="painelLabel">Data de registro da despesa</label>
+                </div>
+
+                <div class="row">
+                    <input type="text" name="numero_documento_despesa" id="numero_documento_despesa" class="formInput width--100" placeholder="Digite o número do documento gerado">
+                    <label class="painelLabel" for="numero_documento_despesa"><!-- Coloque aqui um exemplo --></label>
+                </div>
+
+                <div class="row">
+                    <textarea name="descricao_despesa" id="descricao_despesa" class="formInput width--100" placeholder="Digite alguma descrição sobre a despesa..."></textarea>
+                </div>
+
+                <div class="row">
+                    <button class="btnPainelFormulario cadastrarUnidade">Cadastrar</button>
+                    <button class="btnPainelFormulario atualizarUnidade">Atualizar</button>
+                    <button class="btnPainelFormulario cancelarUnidade">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+    <!-- Fim formulário cadastro Unidade -->
+
+    <script type="module" src="./js/components/index.js"></script>
+</body>
+</html>
