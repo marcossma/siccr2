@@ -35,12 +35,12 @@
 
             <section class="divListaTiposRecursos informacoes_painel">
                 <div class="cabecalho flex">
-                    <div class="titulo flex flex--2">Subunidade</div>
+                    <div class="titulo flex flex--6">Subunidade</div>
                     <div class="titulo flex flex--3">Despesa</div>
-                    <div class="titulo flex flex--2">Valor</div>
+                    <div class="titulo flex flex--3">Valor</div>
                     <div class="titulo flex flex--3">Data</div>
                     <div class="titulo flex flex--3">Num. Doc.</div>
-                    <div class="titulo flex flex--10">Observações</div>
+                    <div class="titulo flex flex--8">Observações</div>
                     <div class="titulo flex flex--2">Ações</div>
                 </div>
 
@@ -86,12 +86,14 @@
                     <select name="id_subunidade" id="id_subunidade" class="listaSelect formInput width--100">
                         <option>Selecione a subunidade...</option>
                     </select>
+                    <label for="id_subunidade" class="painelLabel">Subunidade</label>
                 </div>
 
                 <div class="row">
                     <select name="id_tipo_despesa" id="id_tipo_despesa" class="listaSelect formInput width--100">
                         <option>Selecione o tipo de despesa...</option>
                     </select>
+                    <label for="id_tipo_despesa" class="painelLabel">Despesa</label>
                 </div>
 
                 <div class="row">
@@ -106,7 +108,7 @@
 
                 <div class="row">
                     <input type="text" name="numero_documento_despesa" id="numero_documento_despesa" class="formInput width--100" placeholder="Digite o número do documento gerado">
-                    <label class="painelLabel" for="numero_documento_despesa"><!-- Coloque aqui um exemplo --></label>
+                    <label class="painelLabel" for="numero_documento_despesa">Número do doc. gerado no SIE</label>
                 </div>
 
                 <div class="row">

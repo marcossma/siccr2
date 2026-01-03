@@ -25,6 +25,8 @@ const salasTipoRoutes = require("./routes/salas-tipo.js");
 const tiposRecursos = require("./routes/tipos-recursos.js");
 // Importar rotas para tipos de despesas
 const tiposDespesas = require("./routes/tipos-despesas.js");
+// Importar rotas para despesas
+const despesas = require("./routes/despesas.js");
 
 // Porta do servidor
 const PORT = process.env.SERVER_PORT || 15000;
@@ -80,6 +82,10 @@ app.use("/api/tipos-recursos", tiposRecursos);
 // Rota para os tipos de despesas
 // ##############################
 app.use("/api/tipos-despesas", tiposDespesas);
+
+// Rota para as despesas
+// #####################
+app.use("/api/despesas", despesas);
 
 // Configurar o uso de arquivos estáticos
 app.use(express.static(path.join(__dirname, "public")));

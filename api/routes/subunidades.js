@@ -89,7 +89,10 @@ router.get("/total-info", async(req, res) => {
         users.whatsapp,
         users.permissao,
         count(*) over() as total_subunidades 
-        FROM subunidades left join unidades on subunidades.unidade_id = unidades.unidade_id left join predios on subunidades.predio_id = predios.predio_id left join users on subunidades.chefe = users.user_id order by subunidades.subunidade_nome`);
+        FROM subunidades left join unidades on subunidades.unidade_id = unidades.unidade_id
+         left join predios on subunidades.predio_id = predios.predio_id
+         left join users on subunidades.chefe = users.user_id 
+         order by subunidades.subunidade_nome`);
 
     res.status(200).json({
         status: "success",

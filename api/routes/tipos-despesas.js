@@ -3,7 +3,7 @@ const pool = require("../config/database.js");
 
 const router = express.Router();
 
-// Rota para adicioanr novo recurso
+// Rota para adicioanr novo tipo de despesa
 router.post("/", async (req, res) => {
     const { tipo_despesa, descricao_despesa = null } = req.body;
     console.log(req.body);
@@ -18,11 +18,11 @@ router.post("/", async (req, res) => {
             });
         }
 
-        // Prepara a query para cadastrar o recurso
+        // Prepara a query para cadastrar o novo tipo de despesa
         const query = "insert into tipos_despesas (tipo_despesa, descricao_despesa) values ($1, $2) returning *";
         const values = [tipo_despesa, descricao_despesa];
 
-        // Cadastra o recurso
+        // Cadastra o tipo de despesa
         const result = await pool.query(query, values);
 
         // Retorna os dados da operação

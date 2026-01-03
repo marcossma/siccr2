@@ -526,6 +526,68 @@ document.addEventListener("DOMContentLoaded", function(event) {
             elements.frmUnidade.reset();
             elements.dialogPainel.close();
         });
+
+        // Botão editar
+        elements.listaTiposRecursos.addEventListener("click", function(event) {
+            if (event.target.classList.contains("editar")) {
+                
+                const dadosEl = event.target.dataset; // Pega todo o dataset do botão de edição
+                console.log(dadosEl);
+                
+                document.querySelector("#id_despesa").value = dadosEl.id_despesa;
+                elements.listaSelect[0].value = dadosEl.id_subunidade;
+                elements.listaSelect[1].value = dadosEl.id_tipo_despesa;
+                document.querySelector("#valor_despesa").value = dadosEl.valor_despesa;
+                document.querySelector("#data_despesa").value = dadosEl.data_despesa;
+                document.querySelector("#numero_documento_despesa").value = dadosEl.numero_documento_despesa || "Nada informado";
+                document.querySelector("#observacao_despesa").value = dadosEl.observacao_despesa || "Nada informado";
+
+                elements.fieldsetLegend.textContent = "Atualizar despesa";
+                elements.btnCadastrar.disabled = true;
+                elements.btnCadastrar.style.display = "none";
+                elements.btnAtualizar.disabled = false;
+                elements.btnAtualizar.style.display = "inline-block";
+
+
+                elements.dialogPainel.showModal();
+            }
+        });
+
+        // Renderizar a lista de despesas
+        function renderizarDespesas() {
+            elements.listaTiposRecursos.innerHTML = "";
+            carregarDados("despesas/total-info").then((despesas) => {
+                despesas.forEach((despesa) => {
+                    const divElement = document.createElement("div");
+                    divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
+
+                    divElement.innerHTML = `
+                        <div class="dado flex flex--6">${despesa.subunidade_nome}</div>
+                        <div class="dado flex flex--3">${despesa.tipo_despesa}</div>
+                        <div class="dado flex flex--3">${despesa.valor_despesa}</div>
+                        <div class="dado flex flex--3">${despesa.data_despesa || "Não informado"}</div>
+                        <div class="dado flex flex--3">${despesa.numero_documento_despesa || "Não informado"}</div>
+                        <div class="dado flex flex--8">${despesa.observacao_despesa || "Não informado"}</div>
+                        <div class="dado flex flex--2 font--size--20">
+                            <i class="bi bi-pencil-square editar" title="Editar" 
+                                data-id_despesa="${despesa.id_despesa}" 
+                                data-id_subunidade="${despesa.id_subunidade}"
+                                data-id_tipo_despesa="${despesa.id_tipo_despesa}"
+                                data-valor_despesa="${despesa.valor_despesa}"
+                                data-data_despesa="${despesa.data_despesa}" 
+                                data-numero_documento_despesa="${despesa.numero_documento_despesa || "Não informado"}"
+                                data-observacao_despesa="${despesa.observacao_despesa || "Não informado"}">
+                            </i>
+                            <i class="bi bi-x-square excluir" title="Excluir" data-id_tipo_despesa="${despesa.id_tipo_despesa}"></i>
+                        </div>
+                    `;
+
+                    elements.listaTiposRecursos.appendChild(divElement);
+                });
+            });
+        }
+
+        renderizarDespesas();
     }
 
     
