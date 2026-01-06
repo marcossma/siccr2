@@ -5,7 +5,7 @@ const router = express.Router();
 
 // Rota para adicionar nova despesa
 router.post("/", async (req, res) => {
-    const { id_tipo_despesa, id_subunidade, valor_despesa, data_despesa, numero_documento_despesa = null, observacao_despesa = null } = req.body;
+    const { id_tipo_despesa, id_subunidade, valor_despesa, data_despesa = null, numero_documento_despesa = null, observacao_despesa = null } = req.body;
     console.log(req.body);
 
     try {
@@ -28,7 +28,7 @@ router.post("/", async (req, res) => {
         // Retorna os dados da operação
         res.status(201).json({
             status: "success",
-            message: "Tipo de despesa cadastrada com sucesso!",
+            message: "Despesa cadastrada com sucesso!",
             data: result.rows
         });
 
