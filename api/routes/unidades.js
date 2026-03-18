@@ -65,13 +65,30 @@ router.put("/:idunidade", async (req, res) => {
     const unidade_id = req.params.idunidade;
     const { unidade_codigo, unidade, unidade_sigla } = req.body;
 
-    const result = await pool.query("update unidades set unidade_codigo = $1, unidade = $2, unidade_sigla = $3 where unidade_id = $4 returning *", [unidade_codigo, unidade, unidade_sigla, unidade_id]);
-    
-    res.status(200).json({
-        status: "success",
-        message: "Informações da unidade atualizada",
-        data: result.rows
-    });
+    if (!unidade_codigo || !unidade || !unidade_sigla) {
+        return res.status(400).json({
+            status: "error",
+            message: "Todos os campos devem ser preenchidos.",
+            data: ""
+        });
+    }
+
+    try {
+        const result = await pool.query("update unidades set unidade_codigo = $1, unidade = $2, unidade_sigla = $3 where unidade_id = $4 returning *", [unidade_codigo, unidade, unidade_sigla, unidade_id]);
+
+        res.status(200).json({
+            status: "success",
+            message: "Informações da unidade atualizada",
+            data: result.rows
+        });
+    } catch (error) {
+        console.error("Erro ao tentar atualizar unidade: ", error);
+        res.status(500).json({
+            status: "error",
+            message: "Erro ao tentar atualizar unidade.",
+            data: ""
+        });
+    }
 });
 
 // Exportar o roteador

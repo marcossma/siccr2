@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", function(event) {
+document.addEventListener("DOMContentLoaded", function() {
     const apiUrl = "http://localhost:15000/api";
     const urlParam = window.location.pathname;
     
@@ -162,6 +162,187 @@ document.addEventListener("DOMContentLoaded", function(event) {
         dialogLogin.close();
     });
 
+    // Rotinas para a página inicial (/)
+    // ====================================
+    if (urlParam === "/") {
+        const grid = document.querySelector("#noticiasGrid");
+
+        function formatarData(dataIso) {
+            return new Date(dataIso).toLocaleDateString("pt-BR", {
+                day: "2-digit", month: "short", year: "numeric"
+            });
+        }
+
+        function decodificarHtml(html) {
+            const txt = document.createElement("textarea");
+            txt.innerHTML = html;
+            return txt.value;
+        }
+
+        function renderizarNoticias(noticias) {
+            grid.innerHTML = "";
+
+            if (!noticias.length) {
+                grid.innerHTML = '<p class="noticias-erro">Nenhuma notícia encontrada.</p>';
+                return;
+            }
+
+            noticias.forEach(noticia => {
+                const card = document.createElement("div");
+                card.classList.add("noticia-card");
+
+                const imagem = noticia.imagem
+                    ? `<img class="noticia-card-imagem" src="${noticia.imagem}" alt="${decodificarHtml(noticia.titulo)}" loading="lazy">`
+                    : `<div class="noticia-card-imagem-placeholder"><i class="bi bi-image"></i></div>`;
+
+                card.innerHTML = `
+                    ${imagem}
+                    <div class="noticia-card-corpo">
+                        <p class="noticia-card-data">${formatarData(noticia.data)}</p>
+                        <h3 class="noticia-card-titulo">${decodificarHtml(noticia.titulo)}</h3>
+                        <p class="noticia-card-resumo">${noticia.resumo}</p>
+                        <a class="noticia-card-link" href="${noticia.link}" target="_blank" rel="noopener">
+                            Leia mais <i class="bi bi-arrow-up-right"></i>
+                        </a>
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        fetch(`${apiUrl}/noticias?limit=4`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "success") {
+                    renderizarNoticias(data.data);
+                } else {
+                    grid.innerHTML = '<p class="noticias-erro">Não foi possível carregar as notícias.</p>';
+                }
+            })
+            .catch(() => {
+                grid.innerHTML = '<p class="noticias-erro">Erro ao conectar ao servidor.</p>';
+            });
+
+        // Seção de Eventos
+        const eventosLista = document.querySelector("#eventosLista");
+
+        function formatarDataEvento(dataIso) {
+            if (!dataIso) return "Data não informada";
+            const d = new Date(dataIso);
+            if (isNaN(d.getTime())) return dataIso;
+            return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+        }
+
+        function renderizarEventos(eventos) {
+            eventosLista.innerHTML = "";
+
+            if (!eventos.length) {
+                eventosLista.innerHTML = '<p class="noticias-erro">Nenhum evento encontrado.</p>';
+                return;
+            }
+
+            eventos.forEach(evento => {
+                const card = document.createElement("div");
+                card.classList.add("evento-card");
+
+                const periodo = evento.fim && evento.fim !== evento.inicio
+                    ? `${formatarDataEvento(evento.inicio)} – ${formatarDataEvento(evento.fim)}`
+                    : formatarDataEvento(evento.inicio);
+
+                const localHtml = evento.local
+                    ? `<p class="evento-local"><i class="bi bi-geo-alt"></i> ${evento.local}</p>`
+                    : "";
+
+                const linkHtml = evento.link
+                    ? `<a class="noticia-card-link" href="${evento.link}" target="_blank" rel="noopener">Saiba mais <i class="bi bi-arrow-up-right"></i></a>`
+                    : "";
+
+                card.innerHTML = `
+                    <div class="evento-data"><i class="bi bi-calendar3"></i> ${periodo}</div>
+                    <div class="evento-info">
+                        <h3 class="evento-nome">${evento.nome}</h3>
+                        ${localHtml}
+                        ${linkHtml}
+                    </div>
+                `;
+
+                eventosLista.appendChild(card);
+            });
+        }
+
+        fetch(`${apiUrl}/eventos`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "success") {
+                    renderizarEventos(data.data);
+                } else {
+                    eventosLista.innerHTML = '<p class="noticias-erro">Não foi possível carregar os eventos.</p>';
+                }
+            })
+            .catch(() => {
+                eventosLista.innerHTML = '<p class="noticias-erro">Erro ao conectar ao servidor.</p>';
+            });
+    }
+
+    // Rotinas para a página noticias.html (todas as notícias)
+    // ========================================================
+    if (urlParam === "/noticias") {
+        const grid = document.querySelector("#noticiasGrid");
+
+        function formatarDataNoticias(dataIso) {
+            return new Date(dataIso).toLocaleDateString("pt-BR", {
+                day: "2-digit", month: "short", year: "numeric"
+            });
+        }
+
+        function decodificarHtmlNoticias(html) {
+            const txt = document.createElement("textarea");
+            txt.innerHTML = html;
+            return txt.value;
+        }
+
+        function renderizarTodasNoticias(noticias) {
+            grid.innerHTML = "";
+            if (!noticias.length) {
+                grid.innerHTML = '<p class="noticias-erro">Nenhuma notícia encontrada.</p>';
+                return;
+            }
+            noticias.forEach(noticia => {
+                const card = document.createElement("div");
+                card.classList.add("noticia-card");
+                const imagem = noticia.imagem
+                    ? `<img class="noticia-card-imagem" src="${noticia.imagem}" alt="${decodificarHtmlNoticias(noticia.titulo)}" loading="lazy">`
+                    : `<div class="noticia-card-imagem-placeholder"><i class="bi bi-image"></i></div>`;
+                card.innerHTML = `
+                    ${imagem}
+                    <div class="noticia-card-corpo">
+                        <p class="noticia-card-data">${formatarDataNoticias(noticia.data)}</p>
+                        <h3 class="noticia-card-titulo">${decodificarHtmlNoticias(noticia.titulo)}</h3>
+                        <p class="noticia-card-resumo">${noticia.resumo}</p>
+                        <a class="noticia-card-link" href="${noticia.link}" target="_blank" rel="noopener">
+                            Leia mais <i class="bi bi-arrow-up-right"></i>
+                        </a>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        fetch(`${apiUrl}/noticias?limit=12`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "success") {
+                    renderizarTodasNoticias(data.data);
+                } else {
+                    grid.innerHTML = '<p class="noticias-erro">Não foi possível carregar as notícias.</p>';
+                }
+            })
+            .catch(() => {
+                grid.innerHTML = '<p class="noticias-erro">Erro ao conectar ao servidor.</p>';
+            });
+    }
+
     // Rotinas para a página tipos-recursos.html
     // =========================================
     if (urlParam === "/tipos-recursos") {
@@ -190,7 +371,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     }
 
                     return response.json();
-                }).then((data) => {
+                }).then(() => {
                     // Após efetuar a atualização, renderiza novamente a lista
                     renderizarTiposRecursos();
                     frmUnidade.reset();
@@ -218,7 +399,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                     }
 
                     return response.json();
-                }).then((data) => {
+                }).then(() => {
                     renderizarTiposRecursos();
                     frmUnidade.reset();
                     dialogPainel.close();
@@ -592,9 +773,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
     
 
-    const dados = JSON.parse(localStorage.getItem("siccr"));
-    console.log(dados);
-    console.log(dados.permissao); // <-- Aqui retorna undefined
+    const dados = JSON.parse(localStorage.getItem("siccr") || "null");
+    if (dados) {
+        console.log(dados);
+    }
 
 
 });

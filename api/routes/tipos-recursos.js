@@ -63,25 +63,51 @@ router.put("/:idrecurso", async (req, res) => {
     const id_tipo_recurso = req.params.idrecurso;
     const { tipo_recurso, descricao_recurso } = req.body;
 
-    const result = await pool.query("update tipos_recursos set tipo_recurso = $1, descricao_recurso = $2 where id_tipo_recurso = $3 returning *", [tipo_recurso, descricao_recurso, id_tipo_recurso]);
+    if (!tipo_recurso || !descricao_recurso) {
+        return res.status(400).json({
+            status: "error",
+            message: "Todos os campos devem ser preenchidos.",
+            data: ""
+        });
+    }
 
-    res.status(200).json({
-        status: "success",
-        message: "Informações atualizadas com sucesso.",
-        data: result.rows
-    });
+    try {
+        const result = await pool.query("update tipos_recursos set tipo_recurso = $1, descricao_recurso = $2 where id_tipo_recurso = $3 returning *", [tipo_recurso, descricao_recurso, id_tipo_recurso]);
+
+        res.status(200).json({
+            status: "success",
+            message: "Informações atualizadas com sucesso.",
+            data: result.rows
+        });
+    } catch (error) {
+        console.error("Erro ao tentar atualizar tipo de recurso: ", error);
+        res.status(500).json({
+            status: "error",
+            message: "Erro ao tentar atualizar tipo de recurso.",
+            data: ""
+        });
+    }
 });
 
 router.delete("/:idrecurso", async (req, res) => {
     const id_tipo_recurso = req.params.idrecurso;
 
-    const result = await pool.query("delete from tipos_recursos where id_tipo_recurso = $1 returning *", [id_tipo_recurso]);
+    try {
+        await pool.query("delete from tipos_recursos where id_tipo_recurso = $1", [id_tipo_recurso]);
 
-    res.status(200).json({
-        status: "success",
-        message: "Tipo de recurso excluído com sucesso.",
-        data: ""
-    });
+        res.status(200).json({
+            status: "success",
+            message: "Tipo de recurso excluído com sucesso.",
+            data: ""
+        });
+    } catch (error) {
+        console.error("Erro ao tentar excluir tipo de recurso: ", error);
+        res.status(500).json({
+            status: "error",
+            message: "Erro ao tentar excluir tipo de recurso.",
+            data: ""
+        });
+    }
 });
 
 // Exportar o roteador

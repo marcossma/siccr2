@@ -80,18 +80,33 @@ router.get("/total-info", async(req, res) => {
 });
 
 router.put("/:predio_id", async (req, res) => {
-    // Fazer a regra de negócio para atualização do PRÉDIO
     const predio_id = req.params.predio_id;
     const { predio, descricao, unidade_id } = req.body;
-    console.log(predio_id);
 
-    const result = await pool.query("update predios set predio = $1, descricao = $2, unidade_id = $3 where predio_id = $4 returning *", [predio, descricao, unidade_id, predio_id]);
-    
-    res.status(200).json({
-        status: "success",
-        message: "Informações do predio atualizadas",
-        data: result.rows
-    });
+    if (!predio || !unidade_id) {
+        return res.status(400).json({
+            status: "error",
+            message: "Os campos IDENTIFICAÇÃO DO PRÉDIO e UNIDADE devem ser preenchidos.",
+            data: ""
+        });
+    }
+
+    try {
+        const result = await pool.query("update predios set predio = $1, descricao = $2, unidade_id = $3 where predio_id = $4 returning *", [predio, descricao, unidade_id, predio_id]);
+
+        res.status(200).json({
+            status: "success",
+            message: "Informações do prédio atualizadas",
+            data: result.rows
+        });
+    } catch (error) {
+        console.error("Erro ao tentar atualizar prédio: ", error);
+        res.status(500).json({
+            status: "error",
+            message: "Erro ao tentar atualizar prédio.",
+            data: ""
+        });
+    }
 });
 
 // Exportar o roteador

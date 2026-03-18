@@ -1,10 +1,13 @@
 // server.js - arquivo principal do servidor
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({ path: path.resolve(__dirname, ".env") });
+if (!process.env.DB_HOST) {
+    require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
+}
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
 const helmet = require("helmet");
-const path = require("path");
 const WebSocket = require("ws");
 
 // Importar rotas dos usuários
@@ -27,65 +30,66 @@ const tiposRecursos = require("./routes/tipos-recursos.js");
 const tiposDespesas = require("./routes/tipos-despesas.js");
 // Importar rotas para despesas
 const despesas = require("./routes/despesas.js");
+// Importar rotas para notícias (proxy WordPress)
+const noticias = require("./routes/noticias.js");
+// Importar rotas para eventos (scraping WordPress)
+const eventos = require("./routes/eventos.js");
+// Importar middleware de autenticação
+const autenticar = require("./middlewares/auth.js");
 
 // Porta do servidor
-const PORT = process.env.SERVER_PORT || 15000;
+const PORT = process.env.PORT || 15000;
 
 const app = express();
 app.use(express.json());
-app.use(cors());
-app.use(helmet());
+app.use(cors({
+    origin: process.env.CORS_ORIGIN || "http://localhost:15000",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+}));
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+            "img-src": ["'self'", "https://www.ufsm.br", "data:"],
+        }
+    }
+}));
 
 // ##############
 //  Rotas de API
 // ##############
-app.get("/api/test", async(req, res) => {
-    res.status(201).json({
+app.get("/api/test", (_req, res) => {
+    res.status(200).json({
         status: "success",
         message: "Api funcionando!",
         data: ""
     });
 });
 
-// Rotas para os usuários
-// ######################
-app.use("/api/usuarios", usuariosRoutes);
-
-// Rota para autenticação
-// ######################
+// Rota para autenticação (pública - sem middleware)
+// ##################################################
 app.use("/api/auth", usuariosAuth);
 
-// Rota para as unidades
-// #####################
-app.use("/api/unidades", unidadesRoutes);
+// Rota para notícias do CCR (pública - sem middleware)
+// #####################################################
+app.use("/api/noticias", noticias);
 
-// Rota para os prédios
-// ####################
-app.use("/api/predios", prediosRoutes);
+// Rota para eventos do CCR (pública - sem middleware)
+// ####################################################
+app.use("/api/eventos", eventos);
 
-// Rota para as subunidades
-// ####################
-app.use("/api/subunidades", subunidadesRoutes);
-
-// Rota para as salas
-// ####################
-app.use("/api/salas", salasRoutes);
-
-// Rota para os tipos de salas
-// ###########################
-app.use("/api/salas-tipo", salasTipoRoutes);
-
-// Rota para os tipos de recursos
-// ##############################
-app.use("/api/tipos-recursos", tiposRecursos);
-
-// Rota para os tipos de despesas
-// ##############################
-app.use("/api/tipos-despesas", tiposDespesas);
-
-// Rota para as despesas
-// #####################
-app.use("/api/despesas", despesas);
+// Rotas protegidas (autenticar aplicado individualmente)
+// ######################################################
+app.use("/api/usuarios",      autenticar, usuariosRoutes);
+app.use("/api/unidades",      autenticar, unidadesRoutes);
+app.use("/api/predios",       autenticar, prediosRoutes);
+app.use("/api/subunidades",   autenticar, subunidadesRoutes);
+app.use("/api/salas",         autenticar, salasRoutes);
+app.use("/api/salas-tipo",    autenticar, salasTipoRoutes);
+app.use("/api/tipos-recursos",autenticar, tiposRecursos);
+app.use("/api/tipos-despesas",autenticar, tiposDespesas);
+app.use("/api/despesas",      autenticar, despesas);
 
 // Configurar o uso de arquivos estáticos
 app.use(express.static(path.join(__dirname, "public")));

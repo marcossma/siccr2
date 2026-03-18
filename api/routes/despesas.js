@@ -6,7 +6,6 @@ const router = express.Router();
 // Rota para adicionar nova despesa
 router.post("/", async (req, res) => {
     const { id_tipo_despesa, id_subunidade, valor_despesa, data_despesa, numero_documento_despesa = null, observacao_despesa = null } = req.body;
-    console.log(req.body);
 
     try {
         // Verifica se todos os campos estão preenchidos
@@ -104,25 +103,43 @@ router.put("/:iddespesa", async (req, res) => {
     const id_despesa = req.params.iddespesa;
     const { id_tipo_despesa, id_subunidade, valor_despesa, data_despesa, numero_documento_despesa, observacao_despesa } = req.body;
 
-    const result = await pool.query("update despesas set id_tipo_despesa = $1, id_subunidade = $2, valor_despesa = $3, data_despesa = $4, numero_documento_despesa = $5, observacao_despesa = $6 where id_despesa = $7 returning *", [id_tipo_despesa, id_subunidade, valor_despesa, data_despesa, numero_documento_despesa, observacao_despesa, id_despesa]);
+    try {
+        const result = await pool.query("update despesas set id_tipo_despesa = $1, id_subunidade = $2, valor_despesa = $3, data_despesa = $4, numero_documento_despesa = $5, observacao_despesa = $6 where id_despesa = $7 returning *", [id_tipo_despesa, id_subunidade, valor_despesa, data_despesa, numero_documento_despesa, observacao_despesa, id_despesa]);
 
-    res.status(200).json({
-        status: "success",
-        message: "Informações atualizadas com sucesso.",
-        data: result.rows
-    });
+        res.status(200).json({
+            status: "success",
+            message: "Informações atualizadas com sucesso.",
+            data: result.rows
+        });
+    } catch (error) {
+        console.error("Erro ao tentar atualizar despesa: ", error);
+        res.status(500).json({
+            status: "error",
+            message: "Erro ao tentar atualizar despesa.",
+            data: ""
+        });
+    }
 });
 
 router.delete("/:iddespesa", async (req, res) => {
-    const id_tipo_despesa = req.params.iddespesa;
+    const id_despesa = req.params.iddespesa;
 
-    const result = await pool.query("delete from tipos_despesas where id_tipo_despesa = $1 returning *", [id_tipo_despesa]);
+    try {
+        const result = await pool.query("delete from despesas where id_despesa = $1 returning *", [id_despesa]);
 
-    res.status(200).json({
-        status: "success",
-        message: "Tipo de despesa excluída com sucesso.",
-        data: ""
-    });
+        res.status(200).json({
+            status: "success",
+            message: "Despesa excluída com sucesso.",
+            data: ""
+        });
+    } catch (error) {
+        console.error("Erro ao tentar excluir despesa: ", error);
+        res.status(500).json({
+            status: "error",
+            message: "Erro ao tentar excluir despesa.",
+            data: ""
+        });
+    }
 });
 
 // Exportar o roteador

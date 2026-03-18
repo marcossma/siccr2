@@ -42,7 +42,6 @@ router.post("/login", async (req, res) => {
         const senhaCompare = await bcrypt.compare(senha, user.rows[0].senha); // <-- Compara a senha do formulário com a senha do banco de dados do usuário
 
         if (!senhaCompare) {
-            console.error("Erro: ", error);
             return res.status(401).json({
                 status: "error",
                 message: "Usuário ou senha inválidos!",
@@ -50,15 +49,29 @@ router.post("/login", async (req, res) => {
             });
         }
 
+        const userData = user.rows[0];
         const token = jwt.sign({
-            id: user.user_id, nome: user.nome, siape: user.siape, email: user.email, whatsapp: user.whatsapp, permissao: user.permissao, subunidade: user.subunidade_id, data_nascimento: user.data_nascimento
-        }, "jwt-chave-super-secreta-full", {expiresIn: "1h"});
+            id: userData.user_id,
+            nome: userData.nome,
+            siape: userData.siape,
+            email: userData.email,
+            whatsapp: userData.whatsapp,
+            permissao: userData.permissao,
+            subunidade: userData.subunidade_id,
+            data_nascimento: userData.data_nascimento
+        }, process.env.JWT_SECRET, { expiresIn: "1h" });
 
-        console.log(`Usuário ${user.rows[0].nome} autenticado`);
-            return res.status(200).json({
+        return res.status(200).json({
                 status: "success",
                 message: "Usuário autenticado com sucesso.",
-                data: user.rows,
+                data: [{
+                    user_id: userData.user_id,
+                    nome: userData.nome,
+                    siape: userData.siape,
+                    email: userData.email,
+                    permissao: userData.permissao,
+                    subunidade_id: userData.subunidade_id
+                }],
                 token: token
             });
 

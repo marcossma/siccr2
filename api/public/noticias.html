@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SICCR - Sistema Integrado Centro de Ciências Rurais</title>
+    <title>Notícias - SICCR</title>
     <link rel="shortcut icon" href="./img/favicon.png" type="image/x-icon">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/dialogs.css">
@@ -14,7 +14,6 @@
     <dialog id="dialogLogin">
         <fieldset>
             <legend>Login</legend>
-
             <form id="frmLogin">
                 <div class="row">
                     <input type="text" name="txtLogin" id="txtLogin" class="formInput" placeholder="Digite o seu login">
@@ -42,23 +41,14 @@
         <div>
             <responsive-menu></responsive-menu>
         </div>
-        <main class="main-inicio">
+        <main>
             <section class="secao-noticias">
                 <div class="secao-cabecalho">
                     <h2><i class="bi bi-newspaper"></i> Notícias do CCR</h2>
-                    <a href="/noticias" class="secao-ver-todas">Ver todas <i class="bi bi-arrow-right"></i></a>
+                    <a href="/" class="secao-ver-todas"><i class="bi bi-arrow-left"></i> Voltar ao início</a>
                 </div>
                 <div class="noticias-grid" id="noticiasGrid">
                     <p class="noticias-carregando">Carregando notícias...</p>
-                </div>
-            </section>
-
-            <section class="secao-eventos">
-                <div class="secao-cabecalho">
-                    <h2><i class="bi bi-calendar-event"></i> Eventos do CCR</h2>
-                </div>
-                <div class="eventos-lista" id="eventosLista">
-                    <p class="noticias-carregando">Carregando eventos...</p>
                 </div>
             </section>
         </main>

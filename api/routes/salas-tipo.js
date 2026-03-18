@@ -81,17 +81,33 @@ router.get("/total-info", async(req, res) => {
 });
 
 router.put("/:sala_tipo_id", async (req, res) => {
-    // Fazer a regra de negócio para atualização do PRÉDIO
     const sala_tipo_id = req.params.sala_tipo_id;
     const { sala_tipo_nome } = req.body;
 
-    const result = await pool.query("update salas_tipo set sala_tipo_nome = $1 where sala_tipo_id = $2 returning *", [sala_tipo_nome, sala_tipo_id]);
-    
-    res.status(200).json({
-        status: "success",
-        message: "Informações do tipo de sala atualizadas",
-        data: result.rows
-    });
+    if (!sala_tipo_nome) {
+        return res.status(400).json({
+            status: "error",
+            message: "O campo IDENTIFICAÇÃO DO TIPO DE SALA deve ser preenchido.",
+            data: ""
+        });
+    }
+
+    try {
+        const result = await pool.query("update salas_tipo set sala_tipo_nome = $1 where sala_tipo_id = $2 returning *", [sala_tipo_nome, sala_tipo_id]);
+
+        res.status(200).json({
+            status: "success",
+            message: "Informações do tipo de sala atualizadas",
+            data: result.rows
+        });
+    } catch (error) {
+        console.error("Erro ao tentar atualizar tipo de sala: ", error);
+        res.status(500).json({
+            status: "error",
+            message: "Erro ao tentar atualizar tipo de sala.",
+            data: ""
+        });
+    }
 });
 
 // Exportar o roteador

@@ -1,5 +1,9 @@
 // config/database.js
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
+if (!process.env.DB_HOST) {
+    require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
+}
 const { Pool } = require("pg");
 
 // Configurando o banco de dados

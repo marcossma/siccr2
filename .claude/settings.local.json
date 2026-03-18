@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/wamp64/www/siccr2 -type f -name *.json -o -name *.php -o -name *.html -o -name *.js -o -name *.sql)",
+      "Bash(find /c/wamp64/www/siccr2 -type f \\\\\\(-name *.html -o -name *.css -o -name *.php \\\\\\))",
+      "Bash(grep -v \":0$\")",
+      "Bash(grep -n \"query.*$\" /c/wamp64/www/siccr2/api/routes/despesas.js)",
+      "Bash(wc -l /c/wamp64/www/siccr2/api/routes/*.js)",
+      "WebFetch(domain:www.ufsm.br)"
+    ]
+  }
+}

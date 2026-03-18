@@ -48,8 +48,6 @@ router.get("/total-info", async (req, res) => {
 router.post("/", async (req, res) => {
     const { nome, email, siape, senha, data_nascimento, subunidade_id, whatsapp, permissao, createdat } = req.body;
 
-    console.log("Nome: ", nome);
-
     try {
         // Verificar se todos os campos necessários foram preenchidos
         if (!nome || !siape || !senha) {
@@ -63,7 +61,7 @@ router.post("/", async (req, res) => {
         // Verificar se o siape já foi cadastrado
         const userExists = await pool.query("select * from users where siape = $1", [siape]);
         if (userExists.rows.length > 0) {
-            return res.status(500).json({
+            return res.status(409).json({
                 status: "error",
                 message: `O siape ${siape} já está cadastrado.`,
                 data: ""
@@ -90,8 +88,7 @@ router.post("/", async (req, res) => {
             }
         });
     } catch(error) {
-        console.log(`Erro ao tentar cadastrar o usuário: ${error}`);
-        console.log(error.messsage);
+        console.error(`Erro ao tentar cadastrar o usuário: ${error.message}`);
         res.status(500).json({
             status: "error",
             message: "Erro ao tentar cadastrar novo usuário",
@@ -108,7 +105,7 @@ router.put("/:id", async (req, res) => {
     try {
         const userExist = await pool.query("select * from users where user_id = $1", [user_id]);
         if (userExist.rows.length < 1) {
-            return res.status(500).json({
+            return res.status(404).json({
                 status: "error",
                 message: "Usuário não encontrado.",
                 data: ""
@@ -119,7 +116,7 @@ router.put("/:id", async (req, res) => {
         const values = [nome, email, siape, data_nascimento, subunidade_id, whatsapp, permissao, user_id];
         const result = await pool.query(query, values);
 
-        return res.status(201).json({
+        return res.status(200).json({
             status: "success",
             message: "Usuário atualizado com sucesso.",
             data: {

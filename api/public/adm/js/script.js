@@ -1,6 +1,41 @@
+// Patch global: injeta o token Bearer em todos os fetch da área admin
+(function() {
+    const _fetch = window.fetch.bind(window);
+    window.fetch = function(url, options = {}) {
+        const token = localStorage.getItem("siccr_token");
+        return _fetch(url, {
+            ...options,
+            headers: {
+                "Content-Type": "application/json",
+                ...(options.headers || {}),
+                ...(token ? { "Authorization": `Bearer ${token}` } : {})
+            }
+        });
+    };
+})();
+
 document.addEventListener("DOMContentLoaded", function(event) {
     const apiUrl = "http://localhost:15000/api";
     const urlParam = window.location.pathname;
+
+    // Exibir nome do admin no cabeçalho e configurar logout
+    const siccr = JSON.parse(localStorage.getItem("siccr") || "null");
+    const adminNomeEl = document.querySelector("#adminNome");
+    const btnSair = document.querySelector("#btnSair");
+
+    if (siccr && adminNomeEl) {
+        adminNomeEl.textContent = siccr.nome;
+    }
+
+    if (btnSair) {
+        btnSair.addEventListener("click", function(event) {
+            event.preventDefault();
+            localStorage.removeItem("siccr");
+            localStorage.removeItem("siccr_token");
+            localStorage.removeItem("permissao");
+            window.location.replace("/adm/login");
+        });
+    }
   
     // Função para carregar UNIDADES
     async function carregarUnidades() {

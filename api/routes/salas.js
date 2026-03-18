@@ -80,17 +80,33 @@ router.get("/total-info", async(req, res) => {
 });
 
 router.put("/:sala_id", async (req, res) => {
-    // Fazer a regra de negócio para atualização do PRÉDIO
     const sala_id = req.params.sala_id;
     const { sala_nome, predio_id, subunidade_id, is_agendavel, sala_descricao, sala_tipo_id } = req.body;
 
-    const result = await pool.query("update salas set sala_nome = $1, sala_descricao = $2, subunidade_id = $3, predio_id = $4, is_agendavel = $5, sala_tipo_id = $6 where sala_id = $7 returning *", [sala_nome, sala_descricao, subunidade_id, predio_id, is_agendavel, sala_tipo_id, sala_id]);
-    
-    res.status(200).json({
-        status: "success",
-        message: "Informações da sala atualizadas",
-        data: result.rows
-    });
+    if (!sala_nome || !predio_id) {
+        return res.status(400).json({
+            status: "error",
+            message: "Os campos IDENTIFICAÇÃO DA SALA e PRÉDIO devem ser preenchidos.",
+            data: ""
+        });
+    }
+
+    try {
+        const result = await pool.query("update salas set sala_nome = $1, sala_descricao = $2, subunidade_id = $3, predio_id = $4, is_agendavel = $5, sala_tipo_id = $6 where sala_id = $7 returning *", [sala_nome, sala_descricao, subunidade_id, predio_id, is_agendavel, sala_tipo_id, sala_id]);
+
+        res.status(200).json({
+            status: "success",
+            message: "Informações da sala atualizadas",
+            data: result.rows
+        });
+    } catch (error) {
+        console.error("Erro ao tentar atualizar sala: ", error);
+        res.status(500).json({
+            status: "error",
+            message: "Erro ao tentar atualizar sala.",
+            data: ""
+        });
+    }
 });
 
 // Exportar o roteador
