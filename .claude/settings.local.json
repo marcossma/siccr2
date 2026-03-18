@@ -6,7 +6,10 @@
       "Bash(grep -v \":0$\")",
       "Bash(grep -n \"query.*$\" /c/wamp64/www/siccr2/api/routes/despesas.js)",
       "Bash(wc -l /c/wamp64/www/siccr2/api/routes/*.js)",
-      "WebFetch(domain:www.ufsm.br)"
+      "WebFetch(domain:www.ufsm.br)",
+      "Bash(find /c/wamp64/www/siccr2 -name painel.html -o -name admin* -type f)",
+      "Bash(ls -la /c/wamp64/www/siccr2/api/*.js)",
+      "Bash(docker compose:*)"
     ]
   }
 }

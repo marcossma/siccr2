@@ -111,3 +111,34 @@ h1 {
     padding-left: 10px;
     color: gray;
 }
+
+/* Navegação dos painéis (diretor / chefe) */
+.nav-painel {
+    background-color: #f4f4f4;
+    border-bottom: 1px solid #ddd;
+    width: 80%;
+    margin: 0 auto;
+}
+
+.nav-painel ul {
+    display: flex;
+    list-style: none;
+    gap: 5px;
+    padding: 0;
+    flex-wrap: wrap;
+}
+
+.nav-painel ul li a {
+    display: block;
+    padding: 8px 16px;
+    color: #333;
+    font-size: 13px;
+    border-bottom: 3px solid transparent;
+    transition: 0.2s;
+}
+
+.nav-painel ul li a:hover,
+.nav-painel ul li a.ativo {
+    color: #009536;
+    border-bottom-color: #009536;
+}

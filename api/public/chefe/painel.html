@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICCR - Painel do Chefe</title>
+    <link rel="shortcut icon" href="../img/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../adm/css/style.css">
+    <link rel="stylesheet" href="../adm/css/ui-kit.css">
+    <script src="./js/guard.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/">
+                <img src="../img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo">
+            </a>
+            <div class="acesso">
+                <span id="usuarioNome"></span>
+                <a href="#" id="btnSair">Sair</a>
+            </div>
+        </header>
+
+        <nav class="nav-painel">
+            <ul>
+                <li><a href="/chefe/painel" class="ativo">Painel</a></li>
+                <li><a href="/chefe/usuarios">Usuários</a></li>
+                <li><a href="/chefe/permissoes">Permissões</a></li>
+                <li><a href="/chefe/despesas">Despesas</a></li>
+                <li><a href="/chefe/recursos">Recursos</a></li>
+            </ul>
+        </nav>
+
+        <main class="flex flex--column">
+            <section class="titulo_painel flex justify--content--evenly">
+                <h1>Painel do Chefe de Setor</h1>
+            </section>
+
+            <section class="botoes_painel flex wrap justify--space--around gap--30 width--100">
+
+                <a href="/chefe/usuarios">
+                    <div class="botao_painel flex flex--column align--items--center gap--15 cursor--pointer">
+                        <i class="bi bi-people font--size--30"></i>
+                        <p>Servidores</p>
+                    </div>
+                </a>
+
+                <a href="/chefe/permissoes">
+                    <div class="botao_painel flex flex--column align--items--center gap--15 cursor--pointer">
+                        <i class="bi bi-shield-check font--size--30"></i>
+                        <p>Permissões</p>
+                    </div>
+                </a>
+
+                <a href="/chefe/despesas">
+                    <div class="botao_painel flex flex--column align--items--center gap--15 cursor--pointer">
+                        <i class="bi bi-cash-stack font--size--30"></i>
+                        <p>Despesas</p>
+                    </div>
+                </a>
+
+                <a href="/chefe/recursos">
+                    <div class="botao_painel flex flex--column align--items--center gap--15 cursor--pointer">
+                        <i class="bi bi-wallet2 font--size--30"></i>
+                        <p>Recursos</p>
+                    </div>
+                </a>
+
+                <a href="/chefe/salas">
+                    <div class="botao_painel flex flex--column align--items--center gap--15 cursor--pointer">
+                        <i class="bi bi-door-closed font--size--30"></i>
+                        <p>Salas</p>
+                    </div>
+                </a>
+
+            </section>
+        </main>
+
+        <footer>Sistema Integrado CCR</footer>
+    </div>
+
+    <script src="./js/script.js"></script>
+</body>
+</html>

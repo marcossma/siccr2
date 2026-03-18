@@ -28,8 +28,15 @@ router.post("/login", async (req, res) => {
             });
         }
 
-        const user = await pool.query("select * from users where siape = $1", [siape]);
-        
+        // JOIN com subunidades para obter is_direcao_centro
+        const user = await pool.query(
+            `SELECT u.*, s.is_direcao_centro
+             FROM users u
+             LEFT JOIN subunidades s ON s.subunidade_id = u.subunidade_id
+             WHERE u.siape = $1`,
+            [siape]
+        );
+
         if (user.rowCount <= 0) {
             return res.status(401).json({
                 status: "error",
@@ -37,9 +44,8 @@ router.post("/login", async (req, res) => {
                 data: null
             });
         }
-        
 
-        const senhaCompare = await bcrypt.compare(senha, user.rows[0].senha); // <-- Compara a senha do formulário com a senha do banco de dados do usuário
+        const senhaCompare = await bcrypt.compare(senha, user.rows[0].senha);
 
         if (!senhaCompare) {
             return res.status(401).json({
@@ -58,22 +64,26 @@ router.post("/login", async (req, res) => {
             whatsapp: userData.whatsapp,
             permissao: userData.permissao,
             subunidade: userData.subunidade_id,
+            unidade: userData.unidade_id,
+            is_direcao_centro: userData.is_direcao_centro ?? false,
             data_nascimento: userData.data_nascimento
-        }, process.env.JWT_SECRET, { expiresIn: "1h" });
+        }, process.env.JWT_SECRET, { expiresIn: "8h" });
 
         return res.status(200).json({
-                status: "success",
-                message: "Usuário autenticado com sucesso.",
-                data: [{
-                    user_id: userData.user_id,
-                    nome: userData.nome,
-                    siape: userData.siape,
-                    email: userData.email,
-                    permissao: userData.permissao,
-                    subunidade_id: userData.subunidade_id
-                }],
-                token: token
-            });
+            status: "success",
+            message: "Usuário autenticado com sucesso.",
+            data: [{
+                user_id: userData.user_id,
+                nome: userData.nome,
+                siape: userData.siape,
+                email: userData.email,
+                permissao: userData.permissao,
+                subunidade_id: userData.subunidade_id,
+                unidade_id: userData.unidade_id,
+                is_direcao_centro: userData.is_direcao_centro ?? false
+            }],
+            token: token
+        });
 
     } catch (error) {
         console.log("Erro ao tentar executar o login: ", error);

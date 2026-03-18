@@ -191,12 +191,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 const card = document.createElement("div");
                 card.classList.add("noticia-card");
 
-                const imagem = noticia.imagem
-                    ? `<img class="noticia-card-imagem" src="${noticia.imagem}" alt="${decodificarHtml(noticia.titulo)}" loading="lazy">`
-                    : `<div class="noticia-card-imagem-placeholder"><i class="bi bi-image"></i></div>`;
-
                 card.innerHTML = `
-                    ${imagem}
                     <div class="noticia-card-corpo">
                         <p class="noticia-card-data">${formatarData(noticia.data)}</p>
                         <h3 class="noticia-card-titulo">${decodificarHtml(noticia.titulo)}</h3>
@@ -311,11 +306,7 @@ document.addEventListener("DOMContentLoaded", function() {
             noticias.forEach(noticia => {
                 const card = document.createElement("div");
                 card.classList.add("noticia-card");
-                const imagem = noticia.imagem
-                    ? `<img class="noticia-card-imagem" src="${noticia.imagem}" alt="${decodificarHtmlNoticias(noticia.titulo)}" loading="lazy">`
-                    : `<div class="noticia-card-imagem-placeholder"><i class="bi bi-image"></i></div>`;
                 card.innerHTML = `
-                    ${imagem}
                     <div class="noticia-card-corpo">
                         <p class="noticia-card-data">${formatarDataNoticias(noticia.data)}</p>
                         <h3 class="noticia-card-titulo">${decodificarHtmlNoticias(noticia.titulo)}</h3>
