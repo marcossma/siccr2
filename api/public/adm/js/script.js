@@ -14,7 +14,7 @@
     };
 })();
 
-document.addEventListener("DOMContentLoaded", function(event) {
+document.addEventListener("DOMContentLoaded", function() {
     const apiUrl = "http://localhost:15000/api";
     const urlParam = window.location.pathname;
 
@@ -23,1279 +23,909 @@ document.addEventListener("DOMContentLoaded", function(event) {
     const adminNomeEl = document.querySelector("#adminNome");
     const btnSair = document.querySelector("#btnSair");
 
-    if (siccr && adminNomeEl) {
-        adminNomeEl.textContent = siccr.nome;
-    }
+    if (siccr && adminNomeEl) adminNomeEl.textContent = siccr.nome;
 
     if (btnSair) {
-        btnSair.addEventListener("click", function(event) {
-            event.preventDefault();
+        btnSair.addEventListener("click", function(e) {
+            e.preventDefault();
             localStorage.removeItem("siccr");
             localStorage.removeItem("siccr_token");
             localStorage.removeItem("permissao");
             window.location.replace("/adm/login");
         });
     }
-  
-    // Função para carregar UNIDADES
+
+    // ─── Funções de carregamento de dados ───────────────────────────────────
+
     async function carregarUnidades() {
         try {
-            const response = await fetch(`${apiUrl}/unidades`);
-            const unidades = await response.json();
-
-            return unidades.data;
-        } catch (error) {
-            console.error("Erro ao tentar carregar as unidades: ", error);
-        }
+            const r = await fetch(`${apiUrl}/unidades`);
+            return (await r.json()).data;
+        } catch (e) { console.error("Erro ao carregar unidades:", e); }
     }
 
-    // Função para carregar Subunidades
     async function carregarSubunidades() {
         try {
-            const response = await fetch(`${apiUrl}/subunidades`);
-            const subunidades = await response.json();
-            return subunidades.data;
-        } catch (error) {
-            console.error("Erro ao tentar carregar as SUBUNIDADES: ", error);
-        }
+            const r = await fetch(`${apiUrl}/subunidades`);
+            return (await r.json()).data;
+        } catch (e) { console.error("Erro ao carregar subunidades:", e); }
     }
 
-    // Função para carregar Subunidades INNER Usuarios e mais...
     async function carregarSubunidadesTotalInfo() {
         try {
-            const response = await fetch(`${apiUrl}/subunidades/total-info`);
-            const subunidades = await response.json();
-            return subunidades.data;
-        } catch(error) {
-            console.error("Erro ao tentar carregar as SUBUNIDADES: ", error);
-        }
+            const r = await fetch(`${apiUrl}/subunidades/total-info`);
+            return (await r.json()).data;
+        } catch (e) { console.error("Erro ao carregar subunidades (total-info):", e); }
     }
 
-    // Função para carregar usuários cadastrados
     async function carregarUsuarios() {
         try {
-            const response = await fetch(`${apiUrl}/usuarios`);
-            const usuarios = await response.json();
-
-            return usuarios.data;
-        } catch(error) {
-            console.error(`Erro ao tentar carregar Usuários: ${error}`);
-        }
+            const r = await fetch(`${apiUrl}/usuarios`);
+            return (await r.json()).data;
+        } catch (e) { console.error("Erro ao carregar usuários:", e); }
     }
 
-    //Função para carregar usuários totalInfo
     async function carregarUsuariosTotalInfo() {
         try {
-            const response = await fetch(`${apiUrl}/usuarios/total-info`);
-            const usuarios = await response.json();
+            const r = await fetch(`${apiUrl}/usuarios/total-info`);
+            return (await r.json()).data;
+        } catch (e) { console.error("Erro ao carregar usuários (total-info):", e); }
+    }
 
-            return usuarios.data;
-        } catch(error) {
-            console.error(`Erro ao tentar carregar Usuários totalInfo: ${error}`);
-        }
-    } 
-
-    // Função para carregar PRÉDIOS
     async function carregarPredios() {
         try {
-            const response = await fetch(`${apiUrl}/predios`);
-            const predios = await response.json();
-
-            return predios.data;
-        } catch(error) {
-            console.log("Erro ao tentar carregar os prédios: ", error);
-        }
+            const r = await fetch(`${apiUrl}/predios`);
+            return (await r.json()).data;
+        } catch (e) { console.error("Erro ao carregar prédios:", e); }
     }
 
-    // Função para carregar PRÉDIOS inner UNIDADES
     async function carregarPrediosTotalInfo() {
         try {
-            const response = await fetch(`${apiUrl}/predios/total-info`);
-            const predios = await response.json();
-            return predios.data;
-        } catch (error) {
-            console.log(`Erro ao tentar listar todas as informações dos prédios: ${error}`);
-        }
-
+            const r = await fetch(`${apiUrl}/predios/total-info`);
+            return (await r.json()).data;
+        } catch (e) { console.error("Erro ao carregar prédios (total-info):", e); }
     }
 
-    // Função para carregar SALAS
     async function carregarSalas() {
         try {
-            const response = await fetch(`${apiUrl}/salas`);
-            const salas = await response.json();
-
-            return salas.data;
-        } catch(error) {
-            console.error(`Erro ao tentar carregar as salas: ${error}`);
-        }
+            const r = await fetch(`${apiUrl}/salas`);
+            return (await r.json()).data;
+        } catch (e) { console.error("Erro ao carregar salas:", e); }
     }
 
-    // Função para carregar SALAS com informações dos prédios e das subunidades
     async function carregarSalasTotalInfo() {
         try {
-            const response = await fetch(`${apiUrl}/salas/total-info`);
-            const salas = await response.json();
-
-            return salas.data;
-        } catch(error) {
-            console.error(`Erro ao tentar carregar as salas e suas informações: ${error}`);
-        }
+            const r = await fetch(`${apiUrl}/salas/total-info`);
+            return (await r.json()).data;
+        } catch (e) { console.error("Erro ao carregar salas (total-info):", e); }
     }
 
-    // Função para carregar os TIPOS de SALAS
     async function carregarSalasTipo() {
         try {
-            const response = await fetch(`${apiUrl}/salas-tipo`);
-            const salas_tipo = await response.json();
-    
-            return salas_tipo.data;
-        } catch(error) {
-            console.error(`Erro ao tentar carregar os tipos de sala: ${error}`);
-        }
+            const r = await fetch(`${apiUrl}/salas-tipo`);
+            return (await r.json()).data;
+        } catch (e) { console.error("Erro ao carregar tipos de sala:", e); }
     }
 
-    // =================================
-    // Rotina para o gestão de unidades
-    // =================================
+    // ─── Helper: ícones de ação padrão ──────────────────────────────────────
+    function iconeAcoes(editarAttrs, excluirId, entidade) {
+        return `
+            <i class="bi bi-pencil-square editar" title="Editar" ${editarAttrs}></i>
+            <i class="bi bi-trash excluir" title="Excluir" data-id="${excluirId}" data-entidade="${entidade}"></i>
+        `;
+    }
+
+    // ─── Helper: popular select ──────────────────────────────────────────────
+    function popularSelect(select, items, valueFn, textFn, placeholder = "Selecione...") {
+        select.innerHTML = `<option value="">${placeholder}</option>`;
+        (items || []).forEach(item => {
+            select.innerHTML += `<option value="${valueFn(item)}">${textFn(item)}</option>`;
+        });
+    }
+
+    // =========================================================================
+    // GESTÃO DE UNIDADES — /adm/unidades
+    // =========================================================================
     if (urlParam === "/adm/unidades") {
-        // Seleção de elementos
-        const btnAdicionar = document.querySelector(".btn_adicionar");
-        const frmUnidade = document.querySelector(".frmUnidade");
-        const btnCadastrarUnidade = document.querySelector(".cadastrarUnidade");
-        const btnAtualizarUnidade = document.querySelector(".atualizarUnidade");
-        const btnCancelarUnidade = document.querySelector(".cancelarUnidade");
-        const dialogPainel = document.querySelector(".dialogPainel");
-        const listaUnidades = document.querySelector(".listaUnidades");
-        
-        // Função para atualizar informações da Unidade
-        async function updateUnidade(idUnidade, codigoUnidade, unidade, sigla) {
+        const btnAdicionar    = document.querySelector(".btn_adicionar");
+        const frmUnidade      = document.querySelector(".frmUnidade");
+        const btnCadastrar    = document.querySelector(".cadastrarUnidade");
+        const btnAtualizar    = document.querySelector(".atualizarUnidade");
+        const btnCancelar     = document.querySelector(".cancelarUnidade");
+        const dialogPainel    = document.querySelector(".dialogPainel");
+        const listaUnidades   = document.querySelector(".listaUnidades");
 
-            // Verificar se o código está escrito com . caso contrário atribuir . ao código
-            if (codigoUnidade.split(",").length > 1) {
-                codigoUnidade = codigoUnidade.replace(",", ".");
-            }
-            
-            const dadosAtualizar = {
-                unidade_codigo: codigoUnidade,
-                unidade: unidade,
-                unidade_sigla: sigla
-            };
-
+        async function renderizarUnidades() {
             try {
-                await fetch(`${apiUrl}/unidades/${idUnidade}`, {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify(dadosAtualizar)
-                }).then((response) => {
-                    if (!response.ok) {
-                        console.error(`Ocorreu um erro: ${response.error}`);
-                    }
-
-                    return response.json();
-                }).then((data) => {
-                    // console.log(data);
-                    renderizarUnidades();
-                }).catch((error) => {
-                    console.error(`Ocorreu um erro no fetch: ${error}`);
+                const r = await fetch(`${apiUrl}/unidades`);
+                const { data } = await r.json();
+                listaUnidades.innerHTML = "";
+                data.forEach(u => {
+                    const div = document.createElement("div");
+                    div.classList.add("dados", "flex", "align--items--center");
+                    div.innerHTML = `
+                        <div class="dado flex flex--2">${u.unidade_codigo}</div>
+                        <div class="dado flex flex--10">${u.unidade}</div>
+                        <div class="dado flex flex--2">${u.unidade_sigla}</div>
+                        <div class="dado flex flex--1 font--size--20">
+                            ${iconeAcoes(
+                                `data-id="${u.unidade_id}" data-codigo="${u.unidade_codigo}" data-unidade="${u.unidade}" data-sigla="${u.unidade_sigla}"`,
+                                u.unidade_id, "unidade"
+                            )}
+                        </div>`;
+                    listaUnidades.appendChild(div);
                 });
-            } catch (error) {
-                console.error(`Ocorreu um erro ao tentar atualizar a unidade: ${error}`);
-            }
+            } catch (e) { console.error("Erro ao renderizar unidades:", e); }
         }
 
-        // Função para carregar as Unidades cadastradas
-        async function renderizarUnidades() {
-            listaUnidades.innerHTML = "";
+        async function excluirUnidade(id) {
+            if (!confirm("Excluir esta unidade?")) return;
             try {
-                const response = await fetch(`${apiUrl}/unidades`);
-                const unidades = await response.json();
-
-                unidades.data.forEach((unidade) => {
-                    const divElement = document.createElement("div");
-                    divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
-                    divElement.innerHTML = `
-                        <div class="dado flex flex--2">${unidade.unidade_codigo}</div>
-                        <div class="dado flex flex--10">${unidade.unidade}</div>
-                        <div class="dado flex flex--2">${unidade.unidade_sigla}</div>
-                        <div class="dado flex flex--1 font--size--20">
-                            <i class="bi bi-pencil-square editar" title="Editar" data-id="${unidade.unidade_id}" data-codigo="${unidade.unidade_codigo}" data-unidade="${unidade.unidade}" data-unidade_sigla="${unidade.unidade_sigla}"></i>
-                            <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
-                        </div>
-                    `;
-
-                    listaUnidades.appendChild(divElement);
-                });
-    
-            } catch (error) {
-                console.error("Erro ao tentar carregar as unidades: ", error);
-            }
+                const r = await fetch(`${apiUrl}/unidades/${id}`, { method: "DELETE" });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                renderizarUnidades();
+            } catch (e) { console.error("Erro ao excluir unidade:", e); }
         }
 
         renderizarUnidades();
 
-        // Adição de Listeners
-        btnAdicionar.addEventListener("click", function(event) {
-            event.preventDefault();
-            if (event.target.classList.contains("unidade")) {
-                btnAtualizarUnidade.style.display = "none";
-                btnAtualizarUnidade.disabled = true;
-                btnCadastrarUnidade.disabled = false;
-                btnCadastrarUnidade.style.display = "inline-block";
-                document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastrar unidade";
-                dialogPainel.showModal();
-            }
-        });
-        
-        btnCancelarUnidade.addEventListener("click", function(event) {
-            event.preventDefault();
+        btnAdicionar.addEventListener("click", function(e) {
+            e.preventDefault();
+            if (!e.target.classList.contains("unidade")) return;
+            document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastrar unidade";
+            btnAtualizar.style.display = "none"; btnAtualizar.disabled = true;
+            btnCadastrar.style.display = "inline-block"; btnCadastrar.disabled = false;
             frmUnidade.reset();
-            dialogPainel.close();
+            dialogPainel.showModal();
         });
 
-        btnCadastrarUnidade.addEventListener("click", async function(event) {
-            event.preventDefault();
-            const unidade_id = document.querySelector("#unidade_id").value;
-            let unidade_codigo = document.querySelector("#unidade_codigo").value;
-            const unidade = document.querySelector("#unidade").value;
-            const unidade_sigla = document.querySelector("#unidade_sigla").value;
+        btnCancelar.addEventListener("click", function(e) {
+            e.preventDefault(); frmUnidade.reset(); dialogPainel.close();
+        });
 
-            // Verifica se todos os campos estão preenchidos
-            if (!unidade_codigo || !unidade || !unidade_sigla) {
-                alert("Todos os campos devem ser preenchidos.");
-                return;
-            }
-
-            //Validar o campo Codigo da Unidade para garantir que esteja com "."
-            if (unidade_codigo.split(",").length > 1) {
-                unidade_codigo = unidade_codigo.replace(",", ".");
-            }
-
-            const unidadeNova = {
-                unidade_codigo,
-                unidade,
-                unidade_sigla
-            }
-
-            await fetch(`${apiUrl}/unidades`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(unidadeNova)
-            }).then((response) => {
-                if (!response.ok) {
-                    console.error("Ocorreu um erro: ", response.error);
-                }
-
-                return response.json();
-            }).then((data) => {
-                //console.log(data);
-                // Fazer retorno visual para informar sucesso ou erro no cadastro da unidade
+        btnCadastrar.addEventListener("click", async function(e) {
+            e.preventDefault();
+            let codigo = document.querySelector("#unidade_codigo").value.trim();
+            const unidade = document.querySelector("#unidade").value.trim();
+            const sigla   = document.querySelector("#unidade_sigla").value.trim();
+            if (!codigo || !unidade || !sigla) { alert("Todos os campos são obrigatórios."); return; }
+            if (codigo.includes(",")) codigo = codigo.replace(",", ".");
+            try {
+                const r = await fetch(`${apiUrl}/unidades`, {
+                    method: "POST",
+                    body: JSON.stringify({ unidade_codigo: codigo, unidade, unidade_sigla: sigla })
+                });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                frmUnidade.reset(); dialogPainel.close();
                 renderizarUnidades();
-            }).catch((error) => {
-                console.error("Ocorreu um erro em catch: ", error);
-            });
-
-            // Ao terminar o processamento, limpa o formulário e fecha o modal.
-            frmUnidade.reset();
-            dialogPainel.close();
+            } catch (e) { console.error("Erro ao cadastrar unidade:", e); }
         });
 
-        btnAtualizarUnidade.addEventListener("click", function(event) {
-            event.preventDefault();
-            const unidade_id = document.querySelector("#unidade_id").value;
-            const unidade_codigo = document.querySelector("#unidade_codigo").value;
-            const unidade = document.querySelector("#unidade").value;
-            const unidade_sigla = document.querySelector("#unidade_sigla").value;
-            updateUnidade(unidade_id, unidade_codigo, unidade, unidade_sigla);
-            frmUnidade.reset();
-            dialogPainel.close();
+        btnAtualizar.addEventListener("click", async function(e) {
+            e.preventDefault();
+            const id     = document.querySelector("#unidade_id").value;
+            let codigo   = document.querySelector("#unidade_codigo").value.trim();
+            const unidade = document.querySelector("#unidade").value.trim();
+            const sigla   = document.querySelector("#unidade_sigla").value.trim();
+            if (codigo.includes(",")) codigo = codigo.replace(",", ".");
+            try {
+                await fetch(`${apiUrl}/unidades/${id}`, {
+                    method: "PUT",
+                    body: JSON.stringify({ unidade_codigo: codigo, unidade, unidade_sigla: sigla })
+                });
+                frmUnidade.reset(); dialogPainel.close();
+                renderizarUnidades();
+            } catch (e) { console.error("Erro ao atualizar unidade:", e); }
         });
 
-        // Abrir modal para atualizar os dados da unidade
-        listaUnidades.addEventListener("click", function(event) {
-            if (event.target.classList.contains("editar")) {
-                btnCadastrarUnidade.style.display = "none";
-                btnCadastrarUnidade.disabled = true;
-                btnAtualizarUnidade.disabled = false;
-                btnAtualizarUnidade.style.display = "inline-block";
+        listaUnidades.addEventListener("click", function(e) {
+            const el = e.target;
+            if (el.classList.contains("editar")) {
                 document.querySelector(".dialogPainel fieldset legend").textContent = "Editar unidade";
-                // Aplicar os values nos campos de formulário com os valore da unidade
-                document.querySelector("#unidade_id").value = event.target.getAttribute("data-id");
-                document.querySelector("#unidade_codigo").value = event.target.getAttribute("data-codigo");
-                document.querySelector("#unidade").value = event.target.getAttribute("data-unidade");
-                document.querySelector("#unidade_sigla").value = event.target.getAttribute("data-unidade_sigla");
-                // Pensar em como pegar o id_Unidade e enviar para atualizar
-                const unidade_id = event.target.getAttribute("data-id");
+                btnCadastrar.style.display = "none"; btnCadastrar.disabled = true;
+                btnAtualizar.style.display = "inline-block"; btnAtualizar.disabled = false;
+                document.querySelector("#unidade_id").value     = el.dataset.id;
+                document.querySelector("#unidade_codigo").value = el.dataset.codigo;
+                document.querySelector("#unidade").value        = el.dataset.unidade;
+                document.querySelector("#unidade_sigla").value  = el.dataset.sigla;
                 dialogPainel.showModal();
             }
-
-            if (event.target.classList.contains("info")) {
-                alert("Funcionalidade em fase de implementação!");
-                return;
-            }
+            if (el.classList.contains("excluir")) excluirUnidade(el.dataset.id);
         });
-    } // Fim /adm/unidades
+    } // fim /adm/unidades
 
-    // ====================================
-    // Rotina para a gestão de subunidades
-    // ====================================
+    // =========================================================================
+    // GESTÃO DE SUBUNIDADES — /adm/subunidades
+    // =========================================================================
     if (urlParam === "/adm/subunidades") {
-        // Seleção de elementos
-        const titulo = document.querySelector(".titulo_painel h1");
+        const titulo       = document.querySelector(".titulo_painel h1");
         const btnAdicionar = document.querySelector(".btn_adicionar");
-        const frmUnidade = document.querySelector(".frmUnidade");
-        const btnCadastrarUnidade = document.querySelector(".cadastrarUnidade");
-        const btnAtualizarUnidade = document.querySelector(".atualizarUnidade");
-        const btnCancelarUnidade = document.querySelector(".cancelarUnidade");
+        const frmUnidade   = document.querySelector(".frmUnidade");
+        const btnCadastrar = document.querySelector(".cadastrarUnidade");
+        const btnAtualizar = document.querySelector(".atualizarUnidade");
+        const btnCancelar  = document.querySelector(".cancelarUnidade");
         const dialogPainel = document.querySelector(".dialogPainel");
         const listaUnidades = document.querySelector(".listaUnidades");
 
-        // Abrir modal para atualizar os dados da SUBUNIDADE
-        listaUnidades.addEventListener("click", function(event) {
-            if (event.target.classList.contains("editar")) {
-                let selectChefe = document.querySelector("#chefe");
-                let selectUnidade = document.querySelector("#unidade_id");
-                let selectPredio = document.querySelector("#predio_id");
-                btnCadastrarUnidade.style.display = "none";
-                btnCadastrarUnidade.disabled = true;
-                btnAtualizarUnidade.disabled = false;
-                btnAtualizarUnidade.style.display = "inline-block";
-                document.querySelector(".dialogPainel fieldset legend").textContent = "Editar subunidade";
-                // Aplicar os values nos campos de formulário com os valores da subunidade
-                document.querySelector("#subunidade_id").value = event.target.getAttribute("data-subunidade_id")
-                document.querySelector("#subunidade_codigo").value = event.target.getAttribute("data-subunidade_codigo");
-                document.querySelector("#subunidade_nome").value = event.target.getAttribute("data-subunidade_nome");
-                document.querySelector("#subunidade_email").value = event.target.getAttribute("data-subunidade_email");
-                document.querySelector("#subunidade_sigla").value = event.target.getAttribute("data-subunidade_sigla");
-                
-                // Listando usuários para seleção de CHEFIA
-                carregarUsuarios().then((usuarios) => {
-                    selectChefe.innerHTML = "";
-                    usuarios.forEach((usuario) => {
-                        selectChefe.innerHTML += `
-                            <option value="${usuario.user_id}">${usuario.nome}</option>
-                        `;
-                    })
-
-                    document.querySelector("#chefe").value = event.target.getAttribute("data-subunidade_chefe");
-                });
-
-                // Listando unidades para a seleção da UNIDADE
-                carregarUnidades().then((unidades) => {
-                    selectUnidade.innerHTML = "";
-                    unidades.forEach((unidade) => {
-                        selectUnidade.innerHTML += `
-                            <option value="${unidade.unidade_id}">${unidade.unidade}</option>
-                        `;
-                    });
-
-                    document.querySelector("#unidade_id").value = event.target.getAttribute("data-unidade_id");
-                });
-
-                carregarPredios().then((predios) => {
-                    selectPredio.innerHTML = "";
-                    predios.forEach((predio) => {
-                        selectPredio.innerHTML += `
-                            <option value="${predio.predio_id}">${predio.predio}</option>
-                        `;
-                    });
-
-                    document.querySelector("#predio_id").value = event.target.getAttribute("data-predio_id");
-                });
-
-                dialogPainel.showModal();
-            }
-
-            if (event.target.classList.contains("info")) {
-                alert("Funcionalidade em fase de implementação!");
-                return;
-            }
-        });
-
-        // Função para mostrar a lista de SUBUNIDADES
         async function renderizarSubunidades() {
-            carregarSubunidadesTotalInfo().then((subunidades) => {
-                listaUnidades.innerHTML = "";
-
-                subunidades.forEach((subunidade) => {
-                    const divElement  = document.createElement("div");
-                    divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
-                    divElement.innerHTML = `
-                        <div class="dado flex flex--1">${subunidade.subunidade_codigo}</div>
-                        <div class="dado flex flex--6">${subunidade.subunidade_nome}</div>
-                        <div class="dado flex flex--6">${subunidade.subunidade_email}</div>
-                        <div class="dado flex flex--3">${subunidade.subunidade_sigla.toUpperCase()}</div>
-                        <div class="dado flex flex--2">${subunidade.unidade_sigla}</div>
-                        <div class="dado flex flex--3">${subunidade.nome}</div>
-                        <div class="dado flex flex--2">${subunidade.predio}</div>
-                        <div class="dado flex flex--1 font--size--20">
-                            <i class="bi bi-pencil-square editar" title="Editar" data-subunidade_id="${subunidade.subunidade_id}" data-subunidade_codigo="${subunidade.subunidade_codigo}" data-subunidade_nome="${subunidade.subunidade_nome}" data-subunidade_email="${subunidade.subunidade_email}" data-subunidade_sigla="${subunidade.subunidade_sigla}" data-subunidade_chefe="${subunidade.chefe}" data-unidade_id="${subunidade.unidade_id}" data-predio_id="${subunidade.predio_id}"></i>
-                            <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
-                        </div>
-                    `;
-
-                    titulo.textContent = `Painel Administrativo - Subunidades (${subunidade.total_subunidades})`;
-                    listaUnidades.appendChild(divElement);
-                });
-            })
-        }
-
-        async function atualizarSubunidade(dados) {
             try {
-                await fetch(`${apiUrl}/subunidades/${dados.subunidade_id}`, {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(dados)
-                }).then((response) => {
-                    if (!response.ok) {
-                        console.error(`Erro ao tentar atualizar Subunidade: ${response.error}`);
-                    }
-
-                    return response.json();
-                }).then((data) => {
-                    // Após realizar a atualização da Subunidade, renderiza novamente a lista
-                    renderizarSubunidades();
-                    frmUnidade.reset();
-                    dialogPainel.close();
-                }).catch((error) => {
-                    console.error(`Erro ao tentar atualizar Subunidade: ${error}`);
-                })
-            } catch (error) {
-                console.log(`Erro ao tentar atualizar Subunidade: ${error}`);
-            }
-        }
-
-        renderizarSubunidades();    
-
-        // Adição de Listeners
-        btnAdicionar.addEventListener("click", function(event) {
-            event.preventDefault();
-            if (event.target.classList.contains("subunidade")) {
-                let selectUnidades = document.querySelector("#unidade_id");
-                let selectPredios = document.querySelector("#predio_id");
-                let selectUsuarios = document.querySelector("#chefe");
-                selectUnidades.innerHTML = "<option value=''>Selecione a unidade...</option>";
-                selectPredios.innerHTML = "<option value=''>Selecione o prédio...</option>";
-                btnAtualizarUnidade.style.display = "none";
-                btnAtualizarUnidade.disabled = true;
-                btnCadastrarUnidade.disabled = false;
-                btnCadastrarUnidade.style.display = "inline-block";
-
-                carregarUnidades().then((unidade) => {
-                    unidade.forEach((uni) => {
-                        selectUnidades.innerHTML += `
-                            <option value="${uni.unidade_id}">${uni.unidade}</option>
-                        `;
-                    });
-                });
-
-                carregarPrediosTotalInfo().then((predios) => {
-                    predios.forEach((predio) => {
-                        selectPredios.innerHTML += `
-                            <option value="${predio.predio_id}">${predio.predio}</option>
-                        `;
-                    });
-                });
-
-                carregarUsuarios().then((usuarios) => {
-                    usuarios.forEach((usuario) => {
-                        selectUsuarios.innerHTML += `
-                            <option value="${usuario.user_id}">${usuario.nome}</option>
-                        `;
-                    });
-                });
-
-                btnAtualizarUnidade.addEventListener("click", function(event) {
-                    event.preventDefault();
-                    console.log("Clicou!");
-                });
-
-                dialogPainel.showModal();
-            }
-        });
-
-        btnCancelarUnidade.addEventListener("click", function(event) {
-            event.preventDefault();
-            frmUnidade.reset();
-            dialogPainel.close();
-        });
-
-        btnCadastrarUnidade.addEventListener("click", function(event) {
-            event.preventDefault();
-            const formData = new FormData(frmUnidade);
-            const objDados = Object.fromEntries(formData.entries());
-            cadastrarSubunidade(objDados);
-        });
-
-        btnAtualizarUnidade.addEventListener("click", function(event) {
-            event.preventDefault();
-
-            const formData = new FormData(frmUnidade);
-            const objData = Object.fromEntries(formData.entries());
-            atualizarSubunidade(objData);
-        });
-
-        // Função para Cadastrar nova SUBUNIDADE
-        async function cadastrarSubunidade(dados) {
-            listaUnidades.innerHTML = ""; // Limpa a lista de dados para renderizar novamente
-            
-            if (isNaN(dados.chefe)) dados.chefe = null;
-
-            if (!dados.subunidade_nome || !dados.subunidade_codigo) {
-                alert("Os campos Código da Subunidade e Nome da Subunidade devem ser preenchidos!");
-                return;
-            }
-
-            await fetch(`${apiUrl}/subunidades`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(dados)
-            }).then((response) => {
-                if (!response.ok) {
-                    throw new Error(`Erro ao tentar cadastrar nova subunidade: ${response.error}`);
+                const subs = await carregarSubunidadesTotalInfo();
+                listaUnidades.innerHTML = "";
+                if (!subs || !subs.length) {
+                    listaUnidades.innerHTML = "<p style='padding:10px;'>Nenhuma subunidade cadastrada.</p>";
+                    return;
                 }
-                return response.json();
-            }).then((data) => {
-                console.log(data);
-                frmUnidade.reset();
-                renderizarSubunidades();
-                dialogPainel.close();
-            }).catch((error) => {
-                console.log(`Ocorreu um erro ao tentar cadastrar nova subunidade: ${error}`);
-            });
+                titulo.textContent = `Painel Administrativo - Subunidades (${subs[0].total_subunidades})`;
+                subs.forEach(s => {
+                    const div = document.createElement("div");
+                    div.classList.add("dados", "flex", "align--items--center");
+                    div.innerHTML = `
+                        <div class="dado flex flex--1">${s.subunidade_codigo || ""}</div>
+                        <div class="dado flex flex--6">${s.subunidade_nome || ""}${s.is_direcao_centro ? ' <span title="Setor da Direção" style="color:#009536">★</span>' : ""}</div>
+                        <div class="dado flex flex--6">${s.subunidade_email || ""}</div>
+                        <div class="dado flex flex--3">${(s.subunidade_sigla || "").toUpperCase()}</div>
+                        <div class="dado flex flex--2">${s.unidade_sigla || ""}</div>
+                        <div class="dado flex flex--3">${s.chefe_nome || "—"}</div>
+                        <div class="dado flex flex--2">${s.predio || "—"}</div>
+                        <div class="dado flex flex--1 font--size--20">
+                            ${iconeAcoes(
+                                `data-subunidade_id="${s.subunidade_id}"
+                                 data-codigo="${s.subunidade_codigo || ""}"
+                                 data-nome="${s.subunidade_nome || ""}"
+                                 data-email="${s.subunidade_email || ""}"
+                                 data-sigla="${s.subunidade_sigla || ""}"
+                                 data-chefe="${s.chefe || ""}"
+                                 data-unidade_id="${s.unidade_id || ""}"
+                                 data-predio_id="${s.predio_id || ""}"
+                                 data-is_direcao_centro="${s.is_direcao_centro || false}"`,
+                                s.subunidade_id, "subunidade"
+                            )}
+                        </div>`;
+                    listaUnidades.appendChild(div);
+                });
+            } catch (e) { console.error("Erro ao renderizar subunidades:", e); }
         }
-    } // Fim /adm/subunidades
 
-    // ================================
-    // Rotina para a gestão de prédios
-    // ================================
+        async function excluirSubunidade(id) {
+            if (!confirm("Excluir esta subunidade?")) return;
+            try {
+                const r = await fetch(`${apiUrl}/subunidades/${id}`, { method: "DELETE" });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                renderizarSubunidades();
+            } catch (e) { console.error("Erro ao excluir subunidade:", e); }
+        }
+
+        function getDadosSubunidadeForm() {
+            const formData = new FormData(frmUnidade);
+            const dados = Object.fromEntries(formData.entries());
+            // Checkbox não incluso no FormData quando desmarcado — normaliza explicitamente
+            dados.is_direcao_centro = document.querySelector("#is_direcao_centro").checked;
+            if (isNaN(Number(dados.chefe)) || !dados.chefe) dados.chefe = null;
+            return dados;
+        }
+
+        async function cadastrarSubunidade() {
+            const dados = getDadosSubunidadeForm();
+            if (!dados.subunidade_codigo || !dados.subunidade_nome || !dados.unidade_id) {
+                alert("Código, nome e unidade são obrigatórios."); return;
+            }
+            try {
+                const r = await fetch(`${apiUrl}/subunidades`, {
+                    method: "POST", body: JSON.stringify(dados)
+                });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                frmUnidade.reset(); dialogPainel.close();
+                renderizarSubunidades();
+            } catch (e) { console.error("Erro ao cadastrar subunidade:", e); }
+        }
+
+        async function atualizarSubunidade() {
+            const dados = getDadosSubunidadeForm();
+            try {
+                const r = await fetch(`${apiUrl}/subunidades/${dados.subunidade_id}`, {
+                    method: "PUT", body: JSON.stringify(dados)
+                });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                frmUnidade.reset(); dialogPainel.close();
+                renderizarSubunidades();
+            } catch (e) { console.error("Erro ao atualizar subunidade:", e); }
+        }
+
+        async function abrirFormSubunidade(dados = null) {
+            const modoEdicao = dados !== null;
+            document.querySelector(".dialogPainel fieldset legend").textContent = modoEdicao ? "Editar subunidade" : "Cadastrar subunidade";
+            btnCadastrar.style.display = modoEdicao ? "none" : "inline-block";
+            btnCadastrar.disabled = modoEdicao;
+            btnAtualizar.style.display = modoEdicao ? "inline-block" : "none";
+            btnAtualizar.disabled = !modoEdicao;
+
+            const selectChefe   = document.querySelector("#chefe");
+            const selectUnidade = document.querySelector("#unidade_id");
+            const selectPredio  = document.querySelector("#predio_id");
+
+            frmUnidade.reset();
+
+            const [usuarios, unidades, predios] = await Promise.all([
+                carregarUsuarios(), carregarUnidades(), carregarPredios()
+            ]);
+
+            popularSelect(selectChefe,   usuarios,  u => u.user_id,   u => u.nome,   "Selecione o chefe...");
+            popularSelect(selectUnidade, unidades,  u => u.unidade_id, u => u.unidade, "Selecione a unidade...");
+            popularSelect(selectPredio,  predios,   p => p.predio_id,  p => p.predio,  "Selecione o prédio...");
+
+            if (modoEdicao) {
+                document.querySelector("#subunidade_id").value    = dados.subunidade_id;
+                document.querySelector("#subunidade_codigo").value = dados.codigo;
+                document.querySelector("#subunidade_nome").value   = dados.nome;
+                document.querySelector("#subunidade_email").value  = dados.email;
+                document.querySelector("#subunidade_sigla").value  = dados.sigla;
+                document.querySelector("#is_direcao_centro").checked = dados.is_direcao_centro === "true" || dados.is_direcao_centro === true;
+                selectChefe.value   = dados.chefe;
+                selectUnidade.value = dados.unidade_id;
+                selectPredio.value  = dados.predio_id;
+            }
+
+            dialogPainel.showModal();
+        }
+
+        renderizarSubunidades();
+
+        btnAdicionar.addEventListener("click", function(e) {
+            e.preventDefault();
+            if (e.target.classList.contains("subunidade")) abrirFormSubunidade();
+        });
+
+        btnCancelar.addEventListener("click", function(e) {
+            e.preventDefault(); frmUnidade.reset(); dialogPainel.close();
+        });
+
+        btnCadastrar.addEventListener("click", function(e) { e.preventDefault(); cadastrarSubunidade(); });
+        btnAtualizar.addEventListener("click", function(e) { e.preventDefault(); atualizarSubunidade(); });
+
+        listaUnidades.addEventListener("click", function(e) {
+            const el = e.target;
+            if (el.classList.contains("editar")) abrirFormSubunidade(el.dataset);
+            if (el.classList.contains("excluir")) excluirSubunidade(el.dataset.id);
+        });
+    } // fim /adm/subunidades
+
+    // =========================================================================
+    // GESTÃO DE PRÉDIOS — /adm/predios
+    // =========================================================================
     if (urlParam === "/adm/predios") {
-        const btnAdicionar = document.querySelector(".btn_adicionar");
-        const frmUnidade = document.querySelector(".frmUnidade");
-        const btnCadastrarUnidade = document.querySelector(".cadastrarUnidade");
-        const btnAtualizarUnidade = document.querySelector(".atualizarUnidade");
-        const btnCancelarUnidade = document.querySelector(".cancelarUnidade");
-        const dialogPainel = document.querySelector(".dialogPainel");
+        const btnAdicionar  = document.querySelector(".btn_adicionar");
+        const frmUnidade    = document.querySelector(".frmUnidade");
+        const btnCadastrar  = document.querySelector(".cadastrarUnidade");
+        const btnAtualizar  = document.querySelector(".atualizarUnidade");
+        const btnCancelar   = document.querySelector(".cancelarUnidade");
+        const dialogPainel  = document.querySelector(".dialogPainel");
         const listaUnidades = document.querySelector(".listaUnidades");
         const selectUnidades = document.querySelector("#unidade_id");
 
-        // Função para mostrar a lista de PRÉDIOS
         async function renderizarPredios() {
-            carregarPrediosTotalInfo().then((predios) => {
-                listaUnidades.innerHTML = "";
-    
-                predios.forEach((predio) => {
-                    const divElement = document.createElement("div");
-                    divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
-                    divElement.innerHTML = `
-                        <div class="dado flex flex--2">${predio.predio}</div>
-                        <div class="dado flex flex--10">${predio.descricao}</div>
-                        <div class="dado flex flex--2">${predio.unidade_sigla}</div>
-                        <div class="dado flex flex--1 font--size--20">
-                            <i class="bi bi-pencil-square editar" title="Editar" data-id="${predio.predio_id}" data-predio="${predio.predio}" data-descricao="${predio.descricao}" data-unidade="${predio.unidade}" data-unidade_id="${predio.unidade_id}"></i>
-                            <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
-                        </div>
-                    `;
-    
-                    listaUnidades.appendChild(divElement);
-                });
-            });
-        }
-
-        // Função para Cadastrar novo PRÉDIO
-        async function cadastrarPredio(predio, descricao = "", unidade_id) {
-            if (!predio || !unidade_id) {
-                alert("Os campos IDENTIFICAÇÃO DO PRÉDIO e UNIDADE devem ser preenchidos!");
-                return;
-            }
-
-            const predioNovo = { predio, descricao, unidade_id };
-
-            await fetch(`${apiUrl}/predios`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(predioNovo)
-            }).then((response) => {
-                if (!response.ok) {
-                    throw new Error(`Erro ao tentar cadastrar novo prédio: ${response.error}`);
-                }
-                return response.json();
-            }).then((data) => {
-                // console.log(data);
-                renderizarPredios();
-            }).catch((error) => {
-                console.log(`Ocorreu um erro ao tentar cadastrar novo PRÉDIO: ${error}`);
-            });
-
-            frmUnidade.reset();
-            dialogPainel.close();
-        }
-
-        async function atualizarPredio(predio_id, predio, descricao, unidade_id) {
-            const dadosAtualizar = {
-                predio: predio,
-                descricao: descricao,
-                unidade_id: unidade_id
-            };
-
             try {
-                await fetch(`${apiUrl}/predios/${predio_id}`, {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(dadosAtualizar)
-                }).then((response) => {
-                    if (!response.ok) {
-                        console.error(`Erro ao tentar atualizar prédio: ${response.error}`);
-                    }
+                const predios = await carregarPrediosTotalInfo();
+                listaUnidades.innerHTML = "";
+                (predios || []).forEach(p => {
+                    const div = document.createElement("div");
+                    div.classList.add("dados", "flex", "align--items--center");
+                    div.innerHTML = `
+                        <div class="dado flex flex--2">${p.predio}</div>
+                        <div class="dado flex flex--10">${p.descricao || ""}</div>
+                        <div class="dado flex flex--2">${p.unidade_sigla}</div>
+                        <div class="dado flex flex--1 font--size--20">
+                            ${iconeAcoes(
+                                `data-id="${p.predio_id}" data-predio="${p.predio}" data-descricao="${p.descricao || ""}" data-unidade_id="${p.unidade_id}"`,
+                                p.predio_id, "predio"
+                            )}
+                        </div>`;
+                    listaUnidades.appendChild(div);
+                });
+            } catch (e) { console.error("Erro ao renderizar prédios:", e); }
+        }
 
-                    return response.json();
-                }).then((data) => {
-                    // Após realizar a atualização do prédio, renderiza novamente a lista
-                    renderizarPredios();
-                }).catch((error) => {
-                    console.error(`Erro ao tentar atualizar prédio: ${error}`);
-                })
-            } catch (error) {
-                console.log(`Erro ao tentar atualizar prédio: ${error}`);
-            }
+        async function excluirPredio(id) {
+            if (!confirm("Excluir este prédio?")) return;
+            try {
+                const r = await fetch(`${apiUrl}/predios/${id}`, { method: "DELETE" });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                renderizarPredios();
+            } catch (e) { console.error("Erro ao excluir prédio:", e); }
         }
 
         renderizarPredios();
 
-        // Adição de Listeners 
-        btnAdicionar.addEventListener("click", function(event) {
-            event.preventDefault();
-            let selectUnidades = document.querySelector("#unidade_id");
+        btnAdicionar.addEventListener("click", async function(e) {
+            e.preventDefault();
+            if (!e.target.classList.contains("predio")) return;
+            document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastrar prédio";
+            btnAtualizar.style.display = "none"; btnAtualizar.disabled = true;
+            btnCadastrar.style.display = "inline-block"; btnCadastrar.disabled = false;
+            frmUnidade.reset();
+            const unidades = await carregarUnidades();
+            popularSelect(selectUnidades, unidades, u => u.unidade_id, u => u.unidade, "Selecione a unidade...");
+            dialogPainel.showModal();
+        });
 
-            if (event.target.classList.contains("predio")) {
-                selectUnidades.innerHTML = `<option value="">Selecinone a unidade...</option>`
-                btnAtualizarUnidade.style.display = "none";
-                btnAtualizarUnidade.disabled = true;
-                btnCadastrarUnidade.disabled = false;
-                btnCadastrarUnidade.style.display = "inline-block";
-                document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastro de prédio";
+        btnCancelar.addEventListener("click", function(e) {
+            e.preventDefault(); frmUnidade.reset(); dialogPainel.close();
+        });
 
-                // unidadesCarregadas.then((unidade) => {
-                carregarUnidades().then((unidade) => {
-                    unidade.forEach((uni) => {
-                        selectUnidades.innerHTML += `
-                            <option value="${uni.unidade_id}">${uni.unidade}</option>
-                        `;
-                    });
-                });
+        btnCadastrar.addEventListener("click", async function(e) {
+            e.preventDefault();
+            const formData = new FormData(frmUnidade);
+            const dados = Object.fromEntries(formData.entries());
+            if (!dados.predio || !dados.unidade_id) {
+                alert("Identificação do prédio e unidade são obrigatórios."); return;
+            }
+            try {
+                const r = await fetch(`${apiUrl}/predios`, { method: "POST", body: JSON.stringify(dados) });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                frmUnidade.reset(); dialogPainel.close();
+                renderizarPredios();
+            } catch (e) { console.error("Erro ao cadastrar prédio:", e); }
+        });
 
+        btnAtualizar.addEventListener("click", async function(e) {
+            e.preventDefault();
+            const formData = new FormData(frmUnidade);
+            const dados = Object.fromEntries(formData.entries());
+            try {
+                const r = await fetch(`${apiUrl}/predios/${dados.predio_id}`, { method: "PUT", body: JSON.stringify(dados) });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                frmUnidade.reset(); dialogPainel.close();
+                renderizarPredios();
+            } catch (e) { console.error("Erro ao atualizar prédio:", e); }
+        });
+
+        listaUnidades.addEventListener("click", async function(e) {
+            const el = e.target;
+            if (el.classList.contains("editar")) {
+                document.querySelector(".dialogPainel fieldset legend").textContent = "Editar prédio";
+                btnCadastrar.style.display = "none"; btnCadastrar.disabled = true;
+                btnAtualizar.style.display = "inline-block"; btnAtualizar.disabled = false;
+                frmUnidade.reset();
+                const unidades = await carregarUnidades();
+                popularSelect(selectUnidades, unidades, u => u.unidade_id, u => u.unidade, "Selecione a unidade...");
+                document.querySelector("#predio_id").value = el.dataset.id;
+                document.querySelector("#predio").value    = el.dataset.predio;
+                document.querySelector("#descricao").value = el.dataset.descricao;
+                selectUnidades.value = el.dataset.unidade_id;
                 dialogPainel.showModal();
             }
+            if (el.classList.contains("excluir")) excluirPredio(el.dataset.id);
         });
+    } // fim /adm/predios
 
-        // Cancelar cadastro do PRÉDIO
-        btnCancelarUnidade.addEventListener("click", function(event) {
-            event.preventDefault();
-            frmUnidade.reset();
-            dialogPainel.close();
-        });
-
-        // Cadastro de PRÉDIO
-        btnCadastrarUnidade.addEventListener("click", function(event) {
-            event.preventDefault();
-            const formData = new FormData(frmUnidade);
-            const objDados = Object.fromEntries(formData.entries());
-            cadastrarPredio(objDados.predio, objDados.descricao, objDados.unidade_id);
-        });
-
-        btnAtualizarUnidade.addEventListener("click", function(event) {
-            event.preventDefault();
-            const formData = new FormData(frmUnidade);
-            const objDados = Object.fromEntries(formData.entries());
-            atualizarPredio(parseInt(objDados.predio_id), objDados.predio, objDados.descricao, parseInt(objDados.unidade_id));
-            renderizarPredios();
-            frmUnidade.reset();
-            dialogPainel.close();
-        });
-
-        // Botão para abrir o formulário de atualização do PRÉDIO
-        listaUnidades.addEventListener("click", function(event) {
-            if (event.target.classList.contains("editar")) {
-                btnCadastrarUnidade.style.display = "none";
-                btnCadastrarUnidade.disabled = true;
-                btnAtualizarUnidade.disabled = false;
-                btnAtualizarUnidade.style.display = "inline-block";
-                
-                selectUnidades.innerHTML = `<option value=''>Selecione a unidade...</option>`;
-
-                carregarUnidades().then((unidades) => {
-                    selectUnidades.innerHTML = "<option value=''>Selecione a unidade...</option>";
-                    unidades.forEach((unidade) => {
-                        selectUnidades.innerHTML += `
-                            <option value="${unidade.unidade_id}">${unidade.unidade}</option>
-                        `
-                    });
-                    // Mantém selecionado a opção que foi cadastrada para a atualização
-                    selectUnidades.value = event.target.getAttribute("data-unidade_id");
-                });
-
-                document.querySelector(".dialogPainel fieldset legend").textContent = "Editar Prédio";
-                // Aplicar os valores do botão editar aos campos do formulário de edição
-                document.querySelector("#predio_id").value = event.target.getAttribute("data-id");
-                document.querySelector("#predio").value = event.target.getAttribute("data-predio");
-                document.querySelector("#descricao").value = event.target.getAttribute("data-descricao");
-                document.querySelector("#unidade_id").value = event.target.getAttribute("data-unidade");
-
-                dialogPainel.showModal();
-            }
-        });
-    } // Fim /adm/predios
-
-    // ================================
-    // Rotina para a gestão de Usuários
-    // ================================
-    
+    // =========================================================================
+    // GESTÃO DE USUÁRIOS — /adm/usuarios
+    // =========================================================================
     if (urlParam === "/adm/usuarios") {
-        const btnAdicionar = document.querySelector(".btn_adicionar");
-        const frmUnidade = document.querySelector(".frmUnidade");
-        const btnCadastrarUnidade = document.querySelector(".cadastrarUnidade");
-        const btnAtualizarUnidade = document.querySelector(".atualizarUnidade");
-        const btnCancelarUnidade = document.querySelector(".cancelarUnidade");
-        const dialogPainel = document.querySelector(".dialogPainel");
-        const listaUnidades = document.querySelector(".listaUnidades");
-        const selectSubunidades = document.querySelector("#subunidade_id");
-        
-        selectSubunidades.innerHTML = "<option>Selecione a subunidade de lotação...</option>";
+        const btnAdicionar   = document.querySelector(".btn_adicionar");
+        const frmUnidade     = document.querySelector(".frmUnidade");
+        const btnCadastrar   = document.querySelector(".cadastrarUnidade");
+        const btnAtualizar   = document.querySelector(".atualizarUnidade");
+        const btnCancelar    = document.querySelector(".cancelarUnidade");
+        const dialogPainel   = document.querySelector(".dialogPainel");
+        const listaUnidades  = document.querySelector(".listaUnidades");
+        const selectPermissao = document.querySelector("#permissao");
+        const rowSubunidade  = document.querySelector("#rowSubunidade");
+        const rowUnidade     = document.querySelector("#rowUnidade");
+        const selectSubunidade = document.querySelector("#subunidade_id");
+        const selectUnidade  = document.querySelector("#unidade_id");
 
-        // Função para adicionar novo usuário
-        async function cadastrarUsuario(usuario) {
+        // Roles que usam unidade (não subunidade)
+        const ROLES_UNIDADE = ["diretor", "vice_diretor"];
 
-            await fetch(`${apiUrl}/usuarios`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                }, 
-                body: JSON.stringify(usuario)
-            }).then((response) => {
-                if (!response.ok) {
-                    console.error(`Erro ao tentar cadastrar usuário: ${response.error}`);
-                }
-
-                return response.json();
-            }).then((data) => {
-                renderizarUsuarios();
-            }).catch((error) => {
-                console.error(`Ocorreu um erro: ${error}`);
-            });
+        function toggleCamposRole(permissao) {
+            const usaUnidade = ROLES_UNIDADE.includes(permissao);
+            rowSubunidade.style.display = usaUnidade ? "none" : "";
+            rowUnidade.style.display    = usaUnidade ? "" : "none";
         }
 
-        // Carregamento dos options da lista de subunidades do formulário de cadastro de usuário
-        carregarSubunidades().then((subunidades) => {
-            subunidades.forEach((subunidade) => {
-                const optUnidade = document.createElement("option");
-                optUnidade.value = `${subunidade.subunidade_id}`;
-                optUnidade.textContent = `${subunidade.subunidade_nome}`;
-    
-                selectSubunidades.appendChild(optUnidade);
-            });
+        // Atualiza visibilidade ao mudar permissão no select
+        selectPermissao.addEventListener("change", function() {
+            toggleCamposRole(this.value);
         });
+
+        // Pré-carrega subunidades e unidades nos selects
+        async function preCarregarSelects() {
+            const [subs, unis] = await Promise.all([carregarSubunidades(), carregarUnidades()]);
+            popularSelect(selectSubunidade, subs, s => s.subunidade_id, s => s.subunidade_nome, "Selecione a subunidade de lotação...");
+            popularSelect(selectUnidade,    unis, u => u.unidade_id,    u => u.unidade,         "Selecione a unidade...");
+        }
+
+        preCarregarSelects();
 
         function renderizarUsuarios() {
-            carregarUsuariosTotalInfo().then((usuarios) => {
+            carregarUsuariosTotalInfo().then(usuarios => {
                 listaUnidades.innerHTML = "";
-                usuarios.forEach((usuario) => {
-                    // Formatando data em dd/mm/aaaa
-                    const data = new Date(usuario.data_nascimento);
-                    const dataFormatada = data.toLocaleDateString("pt-BR");
+                if (!usuarios) return;
+                usuarios.forEach(u => {
+                    const vinculo = u.subunidade_nome
+                        ? `${u.subunidade_nome} (${u.subunidade_sigla || ""})`
+                        : (u.unidade || "—");
 
-                    const divElement = document.createElement("div");
-                    divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
-                    divElement.innerHTML += `
-                        <div class="dado flex flex--5">${usuario.nome}</div>
-                        <div class="dado flex flex--4">${usuario.email}</div>
-                        <div class="dado flex flex--2">${usuario.siape}</div>
-                        <!--div class="dado flex flex--3">${usuario.data_nascimento}</div-->
-                        <div class="dado flex flex--3">${dataFormatada}</div>
-                        <div class="dado flex flex--2">${usuario.subunidade_sigla}</div>
-                        <div class="dado flex flex--2">${usuario.whatsapp}</div>
-                        <div class="dado flex flex--4">${usuario.permissao.toUpperCase()}</div>
+                    const div = document.createElement("div");
+                    div.classList.add("dados", "flex", "align--items--center");
+                    div.innerHTML = `
+                        <div class="dado flex flex--5">${u.nome}</div>
+                        <div class="dado flex flex--4">${u.email || ""}</div>
+                        <div class="dado flex flex--2">${u.siape}</div>
+                        <div class="dado flex flex--3">${vinculo}</div>
+                        <div class="dado flex flex--3">${(u.permissao || "").toUpperCase()}</div>
                         <div class="dado flex flex--2 font--size--20">
-                            <i class="bi bi-pencil-square editar" title="Editar" data-user_id="${usuario.user_id}" data-nome="${usuario.nome}" data-email="${usuario.email}" data-siape="${usuario.siape}" data-data_nascimento="${usuario.data_nascimento}" data-subunidade_id="${usuario.subunidade_id}" data-whatsapp="${usuario.whatsapp}" data-permissao="${usuario.permissao}"></i>
-                            <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
-                        </div>
-                    `;
-    
-                    listaUnidades.appendChild(divElement);
+                            ${iconeAcoes(
+                                `data-user_id="${u.user_id}"
+                                 data-nome="${u.nome}"
+                                 data-email="${u.email || ""}"
+                                 data-siape="${u.siape}"
+                                 data-data_nascimento="${u.data_nascimento || ""}"
+                                 data-subunidade_id="${u.subunidade_id || ""}"
+                                 data-unidade_id="${u.unidade_id || ""}"
+                                 data-whatsapp="${u.whatsapp || ""}"
+                                 data-permissao="${u.permissao || "servidor"}"`,
+                                u.user_id, "usuario"
+                            )}
+                        </div>`;
+                    listaUnidades.appendChild(div);
                 });
             });
         }
 
-        async function atualizarUsuario(dados) {
+        async function excluirUsuario(id) {
+            if (!confirm("Excluir este usuário?")) return;
             try {
-                await fetch(`${apiUrl}/usuarios/${dados.user_id}`, {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(dados)
-                }).then((response) => {
-                    if (!response.ok) {
-                        console.error(`Erro ao tentar atualizar Usuário: ${response.error}`);
-                    }
-
-                    return response.json();
-                }).then((data) => {
-                    // Após realizar a atualização da Subunidade, renderiza novamente a lista
-                    renderizarUsuarios();
-                    frmUnidade.reset();
-                    dialogPainel.close();
-                }).catch((error) => {
-                    console.error(`Erro ao tentar atualizar Usuário: ${error}`);
-                })
-            } catch (error) {
-                console.log(`Erro ao tentar atualizar Usuário: ${error}`);
-            }
+                const r = await fetch(`${apiUrl}/usuarios/${id}`, { method: "DELETE" });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                renderizarUsuarios();
+            } catch (e) { console.error("Erro ao excluir usuário:", e); }
         }
 
         renderizarUsuarios();
 
-        // Listener dos botões USUÁRIOS
-        btnAdicionar.addEventListener("click", function(event) {
-            event.preventDefault();
-            document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastrar novo usuário";
-            btnCadastrarUnidade.style.display = "inline-block";
-            btnCadastrarUnidade.disabled = false;
-            btnAtualizarUnidade.style.display = "none";
-            btnAtualizarUnidade.disabled = true;
+        btnAdicionar.addEventListener("click", function(e) {
+            e.preventDefault();
+            document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastrar usuário";
+            btnCadastrar.style.display = "inline-block"; btnCadastrar.disabled = false;
+            btnAtualizar.style.display = "none"; btnAtualizar.disabled = true;
+            frmUnidade.reset();
             document.querySelector(".senha").style.display = "block";
+            toggleCamposRole(selectPermissao.value);
+            preCarregarSelects();
             dialogPainel.showModal();
         });
 
-        // Cadastrar usuário no banco
-        btnCadastrarUnidade.addEventListener("click", function(event) {
-            event.preventDefault();
+        btnCadastrar.addEventListener("click", async function(e) {
+            e.preventDefault();
             const formData = new FormData(frmUnidade);
             const dados = Object.fromEntries(formData.entries());
-            // dados.permissoes = formData.getAll("permissoes");
 
-            // cadastrarUsuario(JSON.stringify(dados));
-            cadastrarUsuario(dados);
-            
-            frmUnidade.reset();
-            dialogPainel.close();
+            // Limpar campo não usado conforme permissão
+            if (ROLES_UNIDADE.includes(dados.permissao)) {
+                delete dados.subunidade_id;
+            } else {
+                delete dados.unidade_id;
+            }
+
+            if (!dados.nome || !dados.siape || !dados.senha) {
+                alert("Nome, SIAPE e senha são obrigatórios."); return;
+            }
+
+            try {
+                const r = await fetch(`${apiUrl}/usuarios`, { method: "POST", body: JSON.stringify(dados) });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                frmUnidade.reset(); dialogPainel.close();
+                renderizarUsuarios();
+            } catch (e) { console.error("Erro ao cadastrar usuário:", e); }
         });
 
-        btnCancelarUnidade.addEventListener("click", function(event) {
-            event.preventDefault();
-            frmUnidade.reset();
-            dialogPainel.close();
+        btnCancelar.addEventListener("click", function(e) {
+            e.preventDefault(); frmUnidade.reset(); dialogPainel.close();
         });
 
-        listaUnidades.addEventListener("click", function(event) {
-            if (event.target.classList.contains("editar")) {
-                const dadosEl = event.target.dataset;
-
+        listaUnidades.addEventListener("click", async function(e) {
+            const el = e.target;
+            if (el.classList.contains("editar")) {
+                const d = el.dataset;
                 document.querySelector(".dialogPainel fieldset legend").textContent = "Editar usuário";
-                btnCadastrarUnidade.style.display = "none";
-                btnCadastrarUnidade.disabled = true;
-                btnAtualizarUnidade.style.display = "inline-block";
-                btnAtualizarUnidade.disabled = false;
+                btnCadastrar.style.display = "none"; btnCadastrar.disabled = true;
+                btnAtualizar.style.display = "inline-block"; btnAtualizar.disabled = false;
 
-                document.querySelector("#user_id").value = dadosEl.user_id;
-                document.querySelector("#nome").value = dadosEl.nome;
-                document.querySelector("#email").value = dadosEl.email;
-                document.querySelector("#siape").value = dadosEl.siape;
-                document.querySelector(".senha").style.display = "none";
-                document.querySelector("#data_nascimento").value = dadosEl.data_nascimento.split("T")[0]; // Formata a data de nascimento para poder inserir no campo
-                document.querySelector("#whatsapp").value = dadosEl.whatsapp;
-                document.querySelector("#subunidade_id").value = dadosEl.subunidade_id;
-                
-                // Aqui obetemos todos os input radio permissao para fazermos um loop e marcarmos o correspondente 
-                const radioPermissaoEl = document.querySelectorAll("input[name='permissao']");
+                frmUnidade.reset();
+                await preCarregarSelects();
 
-                radioPermissaoEl.forEach((radio) => {
-                    if (radio.value === dadosEl.permissao) {
-                        radio.checked = true;
-                    }
-                });
+                document.querySelector("#user_id").value = d.user_id;
+                document.querySelector("#nome").value    = d.nome;
+                document.querySelector("#email").value   = d.email;
+                document.querySelector("#siape").value   = d.siape;
+                document.querySelector("#whatsapp").value = d.whatsapp;
+                if (d.data_nascimento) {
+                    document.querySelector("#data_nascimento").value = d.data_nascimento.split("T")[0];
+                }
 
-                btnAtualizarUnidade.addEventListener("click", function(event) {
-                    event.preventDefault();
+                // Permissão (select)
+                document.querySelector("#permissao").value = d.permissao;
+                toggleCamposRole(d.permissao);
 
-                    const formData = new FormData(frmUnidade);
-                    const objData = Object.fromEntries(formData.entries());
-                    // atualizarSubunidade(JSON.stringify(objData));
-                    atualizarUsuario(objData);
-                });
+                // Vinculo (subunidade ou unidade)
+                selectSubunidade.value = d.subunidade_id || "";
+                selectUnidade.value    = d.unidade_id    || "";
+
+                // Senha opcional na edição
+                document.querySelector(".senha").style.display = "block";
 
                 dialogPainel.showModal();
             }
+            if (el.classList.contains("excluir")) excluirUsuario(el.dataset.id);
         });
-    } // Fim /adm/usuarios
 
-    // =============================
-    // Rotina para a gestão de Salas
-    // =============================
+        btnAtualizar.addEventListener("click", async function(e) {
+            e.preventDefault();
+            const formData = new FormData(frmUnidade);
+            const dados = Object.fromEntries(formData.entries());
+
+            // Não enviar senha vazia
+            if (!dados.senha) delete dados.senha;
+
+            // Limpar campo não usado
+            if (ROLES_UNIDADE.includes(dados.permissao)) {
+                delete dados.subunidade_id;
+            } else {
+                delete dados.unidade_id;
+            }
+
+            try {
+                const r = await fetch(`${apiUrl}/usuarios/${dados.user_id}`, { method: "PUT", body: JSON.stringify(dados) });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                frmUnidade.reset(); dialogPainel.close();
+                renderizarUsuarios();
+            } catch (e) { console.error("Erro ao atualizar usuário:", e); }
+        });
+    } // fim /adm/usuarios
+
+    // =========================================================================
+    // GESTÃO DE SALAS — /adm/salas
+    // =========================================================================
     if (urlParam === "/adm/salas") {
-
-        const btnAdicionar = document.querySelector(".btn_adicionar");
-        const frmUnidade = document.querySelector(".frmUnidade");
-        const btnCadastrarUnidade = document.querySelector(".cadastrarUnidade");
-        const btnAtualizarUnidade = document.querySelector(".atualizarUnidade");
-        const btnCancelarUnidade = document.querySelector(".cancelarUnidade");
-        const dialogPainel = document.querySelector(".dialogPainel");
-        const listaUnidades = document.querySelector(".listaUnidades");
+        const btnAdicionar   = document.querySelector(".btn_adicionar");
+        const frmUnidade     = document.querySelector(".frmUnidade");
+        const btnCadastrar   = document.querySelector(".cadastrarUnidade");
+        const btnAtualizar   = document.querySelector(".atualizarUnidade");
+        const btnCancelar    = document.querySelector(".cancelarUnidade");
+        const dialogPainel   = document.querySelector(".dialogPainel");
+        const listaUnidades  = document.querySelector(".listaUnidades");
         const selectSubunidades = document.querySelector("#subunidade_id");
-        const selectPredios = document.querySelector("#predio_id");
-        const selectSalasTipo = document.querySelector("#sala_tipo_id");
+        const selectPredios     = document.querySelector("#predio_id");
+        const selectSalasTipo   = document.querySelector("#sala_tipo_id");
 
-        // Função para renderizar Salas
-        function renderizarSalas() {
-            carregarSalasTotalInfo().then((salas) => {
+        async function renderizarSalas() {
+            try {
+                const salas = await carregarSalasTotalInfo();
                 listaUnidades.innerHTML = "";
-                salas.forEach((sala) => {
-
-                    const divElement = document.createElement("div");
-                    divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
-                    divElement.innerHTML += `
-                        <div class="dado flex flex--2">${sala.sala_nome}</div>
-                        <div class="dado flex flex--2">${sala.predio}</div>
-                        <div class="dado flex flex--3">${sala.subunidade_nome}</div>
-                        <div class="dado flex flex--2">${sala.sala_tipo_nome.toUpperCase()}</div>
-                        <div class="dado flex flex--4">${sala.sala_descricao}</div>
-                        <div class="dado flex flex--2">${!sala.is_agendavel ? "Não": "Sim"}</div>
+                (salas || []).forEach(s => {
+                    const div = document.createElement("div");
+                    div.classList.add("dados", "flex", "align--items--center");
+                    div.innerHTML = `
+                        <div class="dado flex flex--2">${s.sala_nome}</div>
+                        <div class="dado flex flex--2">${s.predio || "—"}</div>
+                        <div class="dado flex flex--3">${s.subunidade_nome || "—"}</div>
+                        <div class="dado flex flex--2">${(s.sala_tipo_nome || "—").toUpperCase()}</div>
+                        <div class="dado flex flex--4">${s.sala_descricao || ""}</div>
+                        <div class="dado flex flex--2">${s.is_agendavel ? "Sim" : "Não"}</div>
                         <div class="dado flex flex--2 font--size--20">
-                            <i class="bi bi-pencil-square editar" title="Editar" data-sala_id="${sala.sala_id}" data-sala_nome="${sala.sala_nome}" data-predio_id="${sala.predio_id}" data-subunidade_id="${sala.subunidade_id}" data-sala_descricao="${sala.sala_descricao}" data-is_agendavel="${sala.is_agendavel}" data-sala_tipo_id="${sala.sala_tipo_id}"></i>
-                            <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
-                        </div>
-                    `;
-    
-                    listaUnidades.appendChild(divElement);
+                            ${iconeAcoes(
+                                `data-sala_id="${s.sala_id}"
+                                 data-sala_nome="${s.sala_nome}"
+                                 data-predio_id="${s.predio_id || ""}"
+                                 data-subunidade_id="${s.subunidade_id || ""}"
+                                 data-sala_descricao="${s.sala_descricao || ""}"
+                                 data-is_agendavel="${s.is_agendavel ? 1 : 0}"
+                                 data-sala_tipo_id="${s.sala_tipo_id || ""}"`,
+                                s.sala_id, "sala"
+                            )}
+                        </div>`;
+                    listaUnidades.appendChild(div);
                 });
-            });
+            } catch (e) { console.error("Erro ao renderizar salas:", e); }
         }
 
-        // Função para atualizar sala
-        async function atualizarSala(dados) {
+        async function excluirSala(id) {
+            if (!confirm("Excluir esta sala?")) return;
             try {
-                await fetch(`${apiUrl}/salas/${dados.sala_id}`, {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(dados)
-                }).then((response) => {
-                    if (!response.ok) {
-                        console.error(`Erro ao tentar atualizar Sala: ${response.error}`);
-                    }
-
-                    return response.json();
-                }).then((data) => {
-                    // Após realizar a atualização da Subunidade, renderiza novamente a lista
-                    renderizarSalas();
-                    frmUnidade.reset();
-                    dialogPainel.close();
-                }).catch((error) => {
-                    console.error(`Erro ao tentar atualizar sala (Catch): ${error}`);
-                })
-            } catch (error) {
-                console.log(`Erro ao tentar atualizar Sala: ${error}`);
-            }
+                const r = await fetch(`${apiUrl}/salas/${id}`, { method: "DELETE" });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                renderizarSalas();
+            } catch (e) { console.error("Erro ao excluir sala:", e); }
         }
 
-        // Função para cadastrar nova sala
-        async function cadastrarNovaSala(dados) {
-            try {
-                await fetch(`${apiUrl}/salas`, {
-                    method: "POST",
-                    headers: {
-                        "Content-type": "application/json"
-                    },
-                    body: JSON.stringify(dados)
-                }).then((response) => {
-                    if (!response.ok) {
-                        console.error(`Erro ao tentar cadastrar nova sala: ${error}`);
-                    }
-    
-                    return response.json();
-                }).then((data) => {
-                    renderizarSalas();
-                    frmUnidade.reset();
-                    dialogPainel.close();
-                })
-            } catch (error) {
-                console.error(`Erro ao tentar cadastrar nova sala (catch): ${error}`);
-            }
+        async function preencherSelects(predioSel = "", subSel = "", tipoSel = "") {
+            const [predios, subs, tipos] = await Promise.all([
+                carregarPrediosTotalInfo(), carregarSubunidadesTotalInfo(), carregarSalasTipo()
+            ]);
+            popularSelect(selectPredios,    predios, p => p.predio_id,    p => p.predio,         "Selecione o prédio...");
+            popularSelect(selectSubunidades, subs,   s => s.subunidade_id, s => s.subunidade_nome, "Selecione a subunidade...");
+            popularSelect(selectSalasTipo,  tipos,   t => t.sala_tipo_id,  t => t.sala_tipo_nome.toUpperCase(), "Selecione o tipo...");
+            if (predioSel) selectPredios.value    = predioSel;
+            if (subSel)    selectSubunidades.value = subSel;
+            if (tipoSel)   selectSalasTipo.value   = tipoSel;
         }
 
         renderizarSalas();
 
-        // Botão canto superior direito da tela "Abre formulário de cadastro de sala"
-        btnAdicionar.addEventListener("click", function(event) {
-            event.preventDefault();
-            document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastrar nova sala";
-            btnCadastrarUnidade.style.display = "inline-block";
-            btnCadastrarUnidade.disabled = false;
-            btnAtualizarUnidade.style.display = "none";
-            btnAtualizarUnidade.disabled = true;
-
-            carregarPrediosTotalInfo().then((predios) => {
-                selectPredios.innerHTML = `<option value="">Selecione o prédio onde se encontra a sala...</option>`;
-                predios.forEach((predio) => {
-                    selectPredios.innerHTML += `
-                        <option value="${predio.predio_id}">${predio.predio}</option>
-                    `;
-                });
-            });
-
-            carregarSubunidadesTotalInfo().then((subunidades) => {
-                selectSubunidades.innerHTML = `<option value="">Selecione o departamento responsável pela sala...</option>`;
-                subunidades.forEach((subunidade) => {
-                    selectSubunidades.innerHTML += `
-                        <option value="${subunidade.subunidade_id}">${subunidade.subunidade_nome}</option>
-                    `;
-                });
-            });
-
-            carregarSalasTipo().then((salas_tipo) => {
-                selectSalasTipo.innerHTML = `<option value="">Selecione o tipo de sala...</option>`;
-                salas_tipo.forEach((sala_tipo) => {
-                    selectSalasTipo.innerHTML += `
-                        <option value="${sala_tipo.sala_tipo_id}">${sala_tipo.sala_tipo_nome.toUpperCase()}</option>
-                    `;
-                });
-            });
-
+        btnAdicionar.addEventListener("click", async function(e) {
+            e.preventDefault();
+            if (!e.target.classList.contains("sala")) return;
+            document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastrar sala";
+            btnAtualizar.style.display = "none"; btnAtualizar.disabled = true;
+            btnCadastrar.style.display = "inline-block"; btnCadastrar.disabled = false;
+            frmUnidade.reset();
+            await preencherSelects();
             dialogPainel.showModal();
         });
 
-        // Botão para Cadastrar a nova Sala
-        btnCadastrarUnidade.addEventListener("click", function(event) {
-            event.preventDefault();
+        btnCancelar.addEventListener("click", function(e) {
+            e.preventDefault(); frmUnidade.reset(); dialogPainel.close();
+        });
+
+        btnCadastrar.addEventListener("click", async function(e) {
+            e.preventDefault();
             const formData = new FormData(frmUnidade);
-            const objData = Object.fromEntries(formData.entries());
-
-            cadastrarNovaSala(objData);
+            const dados = Object.fromEntries(formData.entries());
+            if (!dados.sala_nome || !dados.predio_id) {
+                alert("Identificação da sala e prédio são obrigatórios."); return;
+            }
+            try {
+                const r = await fetch(`${apiUrl}/salas`, { method: "POST", body: JSON.stringify(dados) });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                frmUnidade.reset(); dialogPainel.close();
+                renderizarSalas();
+            } catch (e) { console.error("Erro ao cadastrar sala:", e); }
         });
 
-        // Botão para "Cancelar" do form de Cadastro/Atualização de sala
-        btnCancelarUnidade.addEventListener("click", function(event) {
-            event.preventDefault();
-            frmUnidade.reset();
-            dialogPainel.close();
+        btnAtualizar.addEventListener("click", async function(e) {
+            e.preventDefault();
+            const formData = new FormData(frmUnidade);
+            const dados = Object.fromEntries(formData.entries());
+            try {
+                const r = await fetch(`${apiUrl}/salas/${dados.sala_id}`, { method: "PUT", body: JSON.stringify(dados) });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                frmUnidade.reset(); dialogPainel.close();
+                renderizarSalas();
+            } catch (e) { console.error("Erro ao atualizar sala:", e); }
         });
 
-        btnAtualizarUnidade.addEventListener("click", function(event) {
-            event.preventDefault();
-            const formData = new FormData(frmUnidade); // Captura todos os campos do formulário de forma automática
-            const objData = Object.fromEntries(formData.entries()); // Transforma os dados do formulário em um objeto
-
-            atualizarSala(objData);
-        });
-
-        listaUnidades.addEventListener("click", function(event) {
-            if (event.target.classList.contains("editar")) {
-                const dadosEl = event.target.dataset; // Obtém todos as informações do tipo data-* desse componente.
-
+        listaUnidades.addEventListener("click", async function(e) {
+            const el = e.target;
+            if (el.classList.contains("editar")) {
+                const d = el.dataset;
                 document.querySelector(".dialogPainel fieldset legend").textContent = "Editar sala";
-                btnCadastrarUnidade.style.display = "none";
-                btnCadastrarUnidade.disabled = true;
-                btnAtualizarUnidade.style.display = "inline-block";
-                btnAtualizarUnidade.disabled = false;
-
-                carregarSubunidades().then((subunidades) => {
-                    selectSubunidades.innerHTML = "<option value=''>Selecione o departamento responsável pela sala...</option>";
-                    subunidades.forEach((subunidade) => {
-                        selectSubunidades.innerHTML += `
-                            <option value="${subunidade.subunidade_id}">${subunidade.subunidade_nome}</option>
-                        `;
-                    });
-                    // Mantém a subunidade que foi selecionada na atualização
-                    selectSubunidades.value = event.target.getAttribute("data-subunidade_id");
+                btnCadastrar.style.display = "none"; btnCadastrar.disabled = true;
+                btnAtualizar.style.display = "inline-block"; btnAtualizar.disabled = false;
+                frmUnidade.reset();
+                await preencherSelects(d.predio_id, d.subunidade_id, d.sala_tipo_id);
+                document.querySelector("#sala_id").value         = d.sala_id;
+                document.querySelector("#sala_nome").value       = d.sala_nome;
+                document.querySelector("#sala_descricao").value  = d.sala_descricao;
+                // Marcar radio is_agendavel
+                document.querySelectorAll("input[name='is_agendavel']").forEach(radio => {
+                    radio.checked = radio.value === d.is_agendavel;
                 });
-
-                carregarPredios().then((predios) => {
-                    selectPredios.innerHTML = "<option value=''>Selecione o prédio onde se encontra a sala...</option>";
-                    predios.forEach((predio) => {
-                        selectPredios.innerHTML += `
-                            <option value="${predio.predio_id}">${predio.predio}</option>
-                        `;
-                    });
-                    // Manter o prédio que foi selecionado na atualização
-                    selectPredios.value = event.target.getAttribute("data-predio_id");
-                });
-
-                carregarSalasTipo().then((salas_tipo) => {
-                    selectSalasTipo.innerHTML = "<option value=''>Selecione o tipo de sala...</option>";
-                    salas_tipo.forEach((sala_tipo) => {
-                        selectSalasTipo.innerHTML += `
-                            <option value="${sala_tipo.sala_tipo_id}">${sala_tipo.sala_tipo_nome}</option>
-                        `;
-                    });
-                    selectSalasTipo.value = event.target.getAttribute("data-sala_tipo_id");
-                });
-
-                document.querySelector("#sala_id").value = dadosEl.sala_id;
-                document.querySelector("#sala_nome").value = dadosEl.sala_nome;
-                document.querySelector("#predio_id").value = dadosEl.predio_id;
-                document.querySelector("#subunidade_id").value = dadosEl.subunidade_id;
-                document.querySelector("#sala_descricao").value = dadosEl.sala_descricao;
-                
-                const radioAgendavel = document.querySelectorAll("input[name='is_agendavel']");
-
-                // Verifica o valor atual do radio button e mantém
-                radioAgendavel.forEach((radio) => {
-                    if (radio.value === dadosEl.is_agendavel) {
-                        radio.checked = true;
-                    }
-                });
-
                 dialogPainel.showModal();
             }
+            if (el.classList.contains("excluir")) excluirSala(el.dataset.id);
         });
+    } // fim /adm/salas
 
-        
-
-
-    } // Fim /adm/salas
-
+    // =========================================================================
+    // GESTÃO DE TIPOS DE SALA — /adm/salas-tipo
+    // =========================================================================
     if (urlParam === "/adm/salas-tipo") {
-        const btnAdicionar = document.querySelector(".btn_adicionar");
-        const frmUnidade = document.querySelector(".frmUnidade");
-        const btnCadastrarUnidade = document.querySelector(".cadastrarUnidade");
-        const btnAtualizarUnidade = document.querySelector(".atualizarUnidade");
-        const btnCancelarUnidade = document.querySelector(".cancelarUnidade");
-        const dialogPainel = document.querySelector(".dialogPainel");
+        const btnAdicionar  = document.querySelector(".btn_adicionar");
+        const frmUnidade    = document.querySelector(".frmUnidade");
+        const btnCadastrar  = document.querySelector(".cadastrarUnidade");
+        const btnAtualizar  = document.querySelector(".atualizarUnidade");
+        const btnCancelar   = document.querySelector(".cancelarUnidade");
+        const dialogPainel  = document.querySelector(".dialogPainel");
         const listaUnidades = document.querySelector(".listaUnidades");
 
         function renderizarSalasTipo() {
-            carregarSalasTipo().then((salas_tipo) => {
+            carregarSalasTipo().then(tipos => {
                 listaUnidades.innerHTML = "";
-                salas_tipo.forEach((sala_tipo) => {
-                    const divElement = document.createElement("div");
-                    divElement.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
-                    divElement.innerHTML += `
-                        <div class="dado flex flex--2">${sala_tipo.sala_tipo_id}</div>
-                        <div class="dado flex flex--10">${sala_tipo.sala_tipo_nome.toUpperCase()}</div>
-                        
+                (tipos || []).forEach(t => {
+                    const div = document.createElement("div");
+                    div.classList.add("dados", "flex", "align--items--center");
+                    div.innerHTML = `
+                        <div class="dado flex flex--2">${t.sala_tipo_id}</div>
+                        <div class="dado flex flex--10">${t.sala_tipo_nome.toUpperCase()}</div>
                         <div class="dado flex flex--2 font--size--20">
-                            <i class="bi bi-pencil-square editar" title="Editar" data-sala_tipo_id="${sala_tipo.sala_tipo_id}" data-sala_tipo_nome="${sala_tipo.sala_tipo_nome}"></i>
-                            <i class="bi bi-info-circle info" title="Ver mais informações" data-tipo="info"></i>
-                        </div>
-                    `;
-    
-                    listaUnidades.appendChild(divElement);
+                            ${iconeAcoes(
+                                `data-sala_tipo_id="${t.sala_tipo_id}" data-sala_tipo_nome="${t.sala_tipo_nome}"`,
+                                t.sala_tipo_id, "sala_tipo"
+                            )}
+                        </div>`;
+                    listaUnidades.appendChild(div);
                 });
             });
         }
 
-        async function cadastrarTipoSala(dados) {
+        async function excluirSalaTipo(id) {
+            if (!confirm("Excluir este tipo de sala?")) return;
             try {
-                await fetch(`${apiUrl}/salas-tipo`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(dados)
-                }).then((response) => {
-                    if (!response.ok) {
-                        console.error(`Erro ao tentar cadastrar novo tipo de sala: ${response.error}`);
-                    }
-    
-                    return response.json();
-                }).then((data) => {
-                    renderizarSalasTipo();
-                    console.log(data);
-                    frmUnidade.reset();
-                    dialogPainel.close();
-                });
-            } catch (error) {
-                console.error(`Erro ao tentar cadastrar novo tipo de sala (catch): ${error}`);
-            }
-        }
-
-        async function atualizarSalaTipo(dados) {
-            try {
-                await fetch(`${apiUrl}/salas-tipo/${dados.sala_tipo_id}`, {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(dados)
-                }).then((response) => {
-                    if (!response.ok) {
-                        console.error(`Erro ao tentar atualizar o tipo de sala: ${response.error}`);
-                    }
-    
-                    return response.json();
-                }).then((data) => {
-                    renderizarSalasTipo();
-                    console.log(data);
-                    frmUnidade.reset();
-                    dialogPainel.close();
-                })
-            } catch (error) {
-                console.error(`Erro ao tentar atualizar o tipo de sala (catch): ${error}`);
-            }
+                const r = await fetch(`${apiUrl}/salas-tipo/${id}`, { method: "DELETE" });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                renderizarSalasTipo();
+            } catch (e) { console.error("Erro ao excluir tipo de sala:", e); }
         }
 
         renderizarSalasTipo();
-        
-        btnAdicionar.addEventListener("click", function(event) {
-            event.preventDefault();
-            document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastro de tipo de sala";
-            btnAtualizarUnidade.disabled = true;
-            btnAtualizarUnidade.style.display = "none";
-            btnCadastrarUnidade.disabled = false;
-            btnCadastrarUnidade.style.display = "inline-block";
+
+        btnAdicionar.addEventListener("click", function(e) {
+            e.preventDefault();
+            document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastrar tipo de sala";
+            btnAtualizar.style.display = "none"; btnAtualizar.disabled = true;
+            btnCadastrar.style.display = "inline-block"; btnCadastrar.disabled = false;
+            frmUnidade.reset();
             dialogPainel.showModal();
         });
 
-        btnCancelarUnidade.addEventListener("click", function(event) {
-            event.preventDefault();
-            frmUnidade.reset();
-            dialogPainel.close();
+        btnCancelar.addEventListener("click", function(e) {
+            e.preventDefault(); frmUnidade.reset(); dialogPainel.close();
         });
 
-        btnCadastrarUnidade.addEventListener("click", function(event) {
-            event.preventDefault();
+        btnCadastrar.addEventListener("click", async function(e) {
+            e.preventDefault();
             const formData = new FormData(frmUnidade);
-            const objData = Object.fromEntries(formData.entries());
-
-            console.log(objData);
-            cadastrarTipoSala(objData);
+            const dados = Object.fromEntries(formData.entries());
+            try {
+                const r = await fetch(`${apiUrl}/salas-tipo`, { method: "POST", body: JSON.stringify(dados) });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                frmUnidade.reset(); dialogPainel.close();
+                renderizarSalasTipo();
+            } catch (e) { console.error("Erro ao cadastrar tipo de sala:", e); }
         });
 
-        btnAtualizarUnidade.addEventListener("click", function(event) {
-            event.preventDefault();
+        btnAtualizar.addEventListener("click", async function(e) {
+            e.preventDefault();
             const formData = new FormData(frmUnidade);
-            const objData = Object.fromEntries(formData.entries());
-
-            atualizarSalaTipo(objData);
-
+            const dados = Object.fromEntries(formData.entries());
+            try {
+                const r = await fetch(`${apiUrl}/salas-tipo/${dados.sala_tipo_id}`, { method: "PUT", body: JSON.stringify(dados) });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                frmUnidade.reset(); dialogPainel.close();
+                renderizarSalasTipo();
+            } catch (e) { console.error("Erro ao atualizar tipo de sala:", e); }
         });
 
-        listaUnidades.addEventListener("click", function(event) {
-            if (event.target.classList.contains("editar")) {
-                document.querySelector(".dialogPainel fieldset legend").textContent = "Atualizar tipo de sala";
-                btnCadastrarUnidade.disabled = true;
-                btnCadastrarUnidade.style.display = "none";
-                btnAtualizarUnidade.disabled = false;
-                btnAtualizarUnidade.style.display = "inline-block";
-
-                document.querySelector("#sala_tipo_id").value = event.target.getAttribute("data-sala_tipo_id");
-                document.querySelector("#sala_tipo_nome").value = event.target.getAttribute("data-sala_tipo_nome");
-    
+        listaUnidades.addEventListener("click", function(e) {
+            const el = e.target;
+            if (el.classList.contains("editar")) {
+                document.querySelector(".dialogPainel fieldset legend").textContent = "Editar tipo de sala";
+                btnCadastrar.style.display = "none"; btnCadastrar.disabled = true;
+                btnAtualizar.style.display = "inline-block"; btnAtualizar.disabled = false;
+                document.querySelector("#sala_tipo_id").value   = el.dataset.sala_tipo_id;
+                document.querySelector("#sala_tipo_nome").value = el.dataset.sala_tipo_nome;
                 dialogPainel.showModal();
             }
-        })
+            if (el.classList.contains("excluir")) excluirSalaTipo(el.dataset.id);
+        });
+    } // fim /adm/salas-tipo
 
-    } // Fim /adm/salas-tipo
-
-
-});
+}); // fim DOMContentLoaded
