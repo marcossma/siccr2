@@ -1,8 +1,8 @@
-// Redirecionar se já estiver autenticado como admin
+// Redirecionar se já estiver autenticado como super_admin
 (function () {
     var siccr = JSON.parse(localStorage.getItem("siccr") || "null");
     var token = localStorage.getItem("siccr_token");
-    if (token && siccr && siccr.permissao === "admin") {
+    if (token && siccr && siccr.permissao === "super_admin") {
         window.location.replace("/adm/painel");
     }
 })();
@@ -51,8 +51,8 @@ frmLoginAdmin.addEventListener("submit", async function (event) {
 
         const usuario = data.data[0];
 
-        if (usuario.permissao !== "admin") {
-            mostrarErro("Acesso negado. Apenas administradores podem acessar esta área.");
+        if (usuario.permissao !== "super_admin") {
+            mostrarErro("Acesso negado. Apenas administradores do sistema podem acessar esta área.");
             return;
         }
 

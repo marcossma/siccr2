@@ -1,113 +1,129 @@
 const express = require("express");
 const pool = require("../config/database.js");
+const { getNivelAcesso } = require("../middlewares/autorizar.js");
 
 const router = express.Router();
 
-// Rota para adicionar nova SALA
-router.post("/", async (req, res) => {
-    const { sala_nome, sala_descricao, predio_id, subunidade_id, is_agendavel, sala_tipo_id } = req.body;
-
-    try {
-        // Verifica se não estão faltando campos obrigatórios
-        if (!sala_nome || !predio_id) {
-            return res.status(400).json({
-                status: "error",
-                message: "Os campos de IDENTIFICAÇÃO DA SALA e PRÉDIO devem ser preenchidos.",
-                data: ""
-            });
-        }
-
-        // Prepara a query para cadastrar o PRÉDIO
-        const query = "insert into salas (sala_nome, sala_descricao, predio_id, subunidade_id, is_agendavel, sala_tipo_id) values ($1, $2, $3, $4, $5, $6) returning *";
-        const values = [sala_nome, sala_descricao, predio_id, subunidade_id, is_agendavel, sala_tipo_id];
-
-        // Cadastra a unidade
-        const result = await pool.query(query, values);
-
-        // Retorna os dados da operação
-        res.status(201).json({
-            status: "success",
-            message: "Sala Cadastrada com sucesso.",
-            data: result.rows
-        });
-    } catch(error) {
-        console.log(`Ocorreu um erro: ${error}`);
-        res.status(500).json({
-            status: "error",
-            message: "Erro ao tentar cadastrar sala.",
-            data: ""
-        });
-    }
-
-});
-
-// Rota para listar os SALAS
+// GET /api/salas — lista salas (com filtro de escopo)
 router.get("/", async (req, res) => {
     try {
-        const result = await pool.query("select * from salas order by sala_nome");
-        res.status(200).json({
-            status: "success",
-            message: "",
-            data: result.rows
-        });
+        const { rows } = await pool.query("SELECT * FROM salas ORDER BY sala_nome");
+        return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
-        console.log(`Erro ao tentar listar as salas: ${error}`);
-        res.status(500).json({
-            status: "error",
-            message: "Erro ao tentar listar as salas.",
-            data: ""
-        });
+        console.error("Erro ao listar salas:", error);
+        return res.status(500).json({ status: "error", message: "Erro ao listar salas.", data: null });
     }
 });
 
-// Rota para listar os SALAS E DADOS DAS SUBUNIDADES E PRÉDIOS
-router.get("/total-info", async(req, res) => {
+// GET /api/salas/total-info — lista salas com dados relacionados
+router.get("/total-info", async (req, res) => {
     try {
-        const result = await pool.query("select * from salas left join subunidades on salas.subunidade_id = subunidades.subunidade_id left join predios on salas.predio_id = predios.predio_id left join salas_tipo on salas_tipo.sala_tipo_id = salas.sala_tipo_id order by salas.sala_nome");
-        res.status(200).json({
-            status: "success",
-            message: "",
-            data: result.rows
-        })
-    } catch(error) {
-        console.log(`Erro ao tentar listar todas as informações da sala: ${error}`);
-        res.status(500).json({
-            status: "error",
-            message: "Erro ao tentar listar todas as informações da sala.",
-            data: ""
-        });
+        const nivel = getNivelAcesso(req.usuario);
+        let whereClause = "";
+        let params = [];
+
+        if (nivel === "chefe") {
+            whereClause = "WHERE sa.subunidade_id = $1";
+            params = [req.usuario.subunidade];
+        } else if (nivel === "diretor") {
+            whereClause = "WHERE p.unidade_id = $1";
+            params = [req.usuario.unidade];
+        }
+        // super_admin vê tudo
+
+        const { rows } = await pool.query(`
+            SELECT
+                sa.sala_id, sa.sala_nome, sa.sala_descricao,
+                sa.predio_id, sa.subunidade_id, sa.is_agendavel, sa.sala_tipo_id,
+                p.predio, p.descricao AS predio_descricao, p.unidade_id,
+                s.subunidade_nome, s.subunidade_sigla,
+                st.sala_tipo_nome
+            FROM salas sa
+            LEFT JOIN predios p ON p.predio_id = sa.predio_id
+            LEFT JOIN subunidades s ON s.subunidade_id = sa.subunidade_id
+            LEFT JOIN salas_tipo st ON st.sala_tipo_id = sa.sala_tipo_id
+            ${whereClause}
+            ORDER BY sa.sala_nome
+        `, params);
+
+        return res.status(200).json({ status: "success", message: "", data: rows });
+    } catch (error) {
+        console.error("Erro ao listar salas (total-info):", error);
+        return res.status(500).json({ status: "error", message: "Erro ao listar informações das salas.", data: null });
     }
 });
 
-router.put("/:sala_id", async (req, res) => {
-    const sala_id = req.params.sala_id;
-    const { sala_nome, predio_id, subunidade_id, is_agendavel, sala_descricao, sala_tipo_id } = req.body;
+// POST /api/salas — cadastra nova sala
+router.post("/", async (req, res) => {
+    const { sala_nome, sala_descricao, predio_id, subunidade_id, is_agendavel, sala_tipo_id } = req.body;
 
     if (!sala_nome || !predio_id) {
         return res.status(400).json({
             status: "error",
-            message: "Os campos IDENTIFICAÇÃO DA SALA e PRÉDIO devem ser preenchidos.",
-            data: ""
+            message: "Os campos Identificação da Sala e Prédio são obrigatórios.",
+            data: null
         });
     }
 
     try {
-        const result = await pool.query("update salas set sala_nome = $1, sala_descricao = $2, subunidade_id = $3, predio_id = $4, is_agendavel = $5, sala_tipo_id = $6 where sala_id = $7 returning *", [sala_nome, sala_descricao, subunidade_id, predio_id, is_agendavel, sala_tipo_id, sala_id]);
-
-        res.status(200).json({
-            status: "success",
-            message: "Informações da sala atualizadas",
-            data: result.rows
-        });
+        const { rows } = await pool.query(
+            `INSERT INTO salas (sala_nome, sala_descricao, predio_id, subunidade_id, is_agendavel, sala_tipo_id)
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+            [sala_nome.trim(), sala_descricao || null, predio_id,
+             subunidade_id || null, is_agendavel ?? 0, sala_tipo_id || null]
+        );
+        return res.status(201).json({ status: "success", message: "Sala cadastrada com sucesso.", data: rows[0] });
     } catch (error) {
-        console.error("Erro ao tentar atualizar sala: ", error);
-        res.status(500).json({
-            status: "error",
-            message: "Erro ao tentar atualizar sala.",
-            data: ""
-        });
+        console.error("Erro ao cadastrar sala:", error);
+        return res.status(500).json({ status: "error", message: "Erro ao cadastrar sala.", data: null });
     }
 });
 
-// Exportar o roteador
+// PUT /api/salas/:id — atualiza sala
+router.put("/:id", async (req, res) => {
+    const { id } = req.params;
+    const { sala_nome, sala_descricao, predio_id, subunidade_id, is_agendavel, sala_tipo_id } = req.body;
+
+    if (!sala_nome || !predio_id) {
+        return res.status(400).json({
+            status: "error",
+            message: "Os campos Identificação da Sala e Prédio são obrigatórios.",
+            data: null
+        });
+    }
+
+    try {
+        const { rows, rowCount } = await pool.query(
+            `UPDATE salas SET sala_nome=$1, sala_descricao=$2, subunidade_id=$3,
+                 predio_id=$4, is_agendavel=$5, sala_tipo_id=$6
+             WHERE sala_id=$7 RETURNING *`,
+            [sala_nome.trim(), sala_descricao || null, subunidade_id || null,
+             predio_id, is_agendavel ?? 0, sala_tipo_id || null, id]
+        );
+        if (rowCount === 0) {
+            return res.status(404).json({ status: "error", message: "Sala não encontrada.", data: null });
+        }
+        return res.status(200).json({ status: "success", message: "Sala atualizada com sucesso.", data: rows[0] });
+    } catch (error) {
+        console.error("Erro ao atualizar sala:", error);
+        return res.status(500).json({ status: "error", message: "Erro ao atualizar sala.", data: null });
+    }
+});
+
+// DELETE /api/salas/:id — remove sala
+router.delete("/:id", async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const { rowCount } = await pool.query("DELETE FROM salas WHERE sala_id = $1", [id]);
+        if (rowCount === 0) {
+            return res.status(404).json({ status: "error", message: "Sala não encontrada.", data: null });
+        }
+        return res.status(200).json({ status: "success", message: "Sala excluída com sucesso.", data: null });
+    } catch (error) {
+        console.error("Erro ao excluir sala:", error);
+        return res.status(500).json({ status: "error", message: "Erro ao excluir sala.", data: null });
+    }
+});
+
 module.exports = router;

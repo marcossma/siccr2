@@ -3,112 +3,87 @@ const pool = require("../config/database.js");
 
 const router = express.Router();
 
-// Rota para adicionar nova SALa
-router.post("/", async (req, res) => {
-    const { sala_tipo_nome } = req.body;
-
+// GET /api/salas-tipo — lista todos os tipos de sala
+router.get("/", async (_req, res) => {
     try {
-        // Verifica se não estão faltando campos obrigatórios
-        if (!sala_tipo_nome) {
-            return res.status(400).json({
-                status: "error",
-                message: "Os campos de IDENTIFICAÇÃO DO TIPO DE SALA deve ser preenchido.",
-                data: ""
-            });
-        }
-
-        // Prepara a query para cadastrar o PRÉDIO
-        const query = "insert into salas_tipo (sala_tipo_nome) values ($1) returning *";
-        const values = [sala_tipo_nome];
-
-        // Cadastra a unidade
-        const result = await pool.query(query, values);
-
-        // Retorna os dados da operação
-        res.status(201).json({
-            status: "success",
-            message: "Tipo de Sala cadastrada com sucesso.",
-            data: result.rows
-        });
-    } catch(error) {
-        console.log(`Ocorreu um erro: ${error}`);
-        res.status(500).json({
-            status: "error",
-            message: "Erro ao tentar cadastrar tipo de sala.",
-            data: ""
-        });
-    }
-
-});
-
-// Rota para listar os SALAS
-router.get("/", async (req, res) => {
-    try {
-        const result = await pool.query("select * from salas_tipo order by sala_tipo_nome");
-        res.status(200).json({
-            status: "success",
-            message: "",
-            data: result.rows
-        });
+        const { rows } = await pool.query(
+            "SELECT * FROM salas_tipo ORDER BY sala_tipo_nome"
+        );
+        return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
-        console.log(`Erro ao tentar listar os tipos de salas: ${error}`);
-        res.status(500).json({
-            status: "error",
-            message: "Erro ao tentar listar os tipos de salas.",
-            data: ""
-        });
+        console.error("Erro ao listar tipos de sala:", error);
+        return res.status(500).json({ status: "error", message: "Erro ao listar tipos de sala.", data: null });
     }
 });
 
-// Rota para listar os SALAS E DADOS DAS SUBUNIDADES E PRÉDIOS
-// INATIVO POR ENQUANTO ATÉ HAVER NECESSIDADE E ADAPTAR AOS TIPOS DE SALAS
-router.get("/total-info", async(req, res) => {
-    try {
-        const result = await pool.query("select * from salas inner join subunidades on salas.subunidade_id = subunidades.subunidade_id inner join predios on salas.predio_id = predios.predio_id order by salas.sala_nome");
-        res.status(200).json({
-            status: "success",
-            message: "",
-            data: result.rows
-        })
-    } catch(error) {
-        console.log(`Erro ao tentar listar todas as informações da sala: ${error}`);
-        res.status(500).json({
-            status: "error",
-            message: "Erro ao tentar listar todas as informações da sala.",
-            data: ""
-        });
-    }
-});
-
-router.put("/:sala_tipo_id", async (req, res) => {
-    const sala_tipo_id = req.params.sala_tipo_id;
+// POST /api/salas-tipo — cadastra novo tipo de sala
+router.post("/", async (req, res) => {
     const { sala_tipo_nome } = req.body;
 
     if (!sala_tipo_nome) {
         return res.status(400).json({
             status: "error",
-            message: "O campo IDENTIFICAÇÃO DO TIPO DE SALA deve ser preenchido.",
-            data: ""
+            message: "O campo Tipo de Sala é obrigatório.",
+            data: null
         });
     }
 
     try {
-        const result = await pool.query("update salas_tipo set sala_tipo_nome = $1 where sala_tipo_id = $2 returning *", [sala_tipo_nome, sala_tipo_id]);
-
-        res.status(200).json({
-            status: "success",
-            message: "Informações do tipo de sala atualizadas",
-            data: result.rows
-        });
+        const { rows } = await pool.query(
+            "INSERT INTO salas_tipo (sala_tipo_nome) VALUES ($1) RETURNING *",
+            [sala_tipo_nome.trim()]
+        );
+        return res.status(201).json({ status: "success", message: "Tipo de sala cadastrado com sucesso.", data: rows[0] });
     } catch (error) {
-        console.error("Erro ao tentar atualizar tipo de sala: ", error);
-        res.status(500).json({
-            status: "error",
-            message: "Erro ao tentar atualizar tipo de sala.",
-            data: ""
-        });
+        console.error("Erro ao cadastrar tipo de sala:", error);
+        return res.status(500).json({ status: "error", message: "Erro ao cadastrar tipo de sala.", data: null });
     }
 });
 
-// Exportar o roteador
+// PUT /api/salas-tipo/:id — atualiza tipo de sala
+router.put("/:id", async (req, res) => {
+    const { id } = req.params;
+    const { sala_tipo_nome } = req.body;
+
+    if (!sala_tipo_nome) {
+        return res.status(400).json({
+            status: "error",
+            message: "O campo Tipo de Sala é obrigatório.",
+            data: null
+        });
+    }
+
+    try {
+        const { rows, rowCount } = await pool.query(
+            "UPDATE salas_tipo SET sala_tipo_nome = $1 WHERE sala_tipo_id = $2 RETURNING *",
+            [sala_tipo_nome.trim(), id]
+        );
+        if (rowCount === 0) {
+            return res.status(404).json({ status: "error", message: "Tipo de sala não encontrado.", data: null });
+        }
+        return res.status(200).json({ status: "success", message: "Tipo de sala atualizado com sucesso.", data: rows[0] });
+    } catch (error) {
+        console.error("Erro ao atualizar tipo de sala:", error);
+        return res.status(500).json({ status: "error", message: "Erro ao atualizar tipo de sala.", data: null });
+    }
+});
+
+// DELETE /api/salas-tipo/:id — remove tipo de sala
+router.delete("/:id", async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const { rowCount } = await pool.query(
+            "DELETE FROM salas_tipo WHERE sala_tipo_id = $1", [id]
+        );
+        if (rowCount === 0) {
+            return res.status(404).json({ status: "error", message: "Tipo de sala não encontrado.", data: null });
+        }
+        return res.status(200).json({ status: "success", message: "Tipo de sala excluído com sucesso.", data: null });
+    } catch (error) {
+        console.error("Erro ao excluir tipo de sala:", error);
+        return res.status(500).json({ status: "error", message: "Erro ao excluir tipo de sala.", data: null });
+    }
+});
+
 module.exports = router;

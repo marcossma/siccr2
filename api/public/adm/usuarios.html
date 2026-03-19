@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SICCR - Sistema Integrado Centro de Ciências Rurais</title>
+    <title>SICCR - Usuários</title>
     <link rel="shortcut icon" href="../img/favicon.png" type="image/x-icon">
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/dialogs.css">
@@ -33,121 +33,124 @@
                     <i class="bi bi-people font--size--40"></i>
                     Painel Administrativo - Usuários
                 </h1>
-
-                <button class="btn_adicionar usuario flex align--items--center gap--10 cursor--pointer">Adicionar <i class="bi bi-person-plus font--size--20"></i></button>
+                <button class="btn_adicionar usuario flex align--items--center gap--10 cursor--pointer">
+                    Adicionar <i class="bi bi-person-plus font--size--20"></i>
+                </button>
             </section>
 
-             <div>
+            <div>
                 <menu-navegacao-adm></menu-navegacao-adm>
             </div>
 
             <section class="informacoes_painel">
                 <div class="cabecalho flex">
-                    <div class="titulo flex flex--5">
-                        Nome
-                    </div>
-                    <div class="titulo flex flex--4">
-                        E-Mail
-                    </div>
-                    <div class="titulo flex flex--2">
-                        Siape
-                    </div>
-                    <div class="titulo flex flex--3">
-                        Data de nasc.
-                    </div>
-                    <div class="titulo flex flex--2">
-                        Subunidade
-                    </div>
-                    <div class="titulo flex flex--2">
-                        Whatsapp
-                    </div>
-                    <div class="titulo flex flex--4">
-                        Permissão
-                    </div>
-                    <div class="titulo flex flex--2">
-                        Ações
-                    </div>
+                    <div class="titulo flex flex--5">Nome</div>
+                    <div class="titulo flex flex--4">E-Mail</div>
+                    <div class="titulo flex flex--2">SIAPE</div>
+                    <div class="titulo flex flex--3">Subunidade / Unidade</div>
+                    <div class="titulo flex flex--3">Permissão</div>
+                    <div class="titulo flex flex--2">Ações</div>
                 </div>
-
                 <div class="listaUnidades">
-                    <!-- Informações dos usuários serão carregadas dinamicamente -->
+                    <!-- Usuários carregados dinamicamente -->
                 </div>
             </section>
-            
         </main>
         <footer>Rodapé</footer>
     </div>
 
-    <!-- Formulário cadastro Unidade -->
+    <!-- Formulário cadastro/edição de Usuário -->
     <dialog class="dialogPainel unidades">
         <fieldset>
             <legend>Cadastro de Usuário</legend>
 
             <form class="frmCadastroPainel frmUnidade flex flex--column gap--15">
+                <input type="hidden" name="user_id" id="user_id">
+
+                <!-- Nome -->
                 <div class="row">
-                    <input type="hidden" name="user_id" id="user_id">
-                    <input type="text" name="nome" id="nome" class="formInput width--100" placeholder="Digite o nome do servidor">
+                    <input type="text" name="nome" id="nome" class="formInput width--100"
+                           placeholder="Nome completo do servidor">
                     <label class="painelLabel" for="nome">Ex.: Daniel Mânica</label>
                 </div>
 
+                <!-- E-mail -->
                 <div class="row">
-                    <input type="text" name="email" id="email" class="formInput width--100" placeholder="Digite email do servidor">
+                    <input type="email" name="email" id="email" class="formInput width--100"
+                           placeholder="E-mail institucional">
                     <label class="painelLabel" for="email">Ex.: patrimonio.ccr@ufsm.br</label>
                 </div>
 
-                <div class="row">
-                    <input type="text" name="siape" id="siape" class="formInput width--100" placeholder="Digite siape do servidor">
-                    <label class="painelLabel" for="siape">Ex.: 2152076</label>
-                </div>
-
-                <div class="row senha">
-                    <input type="password" name="senha" id="senha" class="formInput width--100" placeholder="Digite uma senha de acesso">
-                    <label class="painelLabel" for="senha"></label>
-                </div>
-
-                <div class="row">
-                    <input type="date" name="data_nascimento" id="data_nascimento" class="formInput width--100">
-                    <label class="painelLabel" for="data_nascimento">Digite ou selecione a data de nascimento</label>
-                </div>
-
-                <div class="row">
-                    <input type="text" name="whatsapp" id="whatsapp" class="formInput width--100" placeholder="Digite o whatsapp do servidor">
-                    <label class="painelLabel" for="whatsapp">Ex.: 5599999999</label>
-                </div>
-                
-                <div class="row">
-                    <select name="subunidade_id" id="subunidade_id" class="formInput width--100">
-                        <!-- Options serão adicionados dinamicamente -->
-                    </select>
-                    <label class="painelLabel" for="subunidade_id">Selecione a subunidade de lotação...</label>
-                </div>
-
-                <div class="row flex justify--content--center align--items--center gap--10">
-                    <label for="" class="formLabel">Selecione a permissão: </label>
-                    <div class="flex align--items--center justify--content--center gap--20">
-                        <span>
-                            <input type="radio" name="permissao" value="diretor" id="diretor"> Diretor
-                        </span>
-                        <span>
-                            <input type="radio" name="permissao" value="chefe" id="chefia"> Chefe
-                        </span>
-                        <span>
-                            <input type="radio" name="permissao" value="servidor" id="servidor"> Servidor
-                        </span>
+                <!-- SIAPE + Data nascimento (lado a lado) -->
+                <div class="flex gap--15">
+                    <div class="row flex--1">
+                        <input type="text" name="siape" id="siape" class="formInput width--100"
+                               placeholder="SIAPE">
+                        <label class="painelLabel" for="siape">Ex.: 2152076</label>
+                    </div>
+                    <div class="row flex--1">
+                        <input type="text" name="whatsapp" id="whatsapp" class="formInput width--100"
+                               placeholder="WhatsApp">
+                        <label class="painelLabel" for="whatsapp">Ex.: 5599999999999</label>
                     </div>
                 </div>
 
+                <!-- Senha -->
+                <div class="row senha">
+                    <input type="password" name="senha" id="senha" class="formInput width--100"
+                           placeholder="Senha (mín. 8 caracteres — deixe em branco para não alterar)">
+                    <label class="painelLabel" for="senha">Mínimo de 8 caracteres</label>
+                </div>
 
-
+                <!-- Data de nascimento -->
                 <div class="row">
-                    <button class="btnPainelFormulario cadastrarUnidade">Cadastrar</button>
-                    <button class="btnPainelFormulario atualizarUnidade">Atualizar</button>
-                    <button class="btnPainelFormulario cancelarUnidade">Cancelar</button>
+                    <input type="date" name="data_nascimento" id="data_nascimento" class="formInput width--100">
+                    <label class="painelLabel" for="data_nascimento">Data de nascimento</label>
+                </div>
+
+                <!-- Permissão -->
+                <div class="row">
+                    <label class="painelLabel" style="margin-bottom:6px;display:block;">Permissão / Cargo</label>
+                    <select name="permissao" id="permissao" class="formInput width--100">
+                        <option value="servidor">Servidor</option>
+                        <option value="subchefe">Subchefe</option>
+                        <option value="chefe">Chefe de Setor</option>
+                        <option value="vice_diretor">Vice-Diretor</option>
+                        <option value="diretor">Diretor</option>
+                        <option value="super_admin">Super Admin</option>
+                    </select>
+                    <label class="painelLabel" for="permissao">
+                        Diretor/Vice-diretor → vinculado à Unidade &nbsp;|&nbsp;
+                        Demais → vinculado à Subunidade
+                    </label>
+                </div>
+
+                <!-- Subunidade (visível para chefe/subchefe/servidor) -->
+                <div class="row" id="rowSubunidade">
+                    <select name="subunidade_id" id="subunidade_id" class="formInput width--100">
+                        <option value="">— Selecione a subunidade de lotação —</option>
+                    </select>
+                    <label class="painelLabel" for="subunidade_id">Subunidade de lotação</label>
+                </div>
+
+                <!-- Unidade (visível para diretor/vice_diretor) -->
+                <div class="row" id="rowUnidade" style="display:none;">
+                    <select name="unidade_id" id="unidade_id" class="formInput width--100">
+                        <option value="">— Selecione a unidade —</option>
+                    </select>
+                    <label class="painelLabel" for="unidade_id">Unidade de gestão</label>
+                </div>
+
+                <!-- Botões -->
+                <div class="row">
+                    <button type="button" class="btnPainelFormulario cadastrarUnidade">Cadastrar</button>
+                    <button type="button" class="btnPainelFormulario atualizarUnidade">Atualizar</button>
+                    <button type="button" class="btnPainelFormulario cancelarUnidade">Cancelar</button>
                 </div>
             </form>
         </fieldset>
     </dialog>
-    <!-- Fim formulário cadastro Unidade -->
+    <!-- Fim formulário -->
 
     <script type="module" src="../js/components/index.js"></script>
 </body>

@@ -1,139 +1,276 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const pool = require("../config/database.js");
+const { getNivelAcesso } = require("../middlewares/autorizar.js");
 
-// Criar um roteador para o Express
 const router = express.Router();
 
-// Rota para listar os usuários
+// Campos seguros para retornar (nunca expõe senha)
+const CAMPOS_USUARIO = `
+    u.user_id, u.nome, u.email, u.siape, u.data_nascimento,
+    u.subunidade_id, u.unidade_id, u.whatsapp, u.permissao,
+    u.createdat, u.updatedat
+`;
+
+// Validação básica de e-mail
+function emailValido(email) {
+    return !email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+// GET /api/usuarios — lista usuários (com filtro de escopo)
 router.get("/", async (req, res) => {
     try {
-        const result = await pool.query("select * from users order by nome");
-        res.status(200).json({
-            status: "success",
-            message: "",
-            data: result.rows
-        });
-    } catch(error) {
-        console.error(`Erro ao tentar listar os usuários: ${error}`);
-        res.status(500).json({
-            status: "error",
-            message: "Erro ao tentar listar os usuários.",
-            data: ""
-        });
+        const nivel = getNivelAcesso(req.usuario);
+        let query, params = [];
+
+        if (nivel === "super_admin") {
+            query = `SELECT ${CAMPOS_USUARIO}, s.subunidade_nome
+                     FROM users u
+                     LEFT JOIN subunidades s ON s.subunidade_id = u.subunidade_id
+                     ORDER BY u.nome`;
+        } else if (nivel === "diretor") {
+            query = `SELECT ${CAMPOS_USUARIO}, s.subunidade_nome
+                     FROM users u
+                     LEFT JOIN subunidades s ON s.subunidade_id = u.subunidade_id
+                     WHERE s.unidade_id = $1 OR u.unidade_id = $1
+                     ORDER BY u.nome`;
+            params = [req.usuario.unidade];
+        } else {
+            // chefe vê apenas usuários da sua subunidade
+            query = `SELECT ${CAMPOS_USUARIO}, s.subunidade_nome
+                     FROM users u
+                     LEFT JOIN subunidades s ON s.subunidade_id = u.subunidade_id
+                     WHERE u.subunidade_id = $1
+                     ORDER BY u.nome`;
+            params = [req.usuario.subunidade];
+        }
+
+        const { rows } = await pool.query(query, params);
+        return res.status(200).json({ status: "success", message: "", data: rows });
+    } catch (error) {
+        console.error("Erro ao listar usuários:", error);
+        return res.status(500).json({ status: "error", message: "Erro ao listar usuários.", data: null });
     }
 });
 
-// Rota para listar os usuários com todas as informações
+// GET /api/usuarios/total-info — lista com dados relacionados
 router.get("/total-info", async (req, res) => {
     try {
-        const result = await pool.query("select * from users left join subunidades on users.subunidade_id = subunidades.subunidade_id order by users.nome");
-        
-        res.status(200).json({
-            status: "success",
-            message: "",
-            data: result.rows
-        });
+        const nivel = getNivelAcesso(req.usuario);
+        let whereClause = "";
+        let params = [];
+
+        if (nivel === "chefe") {
+            whereClause = "WHERE u.subunidade_id = $1";
+            params = [req.usuario.subunidade];
+        } else if (nivel === "diretor") {
+            whereClause = "WHERE s.unidade_id = $1 OR u.unidade_id = $1";
+            params = [req.usuario.unidade];
+        }
+
+        const { rows } = await pool.query(`
+            SELECT
+                u.user_id, u.nome, u.email, u.siape, u.data_nascimento,
+                u.subunidade_id, u.unidade_id, u.whatsapp, u.permissao,
+                s.subunidade_nome, s.subunidade_sigla, s.is_direcao_centro,
+                un.unidade, un.unidade_sigla
+            FROM users u
+            LEFT JOIN subunidades s ON s.subunidade_id = u.subunidade_id
+            LEFT JOIN unidades un ON un.unidade_id = COALESCE(s.unidade_id, u.unidade_id)
+            ${whereClause}
+            ORDER BY u.nome
+        `, params);
+
+        return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
-        console.error(`Erro ao tentar listar todos as informações dos usuários: ${error}`);
-        res.status(500).json({
-            status: "error",
-            message: "Erro ao tentar listar todas as informações dos usuários.",
-            data: ""
-        });
+        console.error("Erro ao listar usuários (total-info):", error);
+        return res.status(500).json({ status: "error", message: "Erro ao listar informações dos usuários.", data: null });
     }
 });
 
-// Rota para adicionar novo usuário
-router.post("/", async (req, res) => {
-    const { nome, email, siape, senha, data_nascimento, subunidade_id, whatsapp, permissao, createdat } = req.body;
-
+// GET /api/usuarios/:id — busca usuário por ID
+router.get("/:id", async (req, res) => {
+    const { id } = req.params;
     try {
-        // Verificar se todos os campos necessários foram preenchidos
-        if (!nome || !siape || !senha) {
-            return res.status(400).json({
+        const { rows, rowCount } = await pool.query(
+            `SELECT ${CAMPOS_USUARIO}, s.subunidade_nome
+             FROM users u
+             LEFT JOIN subunidades s ON s.subunidade_id = u.subunidade_id
+             WHERE u.user_id = $1`,
+            [id]
+        );
+        if (rowCount === 0) {
+            return res.status(404).json({ status: "error", message: "Usuário não encontrado.", data: null });
+        }
+        return res.status(200).json({ status: "success", message: "", data: rows[0] });
+    } catch (error) {
+        console.error("Erro ao buscar usuário:", error);
+        return res.status(500).json({ status: "error", message: "Erro ao buscar usuário.", data: null });
+    }
+});
+
+// POST /api/usuarios — cadastra novo usuário
+router.post("/", async (req, res) => {
+    const { nome, email, siape, senha, data_nascimento,
+            subunidade_id, unidade_id, whatsapp, permissao } = req.body;
+
+    if (!nome || !siape || !senha) {
+        return res.status(400).json({
+            status: "error",
+            message: "Os campos Nome, SIAPE e Senha são obrigatórios.",
+            data: null
+        });
+    }
+
+    if (!emailValido(email)) {
+        return res.status(400).json({ status: "error", message: "E-mail inválido.", data: null });
+    }
+
+    if (senha.length < 8) {
+        return res.status(400).json({
+            status: "error",
+            message: "A senha deve ter pelo menos 8 caracteres.",
+            data: null
+        });
+    }
+
+    // Valida roles permitidos
+    const rolesPermitidos = ["super_admin", "diretor", "vice_diretor", "chefe", "subchefe", "servidor"];
+    if (permissao && !rolesPermitidos.includes(permissao)) {
+        return res.status(400).json({ status: "error", message: "Permissão inválida.", data: null });
+    }
+
+    // Chefe só pode cadastrar servidores da sua própria subunidade
+    const nivel = getNivelAcesso(req.usuario);
+    if (nivel === "chefe") {
+        const subId = subunidade_id ? parseInt(subunidade_id) : null;
+        if (subId !== req.usuario.subunidade) {
+            return res.status(403).json({
                 status: "error",
-                message: "Os campos nome, siape e senha, são obrigatórios.",
-                data: ""
+                message: "Você só pode cadastrar usuários na sua própria subunidade.",
+                data: null
             });
         }
+        if (permissao && !["servidor", "subchefe"].includes(permissao)) {
+            return res.status(403).json({
+                status: "error",
+                message: "Você só pode cadastrar servidores ou subchefes.",
+                data: null
+            });
+        }
+    }
 
-        // Verificar se o siape já foi cadastrado
-        const userExists = await pool.query("select * from users where siape = $1", [siape]);
-        if (userExists.rows.length > 0) {
+    try {
+        const existe = await pool.query("SELECT user_id FROM users WHERE siape = $1", [siape]);
+        if (existe.rowCount > 0) {
             return res.status(409).json({
                 status: "error",
-                message: `O siape ${siape} já está cadastrado.`,
-                data: ""
+                message: `O SIAPE ${siape} já está cadastrado.`,
+                data: null
             });
         }
 
-        // Caso passe pelas duas verificações, criptografamos a senha e preparamos a query para o cadastro
-        // 1 - Criptografar a senha
         const hashedPassword = await bcrypt.hash(senha, 10);
 
-        // 2 - Inserir o novo usuário no banco de dados
-        const query = "insert into users (nome, email, siape, senha, data_nascimento, subunidade_id, whatsapp, permissao, createdat) values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning *";
-        const values = [nome, email, siape, hashedPassword, data_nascimento, subunidade_id, whatsapp, permissao, createdat];
-        const result = await pool.query(query, values);
+        const { rows } = await pool.query(
+            `INSERT INTO users
+                (nome, email, siape, senha, data_nascimento, subunidade_id,
+                 unidade_id, whatsapp, permissao, createdat)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()) RETURNING user_id, nome, siape, permissao`,
+            [nome.trim(), email || null, siape.trim(), hashedPassword,
+             data_nascimento || null, subunidade_id || null,
+             unidade_id || null, whatsapp || null, permissao || "servidor"]
+        );
 
-        // Retorna o usuário cadastrado
-        res.status(201).json({
-            status: "success",
-            message: "Usuário cadastrado com sucesso!",
-            data: {
-                user_id: result.rows[0].user_id,
-                nome: result.rows[0].nome,
-                siape: result.rows[0].siape
-            }
-        });
-    } catch(error) {
-        console.error(`Erro ao tentar cadastrar o usuário: ${error.message}`);
-        res.status(500).json({
-            status: "error",
-            message: "Erro ao tentar cadastrar novo usuário",
-            data: ""
-        });
+        return res.status(201).json({ status: "success", message: "Usuário cadastrado com sucesso.", data: rows[0] });
+    } catch (error) {
+        console.error("Erro ao cadastrar usuário:", error);
+        return res.status(500).json({ status: "error", message: "Erro ao cadastrar usuário.", data: null });
     }
 });
 
-// Rota para Atualizar usuário
+// PUT /api/usuarios/:id — atualiza usuário
 router.put("/:id", async (req, res) => {
-    const user_id = req.params.id;
-    const { nome, email, siape, data_nascimento, subunidade_id, whatsapp, permissao } = req.body;
+    const { id } = req.params;
+    const { nome, email, siape, senha, data_nascimento,
+            subunidade_id, unidade_id, whatsapp, permissao } = req.body;
+
+    if (!nome || !siape) {
+        return res.status(400).json({
+            status: "error",
+            message: "Os campos Nome e SIAPE são obrigatórios.",
+            data: null
+        });
+    }
+
+    if (!emailValido(email)) {
+        return res.status(400).json({ status: "error", message: "E-mail inválido.", data: null });
+    }
+
+    if (senha && senha.length < 8) {
+        return res.status(400).json({
+            status: "error",
+            message: "A senha deve ter pelo menos 8 caracteres.",
+            data: null
+        });
+    }
 
     try {
-        const userExist = await pool.query("select * from users where user_id = $1", [user_id]);
-        if (userExist.rows.length < 1) {
-            return res.status(404).json({
-                status: "error",
-                message: "Usuário não encontrado.",
-                data: ""
-            });
+        const { rows: userExist } = await pool.query("SELECT user_id FROM users WHERE user_id = $1", [id]);
+        if (!userExist.length) {
+            return res.status(404).json({ status: "error", message: "Usuário não encontrado.", data: null });
         }
 
-        const query = "update users set nome = $1, email = $2, siape = $3, data_nascimento = $4, subunidade_id = $5, whatsapp = $6, permissao = $7 where user_id = $8 returning *";
-        const values = [nome, email, siape, data_nascimento, subunidade_id, whatsapp, permissao, user_id];
-        const result = await pool.query(query, values);
+        // Monta query dinamicamente conforme senha foi ou não informada
+        let query, values;
+        if (senha) {
+            const hashedPassword = await bcrypt.hash(senha, 10);
+            query = `UPDATE users SET nome=$1, email=$2, siape=$3, senha=$4, data_nascimento=$5,
+                         subunidade_id=$6, unidade_id=$7, whatsapp=$8, permissao=$9, updatedat=NOW()
+                     WHERE user_id=$10 RETURNING user_id, nome, siape, permissao`;
+            values = [nome.trim(), email || null, siape.trim(), hashedPassword,
+                      data_nascimento || null, subunidade_id || null,
+                      unidade_id || null, whatsapp || null, permissao || "servidor", id];
+        } else {
+            query = `UPDATE users SET nome=$1, email=$2, siape=$3, data_nascimento=$4,
+                         subunidade_id=$5, unidade_id=$6, whatsapp=$7, permissao=$8, updatedat=NOW()
+                     WHERE user_id=$9 RETURNING user_id, nome, siape, permissao`;
+            values = [nome.trim(), email || null, siape.trim(),
+                      data_nascimento || null, subunidade_id || null,
+                      unidade_id || null, whatsapp || null, permissao || "servidor", id];
+        }
 
-        return res.status(200).json({
-            status: "success",
-            message: "Usuário atualizado com sucesso.",
-            data: {
-                user_id: result.rows[0].user_id,
-                nome: result.rows[0].nome,
-                siape: result.rows[0].siape
-            }
-        });
-    } catch(error) {
-        console.log("Erro ao tentar atualizar usuário: ", error);
-        res.status(500).json({
-            status: "error",
-            message: "Erro ao tentar atualizar usuário.",
-            data: ""
-        });
+        const { rows } = await pool.query(query, values);
+        return res.status(200).json({ status: "success", message: "Usuário atualizado com sucesso.", data: rows[0] });
+    } catch (error) {
+        console.error("Erro ao atualizar usuário:", error);
+        return res.status(500).json({ status: "error", message: "Erro ao atualizar usuário.", data: null });
     }
 });
 
-// Exportar o roteador
+// DELETE /api/usuarios/:id — remove usuário
+router.delete("/:id", async (req, res) => {
+    const { id } = req.params;
+
+    // Impede auto-exclusão
+    if (parseInt(id) === req.usuario.id) {
+        return res.status(400).json({
+            status: "error",
+            message: "Você não pode excluir sua própria conta.",
+            data: null
+        });
+    }
+
+    try {
+        const { rowCount } = await pool.query("DELETE FROM users WHERE user_id = $1", [id]);
+        if (rowCount === 0) {
+            return res.status(404).json({ status: "error", message: "Usuário não encontrado.", data: null });
+        }
+        return res.status(200).json({ status: "success", message: "Usuário excluído com sucesso.", data: null });
+    } catch (error) {
+        console.error("Erro ao excluir usuário:", error);
+        return res.status(500).json({ status: "error", message: "Erro ao excluir usuário.", data: null });
+    }
+});
+
 module.exports = router;

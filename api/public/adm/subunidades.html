@@ -107,16 +107,26 @@
 
                 <div class="row">
                     <select name="predio_id" id="predio_id" class="formInput width--100">
-                        <option>Selecione o prédio da subunidade...</option>
+                        <option value="">Selecione o prédio da subunidade...</option>
                         <!-- Options serão adicionados dinamicamente -->
                     </select>
                     <label class="painelLabel" for="predio_id">Selecione o prédio</label>
                 </div>
 
+                <div class="row flex align--items--center gap--10">
+                    <input type="checkbox" name="is_direcao_centro" id="is_direcao_centro" value="true">
+                    <label for="is_direcao_centro" class="formLabel">
+                        Setor da Direção do Centro
+                    </label>
+                    <label class="painelLabel" style="margin:0;">
+                        (Financeiro, Patrimônio, Infraestrutura, Transporte, Sec. Executiva etc.)
+                    </label>
+                </div>
+
                 <div class="row">
-                    <button class="btnPainelFormulario cadastrarUnidade">Cadastrar</button>
-                    <button class="btnPainelFormulario atualizarUnidade">Atualizar</button>
-                    <button class="btnPainelFormulario cancelarUnidade">Cancelar</button>
+                    <button type="button" class="btnPainelFormulario cadastrarUnidade">Cadastrar</button>
+                    <button type="button" class="btnPainelFormulario atualizarUnidade">Atualizar</button>
+                    <button type="button" class="btnPainelFormulario cancelarUnidade">Cancelar</button>
                 </div>
             </form>
         </fieldset>
