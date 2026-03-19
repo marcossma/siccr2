@@ -91,6 +91,14 @@ document.addEventListener("DOMContentLoaded", function() {
     // Rotinas do FINANCEIRO
     // ----------------------
 
+    // Formata "yyyy-mm-dd" ou ISO timestamp para "dd/mm/yyyy"
+    function formatarData(valor) {
+        if (!valor) return "—";
+        const partes = String(valor).substring(0, 10).split("-");
+        if (partes.length !== 3) return valor;
+        return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    }
+
     // Função para carregar tipos de recursos
     async function carregarTiposRecursos() {
         try {
@@ -913,7 +921,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         <div class="dado flex flex--6">${despesa.subunidade_nome}</div>
                         <div class="dado flex flex--3">${despesa.tipo_despesa}</div>
                         <div class="dado flex flex--3">${despesa.valor_despesa}</div>
-                        <div class="dado flex flex--3">${despesa.data_despesa || "Não informado"}</div>
+                        <div class="dado flex flex--3">${formatarData(despesa.data_despesa)}</div>
                         <div class="dado flex flex--3">${despesa.numero_documento_despesa || "Não informado"}</div>
                         <div class="dado flex flex--8">${despesa.observacao_despesa || "Não informado"}</div>
                         <div class="dado flex flex--2 font--size--20">
@@ -961,7 +969,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         <div class="dado flex flex--4">${p.subunidade_nome || "—"}</div>
                         <div class="dado flex flex--7">${p.descricao_itens}</div>
                         <div class="dado flex flex--2">${p.quantidade || "—"}</div>
-                        <div class="dado flex flex--3">${p.data_pedido || "—"}</div>
+                        <div class="dado flex flex--3">${formatarData(p.data_pedido)}</div>
                         <div class="dado flex flex--3">${p.status}</div>
                         <div class="dado flex flex--2 font--size--20">
                             <i class="bi bi-pencil-square editar" title="Editar"
