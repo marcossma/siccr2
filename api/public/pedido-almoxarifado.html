@@ -26,23 +26,25 @@
             <responsive-menu></responsive-menu>
         </div>
         <main class="flex flex--column flex--center">
-            
-            <section class="titulo_secao flex justify--space--between align--items--center">
-                <h1>Pedido Almoxarifado</h1>
 
+            <section class="titulo_secao flex justify--space--between align--items--center">
+                <h1>Pedidos de Almoxarifado</h1>
                 <button class="btn_adicionar">+ Adicionar</button>
             </section>
 
             <section class="divListaTiposRecursos informacoes_painel">
                 <div class="cabecalho flex">
-                    <div class="titulo flex flex--2">Código</div>
-                    <div class="titulo flex flex--3">Recurso</div>
-                    <div class="titulo flex flex--10">Descrição</div>
+                    <div class="titulo flex flex--2">Cód.</div>
+                    <div class="titulo flex flex--4">Subunidade</div>
+                    <div class="titulo flex flex--7">Itens Solicitados</div>
+                    <div class="titulo flex flex--2">Qtd.</div>
+                    <div class="titulo flex flex--3">Data</div>
+                    <div class="titulo flex flex--3">Status</div>
                     <div class="titulo flex flex--2">Ações</div>
                 </div>
 
                 <div class="listaTiposRecursos">
-                    <!-- Tipos de recursos serão carregados dinamicamente -->
+                    <!-- Pedidos serão carregados dinamicamente -->
                 </div>
             </section>
 
@@ -72,31 +74,59 @@
     </dialog>
     <!-- Fim formulário de Login DIALOG -->
 
-    <!-- Formulário cadastro Unidade -->
+    <!-- Formulário de pedido -->
     <dialog class="dialogPainel unidades">
         <fieldset>
-            <legend>Cadastro de Tipo de Recurso</legend>
+            <legend>Registrar Pedido de Almoxarifado</legend>
 
             <form class="frmCadastroPainel frmUnidade flex flex--column gap--15">
+                <input type="hidden" name="id_pedido" id="id_pedido">
+
                 <div class="row">
-                    <input type="hidden" name="id_tipo_recurso" id="id_tipo_recurso">
-                    <input type="text" name="tipo_recurso" id="tipo_recurso" class="formInput width--100" placeholder="Digite o tipo de recurso">
-                    <label class="painelLabel" for="tipo_recurso">Ex.: Consumo, Permanente...</label>
+                    <select name="subunidade_id" id="subunidade_id" class="listaSelect formInput width--100">
+                        <option value="">Selecione a subunidade...</option>
+                    </select>
+                    <label for="subunidade_id" class="painelLabel">Subunidade solicitante</label>
                 </div>
 
                 <div class="row">
-                    <textarea name="descricao_recurso" id="descricao_recurso" class="formInput width--100" placeholder="Digite alguma descrição sobre o recurso..."></textarea>
+                    <textarea name="descricao_itens" id="descricao_itens" class="formInput width--100" placeholder="Descreva os itens solicitados..."></textarea>
+                    <label for="descricao_itens" class="painelLabel">Itens solicitados</label>
                 </div>
 
                 <div class="row">
-                    <button class="btnPainelFormulario cadastrarUnidade">Cadastrar</button>
-                    <button class="btnPainelFormulario atualizarUnidade">Atualizar</button>
-                    <button class="btnPainelFormulario cancelarUnidade">Cancelar</button>
+                    <input type="number" name="quantidade" id="quantidade" class="formInput width--100" placeholder="Quantidade (opcional)" min="1">
+                    <label for="quantidade" class="painelLabel">Quantidade total (opcional)</label>
+                </div>
+
+                <div class="row">
+                    <input type="date" name="data_pedido" id="data_pedido" class="formInput width--100">
+                    <label for="data_pedido" class="painelLabel">Data do pedido</label>
+                </div>
+
+                <div class="row">
+                    <select name="status" id="status" class="formInput width--100">
+                        <option value="pendente">Pendente</option>
+                        <option value="atendido">Atendido</option>
+                        <option value="cancelado">Cancelado</option>
+                    </select>
+                    <label for="status" class="painelLabel">Status</label>
+                </div>
+
+                <div class="row">
+                    <textarea name="observacao" id="observacao" class="formInput width--100" placeholder="Observações (opcional)..."></textarea>
+                    <label for="observacao" class="painelLabel">Observação (opcional)</label>
+                </div>
+
+                <div class="row">
+                    <button type="button" class="btnPainelFormulario cadastrarUnidade">Cadastrar</button>
+                    <button type="button" class="btnPainelFormulario atualizarUnidade">Atualizar</button>
+                    <button type="button" class="btnPainelFormulario cancelarUnidade">Cancelar</button>
                 </div>
             </form>
         </fieldset>
     </dialog>
-    <!-- Fim formulário cadastro Unidade -->
+    <!-- Fim formulário de pedido -->
 
     <script type="module" src="./js/components/index.js"></script>
 </body>

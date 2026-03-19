@@ -1,8 +1,22 @@
+// Injeta o token Bearer em todos os fetch desta área
+(function () {
+    const _fetch = window.fetch.bind(window);
+    window.fetch = function (url, options = {}) {
+        const token = localStorage.getItem("siccr_token");
+        return _fetch(url, {
+            ...options,
+            headers: {
+                "Content-Type": "application/json",
+                ...(options.headers || {}),
+                ...(token ? { "Authorization": `Bearer ${token}` } : {})
+            }
+        });
+    };
+})();
+
 document.addEventListener("DOMContentLoaded", function() {
     const apiUrl = "http://localhost:15000/api";
     const urlParam = window.location.pathname;
-    
-    console.log("Initialized...");
 
     function verificaLogin() {
         if (localStorage.getItem("siccr_token")) {
@@ -52,16 +66,11 @@ document.addEventListener("DOMContentLoaded", function() {
     
     async function carregarDados(endpoint) {
         try {
-            const response = await fetch(`${apiUrl}/${endpoint}`, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json"
-                }
-            });
+            const response = await fetch(`${apiUrl}/${endpoint}`);
             const dados = await response.json();
             return dados.data;
         } catch(error) {
-            console.error("Erro ao tentar listar os dados: ", error);
+            console.error("Erro ao listar dados de " + endpoint + ":", error);
         }
     }
 
@@ -70,17 +79,11 @@ document.addEventListener("DOMContentLoaded", function() {
     async function excluirDado(id_dado, endpoint) {
         try {
             const response = await fetch(`${apiUrl}/${endpoint}/${id_dado}`, {
-                method: "DELETE",
-                headers: {
-                    "Content-Type": "application/json"
-                }
+                method: "DELETE"
             });
-
-            const data = await response.json();
-            console.log(data);
-            return data;
+            return await response.json();
         } catch (error) {
-            console.error("Erro ao tentar exluir o dado: ", error);
+            console.error("Erro ao tentar excluir o dado: ", error);
         }
     }
     
@@ -571,10 +574,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     throw new Error("HTTP error! status: ", response.status);
                 }
 
-                const data = await response.json();
-                console.log(data);
+                await response.json();
                 renderizarTiposDespesas();
-                return data;
             } catch(error) {
                 console.error("Erro ao tentar cadastrar dados: ", error);
                 throw error;
@@ -604,18 +605,48 @@ document.addEventListener("DOMContentLoaded", function() {
             elements.dialogPainel.close();
         });
 
-        // Botão para excluir despesa
+        // Botão para editar/excluir tipo de despesa
         elements.listaTiposRecursos.addEventListener("click", async function(event) {
+            if (event.target.classList.contains("editar")) {
+                const dadosEl = event.target.dataset;
+
+                elements.fieldsetLegend.textContent = "Editar tipo de despesa";
+                elements.btnCadastrar.disabled = true;
+                elements.btnCadastrar.style.display = "none";
+                elements.btnAtualizar.disabled = false;
+                elements.btnAtualizar.style.display = "inline-block";
+
+                document.querySelector("#id_tipo_despesa").value = dadosEl.id_tipo_despesa;
+                document.querySelector("#tipo_despesa").value = dadosEl.tipo_despesa;
+
+                elements.dialogPainel.showModal();
+            }
+
             if (event.target.classList.contains("excluir")) {
                 const dadosEl = event.target.dataset;
 
-                const confirmacao = confirm("Essa ação não poderá ser desfeita, tem certeza de que deseja excluir essa despesa?");
+                const confirmacao = confirm("Essa ação não poderá ser desfeita, tem certeza de que deseja excluir esse tipo de despesa?");
 
                 if (confirmacao) {
                     await excluirDado(dadosEl.id_tipo_despesa, "tipos-despesas");
                     renderizarTiposDespesas();
                 }
             }
+        });
+
+        // dialogPainel - Botão Atualizar
+        elements.btnAtualizar.addEventListener("click", function(event) {
+            event.preventDefault();
+            const formData = new FormData(elements.frmUnidade);
+            const objData = Object.fromEntries(formData.entries());
+            fetch(`${apiUrl}/tipos-despesas/${objData.id_tipo_despesa}`, {
+                method: "PUT",
+                body: JSON.stringify(objData)
+            }).then(() => {
+                renderizarTiposDespesas();
+                elements.frmUnidade.reset();
+                elements.dialogPainel.close();
+            });
         });
 
         renderizarTiposDespesas();
@@ -626,16 +657,41 @@ document.addEventListener("DOMContentLoaded", function() {
     if (urlParam === "/adicionar-recurso") {
         const elements = getDomElements();
 
+        // Preencher select de tipos de recursos
         carregarDados("tipos-recursos").then((recursos) => {
-            console.log(recursos);
-            elements.listaSelect[0].innerHTML = "<option>Selecione o tipo de recurso...</option>";
+            elements.listaSelect[0].innerHTML = "<option value=\"\">Selecione o tipo de recurso...</option>";
             recursos.forEach((recurso) => {
-                elements.listaSelect[0].innerHTML += `
-                <option value="${recurso.id_tipo_recurso}">${recurso.tipo_recurso.toUpperCase()}</option>
-                `;
+                elements.listaSelect[0].innerHTML += `<option value="${recurso.id_tipo_recurso}">${recurso.tipo_recurso.toUpperCase()}</option>`;
             });
         });
-        
+
+        // Renderizar lista de recursos recebidos
+        function renderizarRecursosRecebidos() {
+            elements.listaTiposRecursos.innerHTML = "";
+            carregarDados("recursos-recebidos").then((recursos) => {
+                recursos.forEach((r) => {
+                    const div = document.createElement("div");
+                    div.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
+                    div.innerHTML = `
+                        <div class="dado flex flex--2">${r.id_recurso_recebido}</div>
+                        <div class="dado flex flex--3">${r.tipo_recurso || "—"}</div>
+                        <div class="dado flex flex--3">${parseFloat(r.valor_recurso_recebido).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
+                        <div class="dado flex flex--7">${r.descricao_recurso_recebido || "—"}</div>
+                        <div class="dado flex flex--2 font--size--20">
+                            <i class="bi bi-pencil-square editar" title="Editar"
+                                data-id_recurso_recebido="${r.id_recurso_recebido}"
+                                data-tipo_recurso_recebido="${r.tipo_recurso_recebido}"
+                                data-valor_recurso_recebido="${r.valor_recurso_recebido}"
+                                data-descricao_recurso_recebido="${r.descricao_recurso_recebido || ""}"></i>
+                            <i class="bi bi-x-square excluir" title="Excluir"
+                                data-id_recurso_recebido="${r.id_recurso_recebido}"></i>
+                        </div>
+                    `;
+                    elements.listaTiposRecursos.appendChild(div);
+                });
+            });
+        }
+
         elements.btnAdicionar.addEventListener("click", function(event) {
             event.preventDefault();
             elements.fieldsetLegend.textContent = "Adicionar Recurso";
@@ -643,7 +699,7 @@ document.addEventListener("DOMContentLoaded", function() {
             elements.btnAtualizar.disabled = true;
             elements.btnCadastrar.style.display = "inline-block";
             elements.btnCadastrar.disabled = false;
-
+            elements.frmUnidade.reset();
             elements.dialogPainel.showModal();
         });
 
@@ -652,6 +708,76 @@ document.addEventListener("DOMContentLoaded", function() {
             elements.frmUnidade.reset();
             elements.dialogPainel.close();
         });
+
+        elements.btnCadastrar.addEventListener("click", function(event) {
+            event.preventDefault();
+            const formData = new FormData(elements.frmUnidade);
+            const objData = Object.fromEntries(formData.entries());
+            fetch(`${apiUrl}/recursos-recebidos`, {
+                method: "POST",
+                body: JSON.stringify({
+                    tipo_recurso_recebido: objData.id_recurso_recebido,
+                    valor_recurso_recebido: objData.valor_recurso_recebido,
+                    descricao_recurso_recebido: objData.descricao_recurso_recebido || null
+                })
+            }).then(() => {
+                renderizarRecursosRecebidos();
+                elements.frmUnidade.reset();
+                elements.dialogPainel.close();
+            });
+        });
+
+        elements.btnAtualizar.addEventListener("click", function(event) {
+            event.preventDefault();
+            const formData = new FormData(elements.frmUnidade);
+            const objData = Object.fromEntries(formData.entries());
+            fetch(`${apiUrl}/recursos-recebidos/${objData.id_recurso_recebido_hidden}`, {
+                method: "PUT",
+                body: JSON.stringify({
+                    tipo_recurso_recebido: objData.id_recurso_recebido,
+                    valor_recurso_recebido: objData.valor_recurso_recebido,
+                    descricao_recurso_recebido: objData.descricao_recurso_recebido || null
+                })
+            }).then(() => {
+                renderizarRecursosRecebidos();
+                elements.frmUnidade.reset();
+                elements.dialogPainel.close();
+            });
+        });
+
+        elements.listaTiposRecursos.addEventListener("click", function(event) {
+            if (event.target.classList.contains("editar")) {
+                const d = event.target.dataset;
+                elements.fieldsetLegend.textContent = "Editar Recurso";
+                elements.btnCadastrar.style.display = "none";
+                elements.btnCadastrar.disabled = true;
+                elements.btnAtualizar.style.display = "inline-block";
+                elements.btnAtualizar.disabled = false;
+
+                document.querySelector("#id_recurso_recebido").value = d.tipo_recurso_recebido;
+                document.querySelector("#valor_recurso_recebido").value = d.valor_recurso_recebido;
+                document.querySelector("#descricao_recurso_recebido").value = d.descricao_recurso_recebido;
+
+                // Armazena o id para o PUT
+                const hiddenId = elements.frmUnidade.querySelector("[name='id_recurso_recebido_hidden']")
+                    || Object.assign(document.createElement("input"), { type: "hidden", name: "id_recurso_recebido_hidden" });
+                hiddenId.value = d.id_recurso_recebido;
+                elements.frmUnidade.appendChild(hiddenId);
+
+                elements.dialogPainel.showModal();
+            }
+
+            if (event.target.classList.contains("excluir")) {
+                const d = event.target.dataset;
+                if (confirm("Deseja excluir este recurso? Essa ação não pode ser desfeita.")) {
+                    excluirDado(d.id_recurso_recebido, "recursos-recebidos").then(() => {
+                        renderizarRecursosRecebidos();
+                    });
+                }
+            }
+        });
+
+        renderizarRecursosRecebidos();
     }
 
     // Rotinar para a página registrar-despesa.html
@@ -699,20 +825,62 @@ document.addEventListener("DOMContentLoaded", function() {
             elements.dialogPainel.close();
         });
 
-        // Botão editar
+        // Botão Cadastrar (POST)
+        elements.btnCadastrar.addEventListener("click", function(event) {
+            event.preventDefault();
+            const formData = new FormData(elements.frmUnidade);
+            const objData = Object.fromEntries(formData.entries());
+            fetch(`${apiUrl}/despesas`, {
+                method: "POST",
+                body: JSON.stringify({
+                    id_tipo_despesa: objData.id_tipo_despesa,
+                    id_subunidade: objData.id_subunidade,
+                    valor_despesa: objData.valor_despesa,
+                    data_despesa: objData.data_despesa || null,
+                    numero_documento_despesa: objData.numero_documento_despesa || null,
+                    observacao_despesa: objData.observacao_despesa || null
+                })
+            }).then(() => {
+                renderizarDespesas();
+                elements.frmUnidade.reset();
+                elements.dialogPainel.close();
+            });
+        });
+
+        // Botão Atualizar (PUT)
+        elements.btnAtualizar.addEventListener("click", function(event) {
+            event.preventDefault();
+            const formData = new FormData(elements.frmUnidade);
+            const objData = Object.fromEntries(formData.entries());
+            fetch(`${apiUrl}/despesas/${objData.id_despesa}`, {
+                method: "PUT",
+                body: JSON.stringify({
+                    id_tipo_despesa: objData.id_tipo_despesa,
+                    id_subunidade: objData.id_subunidade,
+                    valor_despesa: objData.valor_despesa,
+                    data_despesa: objData.data_despesa || null,
+                    numero_documento_despesa: objData.numero_documento_despesa || null,
+                    observacao_despesa: objData.observacao_despesa || null
+                })
+            }).then(() => {
+                renderizarDespesas();
+                elements.frmUnidade.reset();
+                elements.dialogPainel.close();
+            });
+        });
+
+        // Botão editar / excluir
         elements.listaTiposRecursos.addEventListener("click", function(event) {
             if (event.target.classList.contains("editar")) {
-                
-                const dadosEl = event.target.dataset; // Pega todo o dataset do botão de edição
-                console.log(dadosEl);
-                
+                const dadosEl = event.target.dataset;
+
                 document.querySelector("#id_despesa").value = dadosEl.id_despesa;
                 elements.listaSelect[0].value = dadosEl.id_subunidade;
                 elements.listaSelect[1].value = dadosEl.id_tipo_despesa;
                 document.querySelector("#valor_despesa").value = dadosEl.valor_despesa;
                 document.querySelector("#data_despesa").value = dadosEl.data_despesa;
-                document.querySelector("#numero_documento_despesa").value = dadosEl.numero_documento_despesa || "Nada informado";
-                document.querySelector("#observacao_despesa").value = dadosEl.observacao_despesa || "Nada informado";
+                document.querySelector("#numero_documento_despesa").value = dadosEl.numero_documento_despesa || "";
+                document.querySelector("#observacao_despesa").value = dadosEl.observacao_despesa || "";
 
                 elements.fieldsetLegend.textContent = "Atualizar despesa";
                 elements.btnCadastrar.disabled = true;
@@ -720,8 +888,16 @@ document.addEventListener("DOMContentLoaded", function() {
                 elements.btnAtualizar.disabled = false;
                 elements.btnAtualizar.style.display = "inline-block";
 
-
                 elements.dialogPainel.showModal();
+            }
+
+            if (event.target.classList.contains("excluir")) {
+                const dadosEl = event.target.dataset;
+                if (confirm("Deseja excluir esta despesa? Essa ação não pode ser desfeita.")) {
+                    excluirDado(dadosEl.id_despesa, "despesas").then(() => {
+                        renderizarDespesas();
+                    });
+                }
             }
         });
 
@@ -741,16 +917,16 @@ document.addEventListener("DOMContentLoaded", function() {
                         <div class="dado flex flex--3">${despesa.numero_documento_despesa || "Não informado"}</div>
                         <div class="dado flex flex--8">${despesa.observacao_despesa || "Não informado"}</div>
                         <div class="dado flex flex--2 font--size--20">
-                            <i class="bi bi-pencil-square editar" title="Editar" 
-                                data-id_despesa="${despesa.id_despesa}" 
+                            <i class="bi bi-pencil-square editar" title="Editar"
+                                data-id_despesa="${despesa.id_despesa}"
                                 data-id_subunidade="${despesa.id_subunidade}"
                                 data-id_tipo_despesa="${despesa.id_tipo_despesa}"
                                 data-valor_despesa="${despesa.valor_despesa}"
-                                data-data_despesa="${despesa.data_despesa}" 
-                                data-numero_documento_despesa="${despesa.numero_documento_despesa || "Não informado"}"
-                                data-observacao_despesa="${despesa.observacao_despesa || "Não informado"}">
+                                data-data_despesa="${despesa.data_despesa}"
+                                data-numero_documento_despesa="${despesa.numero_documento_despesa || ""}"
+                                data-observacao_despesa="${despesa.observacao_despesa || ""}">
                             </i>
-                            <i class="bi bi-x-square excluir" title="Excluir" data-id_tipo_despesa="${despesa.id_tipo_despesa}"></i>
+                            <i class="bi bi-x-square excluir" title="Excluir" data-id_despesa="${despesa.id_despesa}"></i>
                         </div>
                     `;
 
@@ -762,11 +938,314 @@ document.addEventListener("DOMContentLoaded", function() {
         renderizarDespesas();
     }
 
-    
+    // Rotinas para a página pedido-almoxarifado.html
+    // -----------------------------------------------
+    if (urlParam === "/pedido-almoxarifado") {
+        const elements = getDomElements();
 
-    const dados = JSON.parse(localStorage.getItem("siccr") || "null");
-    if (dados) {
-        console.log(dados);
+        carregarDados("subunidades").then((subunidades) => {
+            elements.listaSelect[0].innerHTML = "<option value=\"\">Selecione a subunidade...</option>";
+            subunidades.forEach((s) => {
+                elements.listaSelect[0].innerHTML += `<option value="${s.subunidade_id}">${s.subunidade_nome}</option>`;
+            });
+        });
+
+        function renderizarPedidos() {
+            elements.listaTiposRecursos.innerHTML = "";
+            carregarDados("pedidos-almoxarifado").then((pedidos) => {
+                pedidos.forEach((p) => {
+                    const div = document.createElement("div");
+                    div.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
+                    div.innerHTML = `
+                        <div class="dado flex flex--2">${p.id_pedido}</div>
+                        <div class="dado flex flex--4">${p.subunidade_nome || "—"}</div>
+                        <div class="dado flex flex--7">${p.descricao_itens}</div>
+                        <div class="dado flex flex--2">${p.quantidade || "—"}</div>
+                        <div class="dado flex flex--3">${p.data_pedido || "—"}</div>
+                        <div class="dado flex flex--3">${p.status}</div>
+                        <div class="dado flex flex--2 font--size--20">
+                            <i class="bi bi-pencil-square editar" title="Editar"
+                                data-id_pedido="${p.id_pedido}"
+                                data-subunidade_id="${p.subunidade_id}"
+                                data-descricao_itens="${p.descricao_itens}"
+                                data-quantidade="${p.quantidade || ""}"
+                                data-data_pedido="${p.data_pedido || ""}"
+                                data-status="${p.status}"
+                                data-observacao="${p.observacao || ""}"></i>
+                            <i class="bi bi-x-square excluir" title="Excluir"
+                                data-id_pedido="${p.id_pedido}"></i>
+                        </div>
+                    `;
+                    elements.listaTiposRecursos.appendChild(div);
+                });
+            });
+        }
+
+        elements.btnAdicionar.addEventListener("click", function(event) {
+            event.preventDefault();
+            elements.fieldsetLegend.textContent = "Registrar Pedido";
+            elements.btnAtualizar.style.display = "none";
+            elements.btnAtualizar.disabled = true;
+            elements.btnCadastrar.style.display = "inline-block";
+            elements.btnCadastrar.disabled = false;
+            elements.frmUnidade.reset();
+            elements.dialogPainel.showModal();
+        });
+
+        elements.btnCancelar.addEventListener("click", function(event) {
+            event.preventDefault();
+            elements.frmUnidade.reset();
+            elements.dialogPainel.close();
+        });
+
+        elements.btnCadastrar.addEventListener("click", function(event) {
+            event.preventDefault();
+            const objData = Object.fromEntries(new FormData(elements.frmUnidade).entries());
+            fetch(`${apiUrl}/pedidos-almoxarifado`, {
+                method: "POST",
+                body: JSON.stringify({
+                    subunidade_id: objData.subunidade_id,
+                    descricao_itens: objData.descricao_itens,
+                    quantidade: objData.quantidade || null,
+                    data_pedido: objData.data_pedido || null,
+                    status: objData.status || "pendente",
+                    observacao: objData.observacao || null
+                })
+            }).then(() => {
+                renderizarPedidos();
+                elements.frmUnidade.reset();
+                elements.dialogPainel.close();
+            });
+        });
+
+        elements.btnAtualizar.addEventListener("click", function(event) {
+            event.preventDefault();
+            const objData = Object.fromEntries(new FormData(elements.frmUnidade).entries());
+            fetch(`${apiUrl}/pedidos-almoxarifado/${objData.id_pedido}`, {
+                method: "PUT",
+                body: JSON.stringify({
+                    subunidade_id: objData.subunidade_id,
+                    descricao_itens: objData.descricao_itens,
+                    quantidade: objData.quantidade || null,
+                    data_pedido: objData.data_pedido || null,
+                    status: objData.status || "pendente",
+                    observacao: objData.observacao || null
+                })
+            }).then(() => {
+                renderizarPedidos();
+                elements.frmUnidade.reset();
+                elements.dialogPainel.close();
+            });
+        });
+
+        elements.listaTiposRecursos.addEventListener("click", function(event) {
+            if (event.target.classList.contains("editar")) {
+                const d = event.target.dataset;
+                elements.fieldsetLegend.textContent = "Editar Pedido";
+                elements.btnCadastrar.style.display = "none";
+                elements.btnCadastrar.disabled = true;
+                elements.btnAtualizar.style.display = "inline-block";
+                elements.btnAtualizar.disabled = false;
+
+                document.querySelector("#id_pedido").value = d.id_pedido;
+                elements.listaSelect[0].value = d.subunidade_id;
+                document.querySelector("#descricao_itens").value = d.descricao_itens;
+                document.querySelector("#quantidade").value = d.quantidade;
+                document.querySelector("#data_pedido").value = d.data_pedido;
+                document.querySelector("#status").value = d.status;
+                document.querySelector("#observacao").value = d.observacao;
+
+                elements.dialogPainel.showModal();
+            }
+
+            if (event.target.classList.contains("excluir")) {
+                const d = event.target.dataset;
+                if (confirm("Deseja excluir este pedido? Essa ação não pode ser desfeita.")) {
+                    excluirDado(d.id_pedido, "pedidos-almoxarifado").then(() => {
+                        renderizarPedidos();
+                    });
+                }
+            }
+        });
+
+        renderizarPedidos();
+    }
+
+    // Rotinas para a página previsao-despesas.html
+    // --------------------------------------------
+    if (urlParam === "/previsao-despesas") {
+        const elements = getDomElements();
+
+        carregarDados("subunidades").then((subunidades) => {
+            elements.listaSelect[0].innerHTML = "<option value=\"\">Selecione a subunidade...</option>";
+            subunidades.forEach((s) => {
+                elements.listaSelect[0].innerHTML += `<option value="${s.subunidade_id}">${s.subunidade_nome}</option>`;
+            });
+        });
+
+        carregarDados("tipos-despesas").then((tipos) => {
+            elements.listaSelect[1].innerHTML = "<option value=\"\">Selecione o tipo de despesa...</option>";
+            tipos.forEach((t) => {
+                elements.listaSelect[1].innerHTML += `<option value="${t.id_tipo_despesa}">${t.tipo_despesa}</option>`;
+            });
+        });
+
+        function renderizarPrevisoes() {
+            elements.listaTiposRecursos.innerHTML = "";
+            carregarDados("previsoes-despesas").then((previsoes) => {
+                previsoes.forEach((p) => {
+                    const div = document.createElement("div");
+                    div.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
+                    div.innerHTML = `
+                        <div class="dado flex flex--2">${p.id_previsao}</div>
+                        <div class="dado flex flex--5">${p.subunidade_nome || "—"}</div>
+                        <div class="dado flex flex--4">${p.tipo_despesa || "—"}</div>
+                        <div class="dado flex flex--3">${parseFloat(p.valor_previsto).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
+                        <div class="dado flex flex--2">${p.ano_referencia}</div>
+                        <div class="dado flex flex--6">${p.observacao || "—"}</div>
+                        <div class="dado flex flex--2 font--size--20">
+                            <i class="bi bi-pencil-square editar" title="Editar"
+                                data-id_previsao="${p.id_previsao}"
+                                data-subunidade_id="${p.subunidade_id}"
+                                data-id_tipo_despesa="${p.id_tipo_despesa}"
+                                data-valor_previsto="${p.valor_previsto}"
+                                data-ano_referencia="${p.ano_referencia}"
+                                data-observacao="${p.observacao || ""}"></i>
+                            <i class="bi bi-x-square excluir" title="Excluir"
+                                data-id_previsao="${p.id_previsao}"></i>
+                        </div>
+                    `;
+                    elements.listaTiposRecursos.appendChild(div);
+                });
+            });
+        }
+
+        elements.btnAdicionar.addEventListener("click", function(event) {
+            event.preventDefault();
+            elements.fieldsetLegend.textContent = "Nova Previsão de Despesa";
+            elements.btnAtualizar.style.display = "none";
+            elements.btnAtualizar.disabled = true;
+            elements.btnCadastrar.style.display = "inline-block";
+            elements.btnCadastrar.disabled = false;
+            elements.frmUnidade.reset();
+            elements.dialogPainel.showModal();
+        });
+
+        elements.btnCancelar.addEventListener("click", function(event) {
+            event.preventDefault();
+            elements.frmUnidade.reset();
+            elements.dialogPainel.close();
+        });
+
+        elements.btnCadastrar.addEventListener("click", function(event) {
+            event.preventDefault();
+            const objData = Object.fromEntries(new FormData(elements.frmUnidade).entries());
+            fetch(`${apiUrl}/previsoes-despesas`, {
+                method: "POST",
+                body: JSON.stringify({
+                    subunidade_id: objData.subunidade_id,
+                    id_tipo_despesa: objData.id_tipo_despesa,
+                    valor_previsto: objData.valor_previsto,
+                    ano_referencia: objData.ano_referencia,
+                    observacao: objData.observacao || null
+                })
+            }).then(() => {
+                renderizarPrevisoes();
+                elements.frmUnidade.reset();
+                elements.dialogPainel.close();
+            });
+        });
+
+        elements.btnAtualizar.addEventListener("click", function(event) {
+            event.preventDefault();
+            const objData = Object.fromEntries(new FormData(elements.frmUnidade).entries());
+            fetch(`${apiUrl}/previsoes-despesas/${objData.id_previsao}`, {
+                method: "PUT",
+                body: JSON.stringify({
+                    subunidade_id: objData.subunidade_id,
+                    id_tipo_despesa: objData.id_tipo_despesa,
+                    valor_previsto: objData.valor_previsto,
+                    ano_referencia: objData.ano_referencia,
+                    observacao: objData.observacao || null
+                })
+            }).then(() => {
+                renderizarPrevisoes();
+                elements.frmUnidade.reset();
+                elements.dialogPainel.close();
+            });
+        });
+
+        elements.listaTiposRecursos.addEventListener("click", function(event) {
+            if (event.target.classList.contains("editar")) {
+                const d = event.target.dataset;
+                elements.fieldsetLegend.textContent = "Editar Previsão";
+                elements.btnCadastrar.style.display = "none";
+                elements.btnCadastrar.disabled = true;
+                elements.btnAtualizar.style.display = "inline-block";
+                elements.btnAtualizar.disabled = false;
+
+                document.querySelector("#id_previsao").value = d.id_previsao;
+                elements.listaSelect[0].value = d.subunidade_id;
+                elements.listaSelect[1].value = d.id_tipo_despesa;
+                document.querySelector("#valor_previsto").value = d.valor_previsto;
+                document.querySelector("#ano_referencia").value = d.ano_referencia;
+                document.querySelector("#observacao").value = d.observacao;
+
+                elements.dialogPainel.showModal();
+            }
+
+            if (event.target.classList.contains("excluir")) {
+                const d = event.target.dataset;
+                if (confirm("Deseja excluir esta previsão? Essa ação não pode ser desfeita.")) {
+                    excluirDado(d.id_previsao, "previsoes-despesas").then(() => {
+                        renderizarPrevisoes();
+                    });
+                }
+            }
+        });
+
+        renderizarPrevisoes();
+    }
+
+    // Rotinas para a página relatorios.html
+    // -------------------------------------
+    if (urlParam === "/relatorios") {
+        function formatarMoeda(valor) {
+            return parseFloat(valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+        }
+
+        carregarDados("relatorios/resumo").then((dados) => {
+            document.querySelector("#totalRecursos").textContent = formatarMoeda(dados.total_recursos);
+            document.querySelector("#totalDespesas").textContent = formatarMoeda(dados.total_despesas);
+
+            const saldoEl = document.querySelector("#totalSaldo");
+            saldoEl.textContent = formatarMoeda(dados.saldo);
+            saldoEl.style.color = dados.saldo >= 0 ? "#007a2e" : "#c0392b";
+
+            const listaSub = document.querySelector("#listaPorSubunidade");
+            listaSub.innerHTML = "";
+            dados.por_subunidade.forEach((item) => {
+                const div = document.createElement("div");
+                div.classList.add("dados", "flex", "align--items--center");
+                div.innerHTML = `
+                    <div class="dado flex flex--8">${item.subunidade_nome}</div>
+                    <div class="dado flex flex--4">${formatarMoeda(item.total)}</div>
+                `;
+                listaSub.appendChild(div);
+            });
+
+            const listaTipo = document.querySelector("#listaPorTipo");
+            listaTipo.innerHTML = "";
+            dados.por_tipo_despesa.forEach((item) => {
+                const div = document.createElement("div");
+                div.classList.add("dados", "flex", "align--items--center");
+                div.innerHTML = `
+                    <div class="dado flex flex--8">${item.tipo_despesa}</div>
+                    <div class="dado flex flex--4">${formatarMoeda(item.total)}</div>
+                `;
+                listaTipo.appendChild(div);
+            });
+        });
     }
 
 

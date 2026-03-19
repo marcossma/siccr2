@@ -26,24 +26,43 @@
             <responsive-menu></responsive-menu>
         </div>
         <main class="flex flex--column flex--center">
-            
-            <section class="titulo_secao flex justify--space--between align--items--center">
-                <h1>Tipos de recursos</h1>
 
-                <button class="btn_adicionar">+ Adicionar</button>
+            <section class="titulo_secao flex justify--space--between align--items--center">
+                <h1>Relatórios Financeiros</h1>
             </section>
 
-            <section class="divListaTiposRecursos informacoes_painel">
-                <div class="cabecalho flex">
-                    <div class="titulo flex flex--2">Código</div>
-                    <div class="titulo flex flex--3">Recurso</div>
-                    <div class="titulo flex flex--10">Descrição</div>
-                    <div class="titulo flex flex--2">Ações</div>
+            <!-- Cards de resumo -->
+            <section class="informacoes_painel" style="width:100%">
+                <div class="flex gap--15" style="flex-wrap:wrap; margin-bottom:1.5rem;">
+                    <div class="relatorio-card" id="cardRecursos">
+                        <div class="relatorio-card-titulo">Total de Recursos Recebidos</div>
+                        <div class="relatorio-card-valor" id="totalRecursos">Carregando...</div>
+                    </div>
+                    <div class="relatorio-card" id="cardDespesas">
+                        <div class="relatorio-card-titulo">Total de Despesas</div>
+                        <div class="relatorio-card-valor" id="totalDespesas">Carregando...</div>
+                    </div>
+                    <div class="relatorio-card" id="cardSaldo">
+                        <div class="relatorio-card-titulo">Saldo</div>
+                        <div class="relatorio-card-valor" id="totalSaldo">Carregando...</div>
+                    </div>
                 </div>
 
-                <div class="listaTiposRecursos">
-                    <!-- Tipos de recursos serão carregados dinamicamente -->
+                <!-- Despesas por subunidade -->
+                <h2 style="margin-bottom:0.5rem;">Despesas por Subunidade</h2>
+                <div class="cabecalho flex">
+                    <div class="titulo flex flex--8">Subunidade</div>
+                    <div class="titulo flex flex--4">Total (R$)</div>
                 </div>
+                <div id="listaPorSubunidade" class="listaTiposRecursos"></div>
+
+                <!-- Despesas por tipo -->
+                <h2 style="margin-top:1.5rem; margin-bottom:0.5rem;">Despesas por Tipo</h2>
+                <div class="cabecalho flex">
+                    <div class="titulo flex flex--8">Tipo de Despesa</div>
+                    <div class="titulo flex flex--4">Total (R$)</div>
+                </div>
+                <div id="listaPorTipo" class="listaTiposRecursos"></div>
             </section>
 
         </main>
@@ -71,32 +90,6 @@
         </fieldset>
     </dialog>
     <!-- Fim formulário de Login DIALOG -->
-
-    <!-- Formulário cadastro Unidade -->
-    <dialog class="dialogPainel unidades">
-        <fieldset>
-            <legend>Cadastro de Tipo de Recurso</legend>
-
-            <form class="frmCadastroPainel frmUnidade flex flex--column gap--15">
-                <div class="row">
-                    <input type="hidden" name="id_tipo_recurso" id="id_tipo_recurso">
-                    <input type="text" name="tipo_recurso" id="tipo_recurso" class="formInput width--100" placeholder="Digite o tipo de recurso">
-                    <label class="painelLabel" for="tipo_recurso">Ex.: Consumo, Permanente...</label>
-                </div>
-
-                <div class="row">
-                    <textarea name="descricao_recurso" id="descricao_recurso" class="formInput width--100" placeholder="Digite alguma descrição sobre o recurso..."></textarea>
-                </div>
-
-                <div class="row">
-                    <button type="button" class="btnPainelFormulario cadastrarUnidade">Cadastrar</button>
-                    <button type="button" class="btnPainelFormulario atualizarUnidade">Atualizar</button>
-                    <button type="button" class="btnPainelFormulario cancelarUnidade">Cancelar</button>
-                </div>
-            </form>
-        </fieldset>
-    </dialog>
-    <!-- Fim formulário cadastro Unidade -->
 
     <script type="module" src="./js/components/index.js"></script>
 </body>

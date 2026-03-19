@@ -30,6 +30,14 @@ const tiposRecursos = require("./routes/tipos-recursos.js");
 const tiposDespesas = require("./routes/tipos-despesas.js");
 // Importar rotas para despesas
 const despesas = require("./routes/despesas.js");
+// Importar rotas para recursos recebidos
+const recursosRecebidos = require("./routes/recursos-recebidos.js");
+// Importar rotas para pedidos de almoxarifado
+const pedidosAlmoxarifado = require("./routes/pedidos-almoxarifado.js");
+// Importar rotas para previsões de despesas
+const previsoesDespesas = require("./routes/previsoes-despesas.js");
+// Importar rotas para relatórios
+const relatorios = require("./routes/relatorios.js");
 // Importar rotas para funcionalidades e permissões
 const funcionalidades = require("./routes/funcionalidades.js");
 const permissoesUsuario = require("./routes/permissoes-usuario.js");
@@ -100,9 +108,13 @@ app.use("/api/salas",             autenticar, autorizar("chefe"),        salasRo
 app.use("/api/salas-tipo",        autenticar, autorizar("chefe"),        salasTipoRoutes);
 
 // Financeiro: chefe+ (ou servidor com permissão — controlado dentro das rotas)
-app.use("/api/tipos-recursos",    autenticar, autorizar("chefe"),        tiposRecursos);
-app.use("/api/tipos-despesas",    autenticar, autorizar("chefe"),        tiposDespesas);
-app.use("/api/despesas",          autenticar, autorizar("chefe"),        despesas);
+app.use("/api/tipos-recursos",       autenticar, autorizar("chefe"),        tiposRecursos);
+app.use("/api/tipos-despesas",       autenticar, autorizar("chefe"),        tiposDespesas);
+app.use("/api/despesas",             autenticar, autorizar("chefe"),        despesas);
+app.use("/api/recursos-recebidos",   autenticar, autorizar("chefe"),        recursosRecebidos);
+app.use("/api/pedidos-almoxarifado", autenticar, autorizar("chefe"),        pedidosAlmoxarifado);
+app.use("/api/previsoes-despesas",   autenticar, autorizar("chefe"),        previsoesDespesas);
+app.use("/api/relatorios",           autenticar, autorizar("chefe"),        relatorios);
 
 // Funcionalidades: somente super_admin pode gerenciar o catálogo
 app.use("/api/funcionalidades",   autenticar, autorizar("super_admin"),  funcionalidades);

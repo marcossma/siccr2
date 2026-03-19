@@ -26,23 +26,25 @@
             <responsive-menu></responsive-menu>
         </div>
         <main class="flex flex--column flex--center">
-            
-            <section class="titulo_secao flex justify--space--between align--items--center">
-                <h1>Tipos de recursos</h1>
 
+            <section class="titulo_secao flex justify--space--between align--items--center">
+                <h1>Previsão de Despesas</h1>
                 <button class="btn_adicionar">+ Adicionar</button>
             </section>
 
             <section class="divListaTiposRecursos informacoes_painel">
                 <div class="cabecalho flex">
-                    <div class="titulo flex flex--2">Código</div>
-                    <div class="titulo flex flex--3">Recurso</div>
-                    <div class="titulo flex flex--10">Descrição</div>
+                    <div class="titulo flex flex--2">Cód.</div>
+                    <div class="titulo flex flex--5">Subunidade</div>
+                    <div class="titulo flex flex--4">Tipo de Despesa</div>
+                    <div class="titulo flex flex--3">Valor Previsto</div>
+                    <div class="titulo flex flex--2">Ano</div>
+                    <div class="titulo flex flex--6">Observação</div>
                     <div class="titulo flex flex--2">Ações</div>
                 </div>
 
                 <div class="listaTiposRecursos">
-                    <!-- Tipos de recursos serão carregados dinamicamente -->
+                    <!-- Previsões serão carregadas dinamicamente -->
                 </div>
             </section>
 
@@ -72,20 +74,41 @@
     </dialog>
     <!-- Fim formulário de Login DIALOG -->
 
-    <!-- Formulário cadastro Unidade -->
+    <!-- Formulário de previsão -->
     <dialog class="dialogPainel unidades">
         <fieldset>
-            <legend>Cadastro de Tipo de Recurso</legend>
+            <legend>Registrar Previsão de Despesa</legend>
 
             <form class="frmCadastroPainel frmUnidade flex flex--column gap--15">
+                <input type="hidden" name="id_previsao" id="id_previsao">
+
                 <div class="row">
-                    <input type="hidden" name="id_tipo_recurso" id="id_tipo_recurso">
-                    <input type="text" name="tipo_recurso" id="tipo_recurso" class="formInput width--100" placeholder="Digite o tipo de recurso">
-                    <label class="painelLabel" for="tipo_recurso">Ex.: Consumo, Permanente...</label>
+                    <select name="subunidade_id" id="subunidade_id" class="listaSelect formInput width--100">
+                        <option value="">Selecione a subunidade...</option>
+                    </select>
+                    <label for="subunidade_id" class="painelLabel">Subunidade</label>
                 </div>
 
                 <div class="row">
-                    <textarea name="descricao_recurso" id="descricao_recurso" class="formInput width--100" placeholder="Digite alguma descrição sobre o recurso..."></textarea>
+                    <select name="id_tipo_despesa" id="id_tipo_despesa" class="listaSelect formInput width--100">
+                        <option value="">Selecione o tipo de despesa...</option>
+                    </select>
+                    <label for="id_tipo_despesa" class="painelLabel">Tipo de despesa</label>
+                </div>
+
+                <div class="row">
+                    <input type="text" name="valor_previsto" id="valor_previsto" class="formInput width--100" placeholder="Ex.: 5000,00">
+                    <label for="valor_previsto" class="painelLabel">Valor previsto (R$)</label>
+                </div>
+
+                <div class="row">
+                    <input type="number" name="ano_referencia" id="ano_referencia" class="formInput width--100" placeholder="Ex.: 2026" min="2000" max="2100">
+                    <label for="ano_referencia" class="painelLabel">Ano de referência</label>
+                </div>
+
+                <div class="row">
+                    <textarea name="observacao" id="observacao" class="formInput width--100" placeholder="Observações (opcional)..."></textarea>
+                    <label for="observacao" class="painelLabel">Observação (opcional)</label>
                 </div>
 
                 <div class="row">
@@ -96,7 +119,7 @@
             </form>
         </fieldset>
     </dialog>
-    <!-- Fim formulário cadastro Unidade -->
+    <!-- Fim formulário de previsão -->
 
     <script type="module" src="./js/components/index.js"></script>
 </body>
