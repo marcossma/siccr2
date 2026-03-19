@@ -54,6 +54,44 @@ header .acesso a {
     cursor: pointer;
 }
 
+header .acesso--logado {
+    width: auto;
+    height: auto;
+    background: transparent;
+    border-radius: 0;
+    gap: 10px;
+}
+
+.usuario-avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: #009536;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.usuario-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.usuario-nome {
+    color: #007a2e;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.usuario-cargo {
+    color: #555;
+    font-size: 12px;
+}
+
 main {
     display: flex;
     width: 80%;

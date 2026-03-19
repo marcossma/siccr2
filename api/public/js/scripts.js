@@ -19,10 +19,31 @@ document.addEventListener("DOMContentLoaded", function() {
     const urlParam = window.location.pathname;
 
     function verificaLogin() {
-        if (localStorage.getItem("siccr_token")) {
-            // document.querySelector(".acesso").setAttribute("hidden", "");
-            document.querySelector(".acesso").style.display = "none";
-        }
+        const acesso = document.querySelector(".acesso");
+        if (!localStorage.getItem("siccr_token")) return;
+
+        const siccr = JSON.parse(localStorage.getItem("siccr") || "null");
+        if (!siccr) { acesso.style.display = "none"; return; }
+
+        const primeiroNome = siccr.nome.trim().split(" ")[0];
+        const inicial = primeiroNome[0].toUpperCase();
+        const labels = {
+            super_admin:  "Super Admin",
+            diretor:      "Diretor",
+            vice_diretor: "Vice-Diretor",
+            chefe:        "Chefe",
+            subchefe:     "Subchefe"
+        };
+        const cargo = labels[siccr.permissao] || "Servidor";
+
+        acesso.classList.add("acesso--logado");
+        acesso.innerHTML = `
+            <div class="usuario-avatar">${inicial}</div>
+            <div class="usuario-info">
+                <span class="usuario-nome">${primeiroNome}</span>
+                <span class="usuario-cargo">${cargo}</span>
+            </div>
+        `;
     }
 
     verificaLogin();
@@ -113,10 +134,12 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Botão para exibir o formulário de login
     // =======================================
-    btnEntrar.addEventListener("click", function(event) {
-        event.preventDefault();
-        dialogLogin.showModal();
-    });
+    if (btnEntrar) {
+        btnEntrar.addEventListener("click", function(event) {
+            event.preventDefault();
+            dialogLogin.showModal();
+        });
+    }
 
     // Botão para efetuar o login
     // ==========================
