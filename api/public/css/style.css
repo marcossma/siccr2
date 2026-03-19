@@ -358,6 +358,10 @@ footer {
     white-space: nowrap;
 }
 
+.nav-menu > li > a:visited {
+    color: var(--nav-text);
+}
+
 .nav-menu > li > a:hover,
 .nav-dropdown-toggle:hover,
 .nav-btn-sair:hover {
@@ -401,6 +405,10 @@ footer {
     font-size: var(--nav-size);
     font-family: var(--nav-font);
     white-space: nowrap;
+}
+
+.nav-dropdown-menu a:visited {
+    color: var(--nav-text);
 }
 
 .nav-dropdown-menu a:hover {
