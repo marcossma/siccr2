@@ -1,126 +1,35 @@
 class MenuNavegacaoAdm extends HTMLElement {
-    constructor() {
-      super();
-  
-      // Anexa o Shadow DOM
-      const shadow = this.attachShadow({ mode: 'open' });
-  
-      // Template HTML + CSS do componente
-      shadow.innerHTML = `
-        <style>
-        @import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css");
+    connectedCallback() {
+        const pagina = window.location.pathname;
 
-        * {
-          margin: 0px;
-          padding: 0px;
-          box-sizing: border-box;
-          font-family: system-ui;
-          font-size: 14px;
-        }
+        const itens = [
+            { href: "/adm/unidades",    icone: "bi-globe",        label: "Unidades" },
+            { href: "/adm/subunidades", icone: "bi-globe-americas", label: "Subunidades" },
+            { href: "/adm/usuarios",    icone: "bi-people",        label: "Usuários" },
+            { href: "/adm/predios",     icone: "bi-buildings",     label: "Prédios" },
+            { href: "/adm/salas",       icone: "bi-door-closed",   label: "Salas" },
+            { href: "/adm/salas-tipo",  icone: "bi-bookmarks",     label: "Tipos de sala" },
+        ];
 
-        ul {
-          width: 100%;
-          display: flex;
-          justify-content: space-around;
-          align-items: center;
-          list-style: none;
-        }
-
-        i {
-          font-size: 30px;
-          transition: .5s;
-        }
-
-        .btn-menu-nav-adm {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          flex-direction: column;
-          cursor: pointer;
-        }
-
-        .btn-menu-nav-adm p {
-          color: white;
-          transition: .5s;
-        }
-
-        .btn-menu-nav-adm:hover p {
-          color: green;
-        }
-
-        a {
-          text-decoration: none;
-          color: black;
-        }
-
-        a:hover {
-          color: green;
-        }
-          
-        </style>
-  
-        <nav class="navbar">
-          <ul>
-            <li>
-              <a href="/adm/unidades">
-                <div class="btn-menu-nav-adm">
-                  <i class="bi bi-globe"></i>
-                  <p>Unidades</p>
-                </div>
-              </a>
-            </li>
-            <li>
-              <a href="/adm/subunidades">
-                <div class="btn-menu-nav-adm">
-                  <i class="bi bi-globe-americas"></i>
-                  <p>Subunidades</p>
-                </div>
-              </a>
-            </li>
-            <li>
-              <a href="/adm/usuarios">
-                <div class="btn-menu-nav-adm">
-                  <i class="bi bi-people"></i>
-                  <p>Usuários</p>
-                </div>
-              </a>
-            </li>
-            <li>
-              <a href="/adm/predios">
-                <div class="btn-menu-nav-adm">
-                  <i class="bi bi-buildings"></i>
-                  <p>Prédios</p>
-                </div>
-              </a>
-            </li>
-            <li>
-              <a href="/adm/salas">
-                <div class="btn-menu-nav-adm">
-                  <i class="bi bi-door-closed"></i>
-                  <p>Salas</p>
-                </div>
-              </a>
-            </li>
-            <li>
-              <a href="/adm/salas-tipo">
-                <div class="btn-menu-nav-adm">
-                  <i class="bi bi-bookmarks"></i>
-                  <p>Tipos de sala</p>
-                </div>
-              </a>
-            </li>
-          </ul>
-        </nav>
-      `;
-  
-      // A partir daqui códigos javascript
-
+        this.innerHTML = `
+            <nav class="nav-adm" aria-label="Navegação do painel administrativo">
+                <ul role="list">
+                    ${itens.map(item => {
+                        const ativo = pagina === item.href;
+                        return `
+                        <li>
+                            <a href="${item.href}"
+                               class="${ativo ? "nav-adm--ativo" : ""}"
+                               ${ativo ? 'aria-current="page"' : ""}>
+                                <i class="bi ${item.icone}" aria-hidden="true"></i>
+                                <span>${item.label}</span>
+                            </a>
+                        </li>`;
+                    }).join("")}
+                </ul>
+            </nav>
+        `;
     }
+}
 
-    
-
-  }
-  
-  // Define o Web Component
-  customElements.define('menu-navegacao-adm', MenuNavegacaoAdm);
-  
+customElements.define("menu-navegacao-adm", MenuNavegacaoAdm);
