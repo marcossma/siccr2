@@ -92,6 +92,37 @@ header .acesso--logado {
     font-size: 12px;
 }
 
+/* Relatórios */
+.relatorio-escopo-badge {
+    font-size: 11px;
+    font-weight: bold;
+    color: #fff;
+    background: #007a2e;
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+.relatorio-card {
+    background: #f4f4f4;
+    border-left: 4px solid #009536;
+    border-radius: 6px;
+    padding: 14px 20px;
+    min-width: 180px;
+}
+
+.relatorio-card-titulo {
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 6px;
+}
+
+.relatorio-card-valor {
+    font-size: 18px;
+    font-weight: bold;
+    color: #007a2e;
+}
+
 main {
     display: flex;
     width: 80%;

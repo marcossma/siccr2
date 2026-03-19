@@ -1246,12 +1246,28 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         carregarDados("relatorios/resumo").then((dados) => {
-            document.querySelector("#totalRecursos").textContent = formatarMoeda(dados.total_recursos);
-            document.querySelector("#totalDespesas").textContent = formatarMoeda(dados.total_despesas);
+            const escopoGeral = dados.escopo === "geral";
 
-            const saldoEl = document.querySelector("#totalSaldo");
-            saldoEl.textContent = formatarMoeda(dados.saldo);
-            saldoEl.style.color = dados.saldo >= 0 ? "#007a2e" : "#c0392b";
+            // Badge de escopo
+            const badgeEl = document.querySelector("#escopoRelatorio");
+            if (badgeEl) {
+                badgeEl.textContent = escopoGeral ? "Visão geral" : "Visão da sua subunidade";
+            }
+
+            // Cards de recursos e saldo só aparecem na visão geral
+            const cardRecursos = document.querySelector("#cardRecursos");
+            const cardSaldo    = document.querySelector("#cardSaldo");
+            if (!escopoGeral) {
+                cardRecursos.style.display = "none";
+                cardSaldo.style.display    = "none";
+            } else {
+                document.querySelector("#totalRecursos").textContent = formatarMoeda(dados.total_recursos);
+                const saldoEl = document.querySelector("#totalSaldo");
+                saldoEl.textContent = formatarMoeda(dados.saldo);
+                saldoEl.style.color = dados.saldo >= 0 ? "#007a2e" : "#c0392b";
+            }
+
+            document.querySelector("#totalDespesas").textContent = formatarMoeda(dados.total_despesas);
 
             const listaSub = document.querySelector("#listaPorSubunidade");
             listaSub.innerHTML = "";

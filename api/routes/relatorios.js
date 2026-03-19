@@ -1,54 +1,96 @@
 const express = require("express");
 const pool = require("../config/database.js");
+const { getNivelAcesso } = require("../middlewares/autorizar.js");
 
 const router = express.Router();
 
-// GET /resumo — totais consolidados para o painel de relatórios
+// GET /resumo — totais consolidados, filtrados pelo nível do usuário
 router.get("/resumo", async (req, res) => {
     try {
+        const nivel = getNivelAcesso(req.usuario);
+        const isRestrito = nivel === "chefe" || nivel === "servidor";
+        const subunidadeId = req.usuario.subunidade;
+
+        if (isRestrito) {
+            // Chefe/servidor: vê apenas os dados da própria subunidade
+            const [despesas, porSubunidade, porTipoDespesa] = await Promise.all([
+                pool.query(
+                    `SELECT COALESCE(SUM(valor_despesa), 0) AS total_despesas
+                     FROM despesas WHERE id_subunidade = $1`,
+                    [subunidadeId]
+                ),
+                pool.query(
+                    `SELECT s.subunidade_nome, COALESCE(SUM(d.valor_despesa), 0) AS total
+                     FROM subunidades s
+                     LEFT JOIN despesas d ON d.id_subunidade = s.subunidade_id
+                     WHERE s.subunidade_id = $1
+                     GROUP BY s.subunidade_id, s.subunidade_nome`,
+                    [subunidadeId]
+                ),
+                pool.query(
+                    `SELECT td.tipo_despesa, COALESCE(SUM(d.valor_despesa), 0) AS total
+                     FROM tipos_despesas td
+                     LEFT JOIN despesas d ON d.id_tipo_despesa = td.id_tipo_despesa
+                                         AND d.id_subunidade = $1
+                     GROUP BY td.id_tipo_despesa, td.tipo_despesa
+                     ORDER BY total DESC`,
+                    [subunidadeId]
+                )
+            ]);
+
+            return res.status(200).json({
+                status: "success",
+                message: "",
+                data: {
+                    escopo:          "subunidade",
+                    total_recursos:  null,
+                    total_despesas:  parseFloat(despesas.rows[0].total_despesas),
+                    saldo:           null,
+                    por_subunidade:  porSubunidade.rows,
+                    por_tipo_despesa: porTipoDespesa.rows
+                }
+            });
+        }
+
+        // Diretor / super_admin: visão geral de todas as subunidades
         const [recursos, despesas, porSubunidade, porTipoDespesa] = await Promise.all([
-            // Total de recursos recebidos
-            pool.query(`
-                SELECT COALESCE(SUM(valor_recurso_recebido), 0) AS total_recursos
-                FROM recursos_recebidos
-            `),
-            // Total de despesas
-            pool.query(`
-                SELECT COALESCE(SUM(valor_despesa), 0) AS total_despesas
-                FROM despesas
-            `),
-            // Despesas agrupadas por subunidade
-            pool.query(`
-                SELECT s.subunidade_nome,
-                       COALESCE(SUM(d.valor_despesa), 0) AS total
-                FROM subunidades s
-                LEFT JOIN despesas d ON d.id_subunidade = s.subunidade_id
-                GROUP BY s.subunidade_id, s.subunidade_nome
-                ORDER BY total DESC
-            `),
-            // Despesas agrupadas por tipo
-            pool.query(`
-                SELECT td.tipo_despesa,
-                       COALESCE(SUM(d.valor_despesa), 0) AS total
-                FROM tipos_despesas td
-                LEFT JOIN despesas d ON d.id_tipo_despesa = td.id_tipo_despesa
-                GROUP BY td.id_tipo_despesa, td.tipo_despesa
-                ORDER BY total DESC
-            `)
+            pool.query(
+                `SELECT COALESCE(SUM(valor_recurso_recebido), 0) AS total_recursos
+                 FROM recursos_recebidos`
+            ),
+            pool.query(
+                `SELECT COALESCE(SUM(valor_despesa), 0) AS total_despesas
+                 FROM despesas`
+            ),
+            pool.query(
+                `SELECT s.subunidade_nome, COALESCE(SUM(d.valor_despesa), 0) AS total
+                 FROM subunidades s
+                 LEFT JOIN despesas d ON d.id_subunidade = s.subunidade_id
+                 GROUP BY s.subunidade_id, s.subunidade_nome
+                 ORDER BY total DESC`
+            ),
+            pool.query(
+                `SELECT td.tipo_despesa, COALESCE(SUM(d.valor_despesa), 0) AS total
+                 FROM tipos_despesas td
+                 LEFT JOIN despesas d ON d.id_tipo_despesa = td.id_tipo_despesa
+                 GROUP BY td.id_tipo_despesa, td.tipo_despesa
+                 ORDER BY total DESC`
+            )
         ]);
 
-        const totalRecursos  = parseFloat(recursos.rows[0].total_recursos);
-        const totalDespesas  = parseFloat(despesas.rows[0].total_despesas);
+        const totalRecursos = parseFloat(recursos.rows[0].total_recursos);
+        const totalDespesas = parseFloat(despesas.rows[0].total_despesas);
 
         return res.status(200).json({
             status: "success",
             message: "",
             data: {
-                total_recursos:    totalRecursos,
-                total_despesas:    totalDespesas,
-                saldo:             totalRecursos - totalDespesas,
-                por_subunidade:    porSubunidade.rows,
-                por_tipo_despesa:  porTipoDespesa.rows
+                escopo:          "geral",
+                total_recursos:  totalRecursos,
+                total_despesas:  totalDespesas,
+                saldo:           totalRecursos - totalDespesas,
+                por_subunidade:  porSubunidade.rows,
+                por_tipo_despesa: porTipoDespesa.rows
             }
         });
     } catch (error) {
@@ -57,16 +99,26 @@ router.get("/resumo", async (req, res) => {
     }
 });
 
-// GET /despesas — lista completa de despesas com joins
+// GET /despesas — lista de despesas filtrada pelo nível do usuário
 router.get("/despesas", async (req, res) => {
     try {
-        const { ano } = req.query;
+        const nivel = getNivelAcesso(req.usuario);
+        const isRestrito = nivel === "chefe" || nivel === "servidor";
         const params = [];
-        let where = "";
+        const conditions = [];
+
+        const { ano } = req.query;
         if (ano) {
             params.push(ano);
-            where = `WHERE EXTRACT(YEAR FROM d.data_despesa) = $1`;
+            conditions.push(`EXTRACT(YEAR FROM d.data_despesa) = $${params.length}`);
         }
+
+        if (isRestrito) {
+            params.push(req.usuario.subunidade);
+            conditions.push(`d.id_subunidade = $${params.length}`);
+        }
+
+        const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
         const { rows } = await pool.query(`
             SELECT d.id_despesa, d.valor_despesa, d.data_despesa,
@@ -86,9 +138,18 @@ router.get("/despesas", async (req, res) => {
     }
 });
 
-// GET /recursos — lista de recursos recebidos com tipo
+// GET /recursos — apenas para diretor e super_admin (recursos são do centro)
 router.get("/recursos", async (req, res) => {
     try {
+        const nivel = getNivelAcesso(req.usuario);
+        if (nivel === "chefe" || nivel === "servidor") {
+            return res.status(403).json({
+                status: "error",
+                message: "Acesso restrito à diretoria.",
+                data: null
+            });
+        }
+
         const { rows } = await pool.query(`
             SELECT rr.id_recurso_recebido, rr.valor_recurso_recebido,
                    rr.descricao_recurso_recebido, rr.data_recebimento,
