@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SICCR - Gerenciamento de Usuários</title>
+    <title>SICCR - Verificar Pedidos de Almoxarifado</title>
     <link rel="shortcut icon" href="./img/favicon.png" type="image/x-icon">
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/dialogs.css">
@@ -28,19 +28,29 @@
         <main class="flex flex--column flex--center">
 
             <section class="titulo_secao flex justify--space--between align--items--center">
-                <h1>Gerenciamento de Usuários</h1>
+                <h1>Verificar Pedidos de Almoxarifado</h1>
+                <!-- Filtro de status -->
+                <div class="flex gap--10 align--items--center">
+                    <label class="painelLabel" for="filtroStatus" style="white-space:nowrap">Exibir:</label>
+                    <select id="filtroStatus" class="formInput" style="padding:6px 10px">
+                        <option value="pendente">Pendentes</option>
+                        <option value="atendido">Atendidos</option>
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
             </section>
 
-            <!-- Lista de usuários -->
+            <!-- Lista de pedidos -->
             <section class="divListaTiposRecursos informacoes_painel">
                 <div class="cabecalho flex">
-                    <div class="titulo flex flex--5">Nome</div>
-                    <div class="titulo flex flex--2">SIAPE</div>
-                    <div class="titulo flex flex--3">Cargo</div>
-                    <div class="titulo flex flex--3">Subunidade</div>
+                    <div class="titulo flex flex--1">Nº</div>
+                    <div class="titulo flex flex--3">Setor</div>
+                    <div class="titulo flex flex--1">Itens</div>
+                    <div class="titulo flex flex--3">Data</div>
+                    <div class="titulo flex flex--3">Status</div>
                     <div class="titulo flex flex--2">Ações</div>
                 </div>
-                <div id="listaUsuarios">
+                <div id="listaPedidosSID">
                     <!-- Carregado via JS -->
                 </div>
             </section>
@@ -69,20 +79,26 @@
         </fieldset>
     </dialog>
 
-    <!-- Dialog: Gerenciar permissões do usuário -->
-    <dialog id="dialogPermissoes" class="dialogPainel" style="min-width:480px">
+    <!-- Dialog: Ver itens e atender pedido -->
+    <dialog id="dialogVerItensSID" class="dialogPainel" style="min-width:500px" data-pedido-id="" data-pedido-status="">
         <fieldset>
-            <legend id="dialogPermissoesLegend">Permissões do usuário</legend>
-            <p id="dialogPermissoesInfo" class="painelLabel" style="margin-bottom:12px"></p>
-            <div id="listaPermissoes">
-                <!-- Carregado via JS -->
+            <legend id="dialogVerItensSIDLegend">Pedido #0</legend>
+            <p id="dialogVerItensSIDInfo" class="painelLabel" style="margin-bottom:10px"></p>
+            <div id="dialogVerItensSIDConteudo" class="pedido-lista-itens pedido-lista-itens--view">
+                <!-- Itens carregados via JS -->
             </div>
-            <p id="permissoesErro" class="login-erro" hidden></p>
             <div class="row" style="margin-top:15px">
-                <button type="button" id="btnFecharPermissoes" class="btnPainelFormulario cancelarUnidade">Fechar</button>
+                <button type="button" id="btnAtenderPedidoSID" class="btnPainelFormulario cadastrarUnidade" hidden>✓ Finalizar Pedido</button>
+                <button type="button" id="btnFecharVerItensSID" class="btnPainelFormulario cancelarUnidade">Fechar</button>
             </div>
         </fieldset>
     </dialog>
+
+    <!-- Toast de notificação WS -->
+    <div id="wsToast" class="ws-toast" hidden>
+        <i class="bi bi-bell-fill"></i>
+        <span id="wsToastMsg"></span>
+    </div>
 
     <script type="module" src="./js/components/index.js"></script>
 </body>

@@ -155,8 +155,8 @@ app.use("/api/pedidos-almoxarifado", autenticar, autorizar("chefe"),        pedi
 app.use("/api/previsoes-despesas",   autenticar, autorizar("chefe"),        previsoesDespesas);
 app.use("/api/relatorios",           autenticar, autorizar("chefe"),        relatorios);
 
-// Funcionalidades: somente super_admin pode gerenciar o catálogo
-app.use("/api/funcionalidades",   autenticar, autorizar("super_admin"),  funcionalidades);
+// Funcionalidades: leitura para chefe+, gestão do catálogo apenas via painel super_admin
+app.use("/api/funcionalidades",   autenticar, autorizar("chefe"),        funcionalidades);
 
 // Permissões de usuário: chefe concede/revoga permissões aos seus servidores
 app.use("/api/permissoes-usuario",autenticar, autorizar("chefe"),        permissoesUsuario);

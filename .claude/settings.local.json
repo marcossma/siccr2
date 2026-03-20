@@ -11,7 +11,8 @@
       "Bash(ls -la /c/wamp64/www/siccr2/api/*.js)",
       "Bash(docker compose:*)",
       "Bash(grep -l \"adminNome\\\\|btnSair\" /c/wamp64/www/siccr2/api/public/adm/*.html)",
-      "Bash(/c/wamp64/www/siccr2/api/public/css/dialogs.css:*)"
+      "Bash(/c/wamp64/www/siccr2/api/public/css/dialogs.css:*)",
+      "Bash(grep -rn \"<dialog \" /c/wamp64/www/siccr2/api/public/*.html)"
     ]
   }
 }

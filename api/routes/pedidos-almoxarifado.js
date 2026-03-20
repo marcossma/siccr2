@@ -6,19 +6,22 @@ const { getNivelAcesso, getEscopoFiltro } = require("../middlewares/autorizar.js
 module.exports = function (wss) {
     const router = express.Router();
 
-    // Broadcast para diretor/super_admin (secretaria)
+    // Verifica se usuário pode atender pedidos (tem funcionalidade ou é diretor/super_admin)
+    function podeAtender(usuario) {
+        if (!usuario) return false;
+        if (["super_admin", "diretor", "vice_diretor"].includes(usuario.permissao)) return true;
+        if (usuario.is_direcao_centro) return true;
+        return Array.isArray(usuario.funcionalidades) &&
+               usuario.funcionalidades.includes("atender_pedido_almoxarifado");
+    }
+
+    // Broadcast para usuários que podem atender pedidos (SID + diretor/super_admin)
     function broadcastPedidoPendente(pedido) {
         if (!wss) return;
         const msg = JSON.stringify({ tipo: "pedido_pendente", pedido });
         wss.clients.forEach((client) => {
             if (client.readyState !== WebSocket.OPEN || !client.usuario) return;
-            const u = client.usuario;
-            const isSecretaria =
-                u.permissao === "super_admin" ||
-                u.permissao === "diretor" ||
-                u.permissao === "vice_diretor" ||
-                u.is_direcao_centro === true;
-            if (isSecretaria) client.send(msg);
+            if (podeAtender(client.usuario)) client.send(msg);
         });
     }
 
@@ -29,7 +32,9 @@ module.exports = function (wss) {
             const params = [];
             let whereClause = "";
 
-            if (nivel === "chefe" || nivel === "servidor") {
+            // SID (atender_pedido_almoxarifado) e diretor/super_admin veem tudo
+            // Chefe e servidor comuns só veem a própria subunidade
+            if (!podeAtender(req.usuario)) {
                 params.push(req.usuario.subunidade);
                 whereClause = `AND pa.subunidade_id = $1`;
             }
@@ -163,9 +168,8 @@ module.exports = function (wss) {
             });
         }
 
-        // Apenas diretor/super_admin pode marcar atendido; chefe pode cancelar o próprio
-        const nivel = getNivelAcesso(req.usuario);
-        if (status === "atendido" && nivel !== "diretor" && nivel !== "super_admin") {
+        // Apenas quem pode atender (SID / diretor / super_admin) marca como atendido
+        if (status === "atendido" && !podeAtender(req.usuario)) {
             return res.status(403).json({
                 status: "error",
                 message: "Apenas a secretaria pode marcar um pedido como atendido.",

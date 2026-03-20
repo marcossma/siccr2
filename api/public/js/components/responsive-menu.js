@@ -4,6 +4,7 @@ class ResponsiveMenu extends HTMLElement {
         const siccr  = JSON.parse(localStorage.getItem("siccr") || "null");
         const perm   = siccr?.permissao || "";
         const isDC   = siccr?.is_direcao_centro === true;
+        const funcs  = Array.isArray(siccr?.funcionalidades) ? siccr.funcionalidades : [];
 
         // Nível efetivo de acesso (espelha getNivelAcesso do backend)
         const nivel = (() => {
@@ -13,6 +14,9 @@ class ResponsiveMenu extends HTMLElement {
             if (perm)                                                return 1; // servidor
             return 0;
         })();
+
+        // Pode verificar/atender pedidos de almoxarifado (SID)
+        const ehSID = nivel >= 3 || funcs.includes("atender_pedido_almoxarifado");
 
         // Monta os itens de menu por nível — só mostra para usuários logados
         const admDropdown = nivel >= 1 ? `
@@ -41,6 +45,7 @@ class ResponsiveMenu extends HTMLElement {
                     <li><a href="/registrar-despesa">Registrar despesa</a></li>
                     <hr>` : ""}
                     <li><a href="/pedido-almoxarifado">Pedido de almoxarifado</a></li>
+                    ${ehSID ? `<hr><li><a href="/verificar-pedidos">Verificar pedidos</a></li>` : ""}
                     <li><a href="/previsao-despesas">Previsão de despesas</a></li>
                     <li><a href="/relatorios">Relatórios</a></li>
                 </ul>

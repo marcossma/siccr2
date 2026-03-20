@@ -56,6 +56,16 @@ router.post("/login", async (req, res) => {
         }
 
         const userData = user.rows[0];
+
+        // Busca funcionalidades do usuário
+        const funcsResult = await pool.query(
+            `SELECT f.nome FROM permissoes_usuario pu
+             JOIN funcionalidades f ON f.id = pu.funcionalidade_id
+             WHERE pu.user_id = $1`,
+            [userData.user_id]
+        );
+        const funcionalidades = funcsResult.rows.map(r => r.nome);
+
         const token = jwt.sign({
             id: userData.user_id,
             nome: userData.nome,
@@ -67,7 +77,8 @@ router.post("/login", async (req, res) => {
             subunidade_sigla: userData.subunidade_sigla ?? null,
             unidade: userData.unidade_id,
             is_direcao_centro: userData.is_direcao_centro ?? false,
-            data_nascimento: userData.data_nascimento
+            data_nascimento: userData.data_nascimento,
+            funcionalidades
         }, process.env.JWT_SECRET, { expiresIn: "8h" });
 
         return res.status(200).json({
@@ -82,7 +93,8 @@ router.post("/login", async (req, res) => {
                 subunidade_id: userData.subunidade_id,
                 subunidade_sigla: userData.subunidade_sigla ?? null,
                 unidade_id: userData.unidade_id,
-                is_direcao_centro: userData.is_direcao_centro ?? false
+                is_direcao_centro: userData.is_direcao_centro ?? false,
+                funcionalidades
             }],
             token: token
         });

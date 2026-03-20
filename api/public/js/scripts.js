@@ -217,6 +217,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     data_nascimento:  u.data_nascimento,
                     whatsapp:         u.whatsapp,
                     subunidade_id:    u.subunidade_id,
+                    funcionalidades:  u.funcionalidades || [],
                     subunidade_sigla: u.subunidade_sigla,
                     unidade_id:       u.unidade_id,
                     permissao:        u.permissao,
@@ -1027,6 +1028,7 @@ document.addEventListener("DOMContentLoaded", function() {
     // Rotinas para a página pedido-almoxarifado.html
     // -----------------------------------------------
     if (urlParam === "/pedido-almoxarifado") {
+        const siccr                 = JSON.parse(localStorage.getItem("siccr") || "null");
         const listaPedidos          = document.getElementById("listaPedidos");
         const btnNovoPedido         = document.getElementById("btnNovoPedido");
         const dialogNovoPedido      = document.getElementById("dialogNovoPedido");
@@ -1037,8 +1039,18 @@ document.addEventListener("DOMContentLoaded", function() {
         const dialogVerItens        = document.getElementById("dialogVerItens");
         const dialogVerItensLegend  = document.getElementById("dialogVerItensLegend");
         const dialogVerItensConteudo= document.getElementById("dialogVerItensConteudo");
+        const btnAtenderPedido      = document.getElementById("btnAtenderPedido");
         const btnFecharVerItens     = document.getElementById("btnFecharVerItens");
         const pedidoErro            = document.getElementById("pedidoErro");
+        const wsToast               = document.getElementById("wsToast");
+        const wsToastMsg            = document.getElementById("wsToastMsg");
+
+        // Verifica se o usuário atual pode atender pedidos (é SID / diretor / super_admin)
+        const ehSID = siccr && (
+            ["super_admin", "diretor", "vice_diretor"].includes(siccr.permissao) ||
+            siccr.is_direcao_centro === true ||
+            (Array.isArray(siccr.funcionalidades) && siccr.funcionalidades.includes("atender_pedido_almoxarifado"))
+        );
 
         const badgeStatus = {
             pendente:  '<span class="badge badge--pendente">Pendente</span>',
@@ -1047,6 +1059,14 @@ document.addEventListener("DOMContentLoaded", function() {
         };
 
         let itensNovoPedido = [];
+        let toastTimer = null;
+
+        function mostrarToast(msg) {
+            wsToastMsg.textContent = msg;
+            wsToast.hidden = false;
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => { wsToast.hidden = true; }, 6000);
+        }
 
         function renderizarListaItensDialog() {
             if (itensNovoPedido.length === 0) {
@@ -1071,6 +1091,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     return;
                 }
                 pedidos.forEach((p) => {
+                    // SID não vê botão excluir de outros setores; usuário comum não vê pedidos atendidos com excluir
+                    const podeExcluir = !ehSID && p.status !== "atendido";
                     const div = document.createElement("div");
                     div.classList.add("dados", "flex", "align--items--center");
                     div.innerHTML = `
@@ -1081,8 +1103,10 @@ document.addEventListener("DOMContentLoaded", function() {
                         <div class="dado flex flex--3">${badgeStatus[p.status] || p.status}</div>
                         <div class="dado flex flex--2 gap--10 font--size--20">
                             <i class="bi bi-eye ver-itens cursor--pointer" title="Ver itens"
-                                data-id="${p.id_pedido}"></i>
-                            ${p.status !== "atendido"
+                                data-id="${p.id_pedido}"
+                                data-status="${p.status}"
+                                data-setor="${p.subunidade_sigla || p.subunidade_nome || ""}"></i>
+                            ${podeExcluir
                                 ? `<i class="bi bi-x-square excluir cursor--pointer" title="Excluir"
                                     data-id="${p.id_pedido}"></i>`
                                 : ""}
@@ -1160,10 +1184,22 @@ document.addEventListener("DOMContentLoaded", function() {
         // Ações na lista (ver itens / excluir)
         listaPedidos.addEventListener("click", async (e) => {
             if (e.target.classList.contains("ver-itens")) {
-                const id = e.target.dataset.id;
-                dialogVerItensLegend.textContent = `Itens do Pedido #${id}`;
+                const id     = e.target.dataset.id;
+                const status = e.target.dataset.status;
+                const setor  = e.target.dataset.setor;
+
+                dialogVerItens.dataset.pedidoId     = id;
+                dialogVerItens.dataset.pedidoStatus = status;
+                dialogVerItensLegend.textContent = setor
+                    ? `Pedido #${id} — ${setor}`
+                    : `Itens do Pedido #${id}`;
                 dialogVerItensConteudo.innerHTML = "Carregando...";
+
+                // Botão "Marcar como Atendido" visível apenas para SID em pedidos pendentes
+                btnAtenderPedido.hidden = !(ehSID && status === "pendente");
+
                 dialogVerItens.showModal();
+
                 const response = await fetch(`${apiUrl}/pedidos-almoxarifado/${id}/itens`);
                 const data = await response.json();
                 if (data.status === "success" && data.data.length > 0) {
@@ -1196,9 +1232,387 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         });
 
+        // SID: marcar pedido como atendido
+        btnAtenderPedido.addEventListener("click", async () => {
+            const id = dialogVerItens.dataset.pedidoId;
+            if (!id) return;
+            if (!confirm("Confirmar que o pedido foi efetuado no SIE?")) return;
+            try {
+                const response = await fetch(`${apiUrl}/pedidos-almoxarifado/${id}/status`, {
+                    method: "PATCH",
+                    body: JSON.stringify({ status: "atendido" })
+                });
+                const data = await response.json();
+                if (data.status === "success") {
+                    dialogVerItens.close();
+                    renderizarPedidos();
+                } else {
+                    alert(data.message || "Erro ao atualizar status.");
+                }
+            } catch {
+                alert("Erro de conexão.");
+            }
+        });
+
         btnFecharVerItens.addEventListener("click", () => dialogVerItens.close());
 
+        // WebSocket — notificações em tempo real para SID
+        if (ehSID) {
+            const wsProto = location.protocol === "https:" ? "wss:" : "ws:";
+            const ws = new WebSocket(`${wsProto}//${location.host}`);
+            ws.addEventListener("open", () => {
+                const token = localStorage.getItem("siccr_token");
+                if (token) ws.send(JSON.stringify({ token }));
+            });
+            ws.addEventListener("message", (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    if (msg.tipo === "pedido_pendente") {
+                        const setor = msg.pedido?.subunidade_sigla || msg.pedido?.subunidade_nome || "setor";
+                        mostrarToast(`Novo pedido de almoxarifado de: ${setor}`);
+                        renderizarPedidos();
+                    }
+                } catch { /* ignora mensagens malformadas */ }
+            });
+        }
+
         renderizarPedidos();
+    }
+
+    // Rotinas para a página verificar-pedidos.html (painel SID)
+    // ----------------------------------------------------------
+    if (urlParam === "/verificar-pedidos") {
+        const siccr                  = JSON.parse(localStorage.getItem("siccr") || "null");
+        const listaPedidosSID        = document.getElementById("listaPedidosSID");
+        const filtroStatus           = document.getElementById("filtroStatus");
+        const dialogVerItensSID      = document.getElementById("dialogVerItensSID");
+        const dialogVerItensSIDLegend= document.getElementById("dialogVerItensSIDLegend");
+        const dialogVerItensSIDInfo  = document.getElementById("dialogVerItensSIDInfo");
+        const dialogVerItensSIDConteudo = document.getElementById("dialogVerItensSIDConteudo");
+        const btnAtenderPedidoSID    = document.getElementById("btnAtenderPedidoSID");
+        const btnFecharVerItensSID   = document.getElementById("btnFecharVerItensSID");
+        const wsToast                = document.getElementById("wsToast");
+        const wsToastMsg             = document.getElementById("wsToastMsg");
+
+        const funcs = Array.isArray(siccr?.funcionalidades) ? siccr.funcionalidades : [];
+        const perm  = siccr?.permissao || "";
+        const isDC  = siccr?.is_direcao_centro === true;
+        const ehSID = ["super_admin","diretor","vice_diretor"].includes(perm) || isDC
+                   || funcs.includes("atender_pedido_almoxarifado");
+
+        // Redireciona se não tiver permissão
+        if (!ehSID) { window.location.href = "/"; }
+
+        const badgeStatus = {
+            pendente:  '<span class="badge badge--pendente">Pendente</span>',
+            atendido:  '<span class="badge badge--atendido">Atendido</span>',
+            cancelado: '<span class="badge badge--cancelado">Cancelado</span>'
+        };
+
+        let toastTimer = null;
+        function mostrarToast(msg) {
+            wsToastMsg.textContent = msg;
+            wsToast.hidden = false;
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => { wsToast.hidden = true; }, 6000);
+        }
+
+        function renderizarPedidosSID() {
+            carregarDados("pedidos-almoxarifado").then((pedidos) => {
+                const filtro = filtroStatus.value;
+                const filtrados = filtro === "todos" ? pedidos
+                    : (pedidos || []).filter(p => p.status === filtro);
+
+                listaPedidosSID.innerHTML = "";
+                if (!filtrados || filtrados.length === 0) {
+                    listaPedidosSID.innerHTML = `<p class="pedido-lista-vazia" style="padding:15px">Nenhum pedido ${filtro === "todos" ? "" : filtro} encontrado.</p>`;
+                    return;
+                }
+                filtrados.forEach((p) => {
+                    const div = document.createElement("div");
+                    div.classList.add("dados", "flex", "align--items--center");
+                    div.innerHTML = `
+                        <div class="dado flex flex--1">${p.id_pedido}</div>
+                        <div class="dado flex flex--3">${p.subunidade_sigla || p.subunidade_nome || "—"}</div>
+                        <div class="dado flex flex--1">${p.total_itens}</div>
+                        <div class="dado flex flex--3">${formatarData(p.data_pedido)}</div>
+                        <div class="dado flex flex--3">${badgeStatus[p.status] || p.status}</div>
+                        <div class="dado flex flex--2 font--size--20">
+                            <i class="bi bi-eye ver-itens-sid cursor--pointer" title="Ver itens e atender"
+                                data-id="${p.id_pedido}"
+                                data-status="${p.status}"
+                                data-setor="${p.subunidade_sigla || p.subunidade_nome || ""}"
+                                data-data="${formatarData(p.data_pedido)}"
+                                data-obs="${p.observacao || ""}"></i>
+                        </div>
+                    `;
+                    listaPedidosSID.appendChild(div);
+                });
+            });
+        }
+
+        filtroStatus.addEventListener("change", renderizarPedidosSID);
+
+        listaPedidosSID.addEventListener("click", async (e) => {
+            const icon = e.target.closest(".ver-itens-sid");
+            if (!icon) return;
+
+            const id     = icon.dataset.id;
+            const status = icon.dataset.status;
+            const setor  = icon.dataset.setor;
+            const data   = icon.dataset.data;
+            const obs    = icon.dataset.obs;
+
+            dialogVerItensSID.dataset.pedidoId     = id;
+            dialogVerItensSID.dataset.pedidoStatus = status;
+            dialogVerItensSIDLegend.textContent = `Pedido #${id} — ${setor}`;
+            dialogVerItensSIDInfo.textContent   = `Data: ${data}${obs ? " · " + obs : ""}`;
+            dialogVerItensSIDConteudo.innerHTML = "Carregando...";
+            btnAtenderPedidoSID.hidden = status !== "pendente";
+            dialogVerItensSID.showModal();
+
+            const resp = await fetch(`${apiUrl}/pedidos-almoxarifado/${id}/itens`);
+            const dat  = await resp.json();
+            if (dat.status === "success" && dat.data.length > 0) {
+                dialogVerItensSIDConteudo.innerHTML = dat.data.map(item => `
+                    <div class="pedido-item flex gap--10">
+                        <span class="pedido-item-codigo">${item.codigo_produto || "—"}</span>
+                        <span class="pedido-item-descricao flex--1">${item.descricao_produto}</span>
+                        <span class="pedido-item-qtd">Qtd: ${item.quantidade}</span>
+                    </div>
+                `).join("");
+            } else {
+                dialogVerItensSIDConteudo.innerHTML = '<p class="pedido-lista-vazia">Nenhum item encontrado.</p>';
+            }
+        });
+
+        btnAtenderPedidoSID.addEventListener("click", async () => {
+            const id = dialogVerItensSID.dataset.pedidoId;
+            if (!id || !confirm("Confirmar que o pedido foi efetuado no SIE?")) return;
+            const resp = await fetch(`${apiUrl}/pedidos-almoxarifado/${id}/status`, {
+                method: "PATCH",
+                body: JSON.stringify({ status: "atendido" })
+            });
+            const dat = await resp.json();
+            if (dat.status === "success") {
+                dialogVerItensSID.close();
+                renderizarPedidosSID();
+            } else {
+                alert(dat.message || "Erro ao atualizar status.");
+            }
+        });
+
+        btnFecharVerItensSID.addEventListener("click", () => dialogVerItensSID.close());
+
+        // WebSocket — atualiza lista em tempo real ao chegar novo pedido
+        const wsProto = location.protocol === "https:" ? "wss:" : "ws:";
+        const ws = new WebSocket(`${wsProto}//${location.host}`);
+        ws.addEventListener("open", () => {
+            const token = localStorage.getItem("siccr_token");
+            if (token) ws.send(JSON.stringify({ token }));
+        });
+        ws.addEventListener("message", (event) => {
+            try {
+                const msg = JSON.parse(event.data);
+                if (msg.tipo === "pedido_pendente") {
+                    const setor = msg.pedido?.subunidade_sigla || msg.pedido?.subunidade_nome || "setor";
+                    mostrarToast(`Novo pedido de: ${setor}`);
+                    if (filtroStatus.value === "pendente" || filtroStatus.value === "todos") {
+                        renderizarPedidosSID();
+                    }
+                }
+            } catch { /* ignora */ }
+        });
+
+        renderizarPedidosSID();
+    }
+
+    // Rotinas para a página gerenciamento-de-usuarios.html
+    // -----------------------------------------------------
+    if (urlParam === "/gerenciamento-de-usuarios") {
+        const siccr              = JSON.parse(localStorage.getItem("siccr") || "null");
+        const listaUsuarios      = document.getElementById("listaUsuarios");
+        const dialogPermissoes   = document.getElementById("dialogPermissoes");
+        const dialogPermissoesLegend = document.getElementById("dialogPermissoesLegend");
+        const dialogPermissoesInfo   = document.getElementById("dialogPermissoesInfo");
+        const listaPermissoes    = document.getElementById("listaPermissoes");
+        const permissoesErro     = document.getElementById("permissoesErro");
+        const btnFecharPermissoes= document.getElementById("btnFecharPermissoes");
+
+        const labelPermissao = {
+            super_admin: "Super Admin", diretor: "Diretor",
+            vice_diretor: "Vice-Diretor", chefe: "Chefe",
+            subchefe: "Subchefe", servidor: "Servidor"
+        };
+
+        // Nível do usuário logado (espelha getNivelAcesso do backend)
+        const perm  = siccr?.permissao || "";
+        const isDC  = siccr?.is_direcao_centro === true;
+        const nivel = perm === "super_admin" ? 4
+                    : (perm === "diretor" || perm === "vice_diretor" || isDC) ? 3
+                    : (perm === "chefe"   || perm === "subchefe") ? 2 : 1;
+
+        let todasFuncionalidades = [];  // carregadas uma vez
+        let usuarioAtual = null;        // usuário cujo dialog está aberto
+
+        // Carrega todas as funcionalidades disponíveis (uma vez)
+        carregarDados("funcionalidades").then(f => { todasFuncionalidades = f || []; });
+
+        function renderizarUsuarios() {
+            carregarDados("usuarios").then((usuarios) => {
+                listaUsuarios.innerHTML = "";
+                if (!usuarios || usuarios.length === 0) {
+                    listaUsuarios.innerHTML = '<p style="padding:15px">Nenhum usuário encontrado.</p>';
+                    return;
+                }
+                usuarios.forEach((u) => {
+                    // Chefe só pode gerenciar permissões de servidores; diretor/super_admin podem gerenciar qualquer um
+                    const podeGerenciar = nivel >= 3 || u.permissao === "servidor" || u.permissao === "subchefe";
+                    const div = document.createElement("div");
+                    div.classList.add("dados", "flex", "align--items--center");
+                    div.innerHTML = `
+                        <div class="dado flex flex--5">${u.nome}</div>
+                        <div class="dado flex flex--2">${u.siape}</div>
+                        <div class="dado flex flex--3">${labelPermissao[u.permissao] || u.permissao}</div>
+                        <div class="dado flex flex--3">${u.subunidade_nome || "—"}</div>
+                        <div class="dado flex flex--2">
+                            ${podeGerenciar
+                                ? `<button type="button" class="btn-permissoes btnPainelFormulario"
+                                    style="font-size:12px;padding:4px 10px"
+                                    data-id="${u.user_id}"
+                                    data-nome="${u.nome}"
+                                    data-permissao="${u.permissao}"
+                                    data-subunidade="${u.subunidade_nome || ""}">
+                                    Permissões
+                                   </button>`
+                                : "—"}
+                        </div>
+                    `;
+                    listaUsuarios.appendChild(div);
+                });
+            });
+        }
+
+        async function abrirDialogPermissoes(userId, nomeUsuario, permissaoUsuario, subunidade) {
+            usuarioAtual = { id: userId, nome: nomeUsuario };
+            dialogPermissoesLegend.textContent = `Permissões — ${nomeUsuario}`;
+            dialogPermissoesInfo.textContent = `${labelPermissao[permissaoUsuario] || permissaoUsuario}${subunidade ? " · " + subunidade : ""}`;
+            permissoesErro.hidden = true;
+            listaPermissoes.innerHTML = "Carregando...";
+            dialogPermissoes.showModal();
+
+            // Busca permissões atuais do usuário
+            let permissoesAtuais = [];
+            try {
+                const resp = await fetch(`${apiUrl}/permissoes-usuario/${userId}`);
+                const data = await resp.json();
+                permissoesAtuais = data.status === "success" ? data.data : [];
+            } catch { /* mantém vazio */ }
+
+            renderizarPermissoesDialog(permissoesAtuais);
+        }
+
+        function renderizarPermissoesDialog(permissoesAtuais) {
+            if (todasFuncionalidades.length === 0) {
+                listaPermissoes.innerHTML = '<p>Nenhuma funcionalidade cadastrada.</p>';
+                return;
+            }
+
+            // Agrupa por módulo
+            const porModulo = {};
+            todasFuncionalidades.forEach(f => {
+                if (!porModulo[f.modulo]) porModulo[f.modulo] = [];
+                porModulo[f.modulo].push(f);
+            });
+
+            let html = "";
+            for (const modulo of Object.keys(porModulo).sort()) {
+                html += `<div class="gerenciar-permissoes-modulo">${modulo}</div>`;
+                porModulo[modulo].forEach(f => {
+                    const concedida = permissoesAtuais.find(p => p.funcionalidade_id === f.id);
+                    html += `
+                        <div class="gerenciar-permissoes-item flex align--items--center gap--10">
+                            <span class="flex--1">
+                                <strong>${f.descricao || f.nome}</strong>
+                                <span class="gerenciar-permissoes-nome">${f.nome}</span>
+                            </span>
+                            ${concedida
+                                ? `<button type="button" class="btn-revogar-perm btnPainelFormulario cancelarUnidade"
+                                    style="font-size:12px;padding:4px 12px"
+                                    data-perm-id="${concedida.id}">Revogar</button>`
+                                : `<button type="button" class="btn-conceder-perm btnPainelFormulario cadastrarUnidade"
+                                    style="font-size:12px;padding:4px 12px"
+                                    data-func-id="${f.id}">Conceder</button>`
+                            }
+                        </div>
+                    `;
+                });
+            }
+            listaPermissoes.innerHTML = html;
+        }
+
+        // Delegação de eventos na lista de usuários
+        listaUsuarios.addEventListener("click", (e) => {
+            const btn = e.target.closest(".btn-permissoes");
+            if (!btn) return;
+            abrirDialogPermissoes(
+                btn.dataset.id,
+                btn.dataset.nome,
+                btn.dataset.permissao,
+                btn.dataset.subunidade
+            );
+        });
+
+        // Delegação de eventos no dialog de permissões
+        listaPermissoes.addEventListener("click", async (e) => {
+            permissoesErro.hidden = true;
+
+            if (e.target.classList.contains("btn-conceder-perm")) {
+                const funcionalidadeId = e.target.dataset.funcId;
+                try {
+                    const resp = await fetch(`${apiUrl}/permissoes-usuario`, {
+                        method: "POST",
+                        body: JSON.stringify({ user_id: usuarioAtual.id, funcionalidade_id: parseInt(funcionalidadeId) })
+                    });
+                    const data = await resp.json();
+                    if (data.status === "success") {
+                        // Recarrega permissões atuais
+                        const r2 = await fetch(`${apiUrl}/permissoes-usuario/${usuarioAtual.id}`);
+                        const d2 = await r2.json();
+                        renderizarPermissoesDialog(d2.status === "success" ? d2.data : []);
+                    } else {
+                        permissoesErro.textContent = data.message || "Erro ao conceder permissão.";
+                        permissoesErro.hidden = false;
+                    }
+                } catch {
+                    permissoesErro.textContent = "Erro de conexão.";
+                    permissoesErro.hidden = false;
+                }
+            }
+
+            if (e.target.classList.contains("btn-revogar-perm")) {
+                const permId = e.target.dataset.permId;
+                try {
+                    const resp = await fetch(`${apiUrl}/permissoes-usuario/${permId}`, { method: "DELETE" });
+                    const data = await resp.json();
+                    if (data.status === "success") {
+                        const r2 = await fetch(`${apiUrl}/permissoes-usuario/${usuarioAtual.id}`);
+                        const d2 = await r2.json();
+                        renderizarPermissoesDialog(d2.status === "success" ? d2.data : []);
+                    } else {
+                        permissoesErro.textContent = data.message || "Erro ao revogar permissão.";
+                        permissoesErro.hidden = false;
+                    }
+                } catch {
+                    permissoesErro.textContent = "Erro de conexão.";
+                    permissoesErro.hidden = false;
+                }
+            }
+        });
+
+        btnFecharPermissoes.addEventListener("click", () => dialogPermissoes.close());
+
+        renderizarUsuarios();
     }
 
     // Rotinas para a página previsao-despesas.html

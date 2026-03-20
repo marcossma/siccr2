@@ -72,7 +72,7 @@
     </dialog>
 
     <!-- Dialog: Novo Pedido -->
-    <dialog id="dialogNovoPedido">
+    <dialog id="dialogNovoPedido" class="dialogPainel" style="min-width:560px">
         <fieldset>
             <legend>Novo Pedido de Almoxarifado</legend>
             <form id="frmNovoPedido" class="flex flex--column gap--15">
@@ -117,13 +117,14 @@
     </dialog>
 
     <!-- Dialog: Ver itens de um pedido -->
-    <dialog id="dialogVerItens">
+    <dialog id="dialogVerItens" class="dialogPainel" style="min-width:480px" data-pedido-id="" data-pedido-status="">
         <fieldset>
             <legend id="dialogVerItensLegend">Itens do Pedido #0</legend>
             <div id="dialogVerItensConteudo" class="pedido-lista-itens pedido-lista-itens--view">
                 <!-- Itens carregados via JS -->
             </div>
             <div class="row" style="margin-top:15px">
+                <button type="button" id="btnAtenderPedido" class="btnPainelFormulario cadastrarUnidade" hidden>✓ Marcar como Atendido</button>
                 <button type="button" id="btnFecharVerItens" class="btnPainelFormulario cancelarUnidade">Fechar</button>
             </div>
         </fieldset>
