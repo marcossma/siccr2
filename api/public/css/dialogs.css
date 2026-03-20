@@ -53,3 +53,23 @@
     background: none;
     color: green;
 }
+
+.login-erro {
+    margin: 0;
+    padding: 8px 12px;
+    border-radius: 5px;
+    background: #fff3f3;
+    border: 1px solid #e53935;
+    color: #c62828;
+    font-size: 13px;
+    text-align: center;
+}
+#dialogNovoPedido #frmNovoPedido {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+#dialogNovoPedido .formInput {
+    padding: 8px 10px;
+}

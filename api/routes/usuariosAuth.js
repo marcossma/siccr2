@@ -28,9 +28,9 @@ router.post("/login", async (req, res) => {
             });
         }
 
-        // JOIN com subunidades para obter is_direcao_centro
+        // JOIN com subunidades para obter is_direcao_centro e subunidade_sigla
         const user = await pool.query(
-            `SELECT u.*, s.is_direcao_centro
+            `SELECT u.*, s.is_direcao_centro, s.subunidade_sigla
              FROM users u
              LEFT JOIN subunidades s ON s.subunidade_id = u.subunidade_id
              WHERE u.siape = $1`,
@@ -64,6 +64,7 @@ router.post("/login", async (req, res) => {
             whatsapp: userData.whatsapp,
             permissao: userData.permissao,
             subunidade: userData.subunidade_id,
+            subunidade_sigla: userData.subunidade_sigla ?? null,
             unidade: userData.unidade_id,
             is_direcao_centro: userData.is_direcao_centro ?? false,
             data_nascimento: userData.data_nascimento
@@ -79,6 +80,7 @@ router.post("/login", async (req, res) => {
                 email: userData.email,
                 permissao: userData.permissao,
                 subunidade_id: userData.subunidade_id,
+                subunidade_sigla: userData.subunidade_sigla ?? null,
                 unidade_id: userData.unidade_id,
                 is_direcao_centro: userData.is_direcao_centro ?? false
             }],

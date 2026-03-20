@@ -9,7 +9,9 @@
       "WebFetch(domain:www.ufsm.br)",
       "Bash(find /c/wamp64/www/siccr2 -name painel.html -o -name admin* -type f)",
       "Bash(ls -la /c/wamp64/www/siccr2/api/*.js)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "Bash(grep -l \"adminNome\\\\|btnSair\" /c/wamp64/www/siccr2/api/public/adm/*.html)",
+      "Bash(/c/wamp64/www/siccr2/api/public/css/dialogs.css:*)"
     ]
   }
 }

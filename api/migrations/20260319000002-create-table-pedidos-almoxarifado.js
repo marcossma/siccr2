@@ -15,27 +15,19 @@ module.exports = {
                 references: { model: "subunidades", key: "subunidade_id" },
                 onDelete: "RESTRICT"
             },
-            descricao_itens: {
+            observacao: {
                 type: Sequelize.TEXT,
-                allowNull: false
-            },
-            quantidade: {
-                type: Sequelize.INTEGER,
                 allowNull: true
-            },
-            data_pedido: {
-                type: Sequelize.DATEONLY,
-                allowNull: false,
-                defaultValue: Sequelize.literal("CURRENT_DATE")
             },
             status: {
                 type: Sequelize.STRING(20),
                 allowNull: false,
                 defaultValue: "pendente"
             },
-            observacao: {
-                type: Sequelize.TEXT,
-                allowNull: true
+            data_pedido: {
+                type: Sequelize.DATEONLY,
+                allowNull: false,
+                defaultValue: Sequelize.literal("CURRENT_DATE")
             },
             createdat: {
                 type: Sequelize.DATE,

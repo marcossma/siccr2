@@ -35,18 +35,62 @@ document.addEventListener("DOMContentLoaded", function() {
             subchefe:     "Subchefe"
         };
         const cargo = labels[siccr.permissao] || "Servidor";
+        const sigla = siccr.subunidade_sigla || "";
 
         acesso.classList.add("acesso--logado");
         acesso.innerHTML = `
             <div class="usuario-avatar">${inicial}</div>
             <div class="usuario-info">
                 <span class="usuario-nome">${primeiroNome}</span>
-                <span class="usuario-cargo">${cargo}</span>
+                <span class="usuario-cargo">${cargo}${sigla ? ` · ${sigla}` : ""}</span>
             </div>
         `;
     }
 
     verificaLogin();
+
+    // ── WebSocket: notificações em tempo real ──────────────────────────────────
+    (function iniciarWS() {
+        const wsToken = localStorage.getItem("siccr_token");
+        const wsSiccr = JSON.parse(localStorage.getItem("siccr") || "null");
+        if (!wsToken || !wsSiccr) return;
+
+        const ws = new WebSocket(`ws://${window.location.host}`);
+        ws.onopen = () => ws.send(JSON.stringify({ tipo: "auth", token: wsToken }));
+        ws.onmessage = (e) => {
+            try {
+                const msg = JSON.parse(e.data);
+                if (msg.tipo === "pedido_pendente") {
+                    const p = wsSiccr.permissao;
+                    const ehSecretaria = p === "super_admin" || p === "diretor" ||
+                                        p === "vice_diretor" || wsSiccr.is_direcao_centro;
+                    if (ehSecretaria) {
+                        const info = msg.pedido;
+                        const qtd = info.total_itens;
+                        mostrarToastWS(
+                            `Novo pedido de almoxarifado — ${info.subunidade_sigla || info.subunidade_nome} ` +
+                            `(${qtd} item${qtd !== 1 ? "s" : ""})`
+                        );
+                    }
+                }
+            } catch {}
+        };
+    })();
+
+    function mostrarToastWS(mensagem) {
+        let toast = document.getElementById("wsToast");
+        if (!toast) {
+            toast = document.createElement("div");
+            toast.id = "wsToast";
+            toast.className = "ws-toast";
+            toast.innerHTML = '<i class="bi bi-bell-fill"></i> <span id="wsToastMsg"></span>';
+            document.body.appendChild(toast);
+        }
+        document.getElementById("wsToastMsg").textContent = mensagem;
+        toast.classList.add("ws-toast--visible");
+        setTimeout(() => toast.classList.remove("ws-toast--visible"), 8000);
+    }
+    // ──────────────────────────────────────────────────────────────────────────
 
     const btnEntrar = document.querySelector("#btnEntrar");
     const btnLogin = document.querySelector("#btnLogin");
@@ -143,49 +187,58 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Botão para efetuar o login
     // ==========================
-    btnLogin.addEventListener("click", function(event) {
+    btnLogin.addEventListener("click", async function(event) {
         event.preventDefault();
-        const txtLogin = document.querySelector("#txtLogin").value;
+        const txtLogin = document.querySelector("#txtLogin").value.trim();
         const txtSenha = document.querySelector("#txtSenha").value;
+        const loginErro = document.querySelector("#loginErro");
 
-        const dados = JSON.stringify({siape: txtLogin, senha: txtSenha});
+        loginErro.hidden = true;
 
-        fetch("http://localhost:15000/api/auth/login", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: dados
-        })
-        .then((response) =>  {
-            return response.json();
-        })
-        .then((data) => { 
-            // console.log(data);
+        if (!txtLogin || !txtSenha) {
+            loginErro.textContent = "Preencha o login e a senha.";
+            loginErro.hidden = false;
+            return;
+        }
+
+        try {
+            const response = await fetch("http://localhost:15000/api/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ siape: txtLogin, senha: txtSenha })
+            });
+            const data = await response.json();
+
             if (data.status === "success") {
-                const dados = {
-                    user_id: data.data[0].user_id,
-                    nome: data.data[0].nome,
-                    data_nascimento: data.data[0].data_nascimento,
-                    whatsapp: data.data[0].whatsapp,
-                    subunidade_id: data.data[0].subunidade_id,
-                    permissao: data.data[0].permissao,
+                const u = data.data[0];
+                localStorage.setItem("siccr", JSON.stringify({
+                    user_id:          u.user_id,
+                    nome:             u.nome,
+                    data_nascimento:  u.data_nascimento,
+                    whatsapp:         u.whatsapp,
+                    subunidade_id:    u.subunidade_id,
+                    subunidade_sigla: u.subunidade_sigla,
+                    unidade_id:       u.unidade_id,
+                    permissao:        u.permissao,
+                    is_direcao_centro: u.is_direcao_centro,
                     token: data.token
-                };
-
-                localStorage.setItem("siccr", JSON.stringify(dados));
+                }));
                 localStorage.setItem("siccr_token", data.token);
-                localStorage.setItem("permissao", data.data[0].permissao);
+                localStorage.setItem("permissao", u.permissao);
 
                 document.querySelector("#frmLogin").reset();
                 dialogLogin.close();
-                window.location.href = "/"; // Redireciona para a página principal para atualizar o menu
+                window.location.href = "/";
                 return;
             }
-        })
-        .catch((error) => {
-            console.log("Erro: ", error);
-        });
+
+            loginErro.textContent = data.message || "Usuário ou senha inválidos.";
+            loginErro.hidden = false;
+
+        } catch (error) {
+            loginErro.textContent = "Erro de conexão. Tente novamente.";
+            loginErro.hidden = false;
+        }
     });
 
     // Botão para fechar o formulário de login
@@ -193,6 +246,8 @@ document.addEventListener("DOMContentLoaded", function() {
     btnCancelarLogin.addEventListener("click", function(event) {
         event.preventDefault();
         document.querySelector("#frmLogin").reset();
+        const loginErro = document.querySelector("#loginErro");
+        if (loginErro) loginErro.hidden = true;
         dialogLogin.close();
     });
 
@@ -972,132 +1027,176 @@ document.addEventListener("DOMContentLoaded", function() {
     // Rotinas para a página pedido-almoxarifado.html
     // -----------------------------------------------
     if (urlParam === "/pedido-almoxarifado") {
-        const elements = getDomElements();
+        const listaPedidos          = document.getElementById("listaPedidos");
+        const btnNovoPedido         = document.getElementById("btnNovoPedido");
+        const dialogNovoPedido      = document.getElementById("dialogNovoPedido");
+        const btnCancelarNovoPedido = document.getElementById("btnCancelarNovoPedido");
+        const btnAdicionarItem      = document.getElementById("btnAdicionarItem");
+        const btnEnviarPedido       = document.getElementById("btnEnviarPedido");
+        const listaItensEl          = document.getElementById("listaItensNovoPedido");
+        const dialogVerItens        = document.getElementById("dialogVerItens");
+        const dialogVerItensLegend  = document.getElementById("dialogVerItensLegend");
+        const dialogVerItensConteudo= document.getElementById("dialogVerItensConteudo");
+        const btnFecharVerItens     = document.getElementById("btnFecharVerItens");
+        const pedidoErro            = document.getElementById("pedidoErro");
 
-        carregarDados("subunidades").then((subunidades) => {
-            elements.listaSelect[0].innerHTML = "<option value=\"\">Selecione a subunidade...</option>";
-            subunidades.forEach((s) => {
-                elements.listaSelect[0].innerHTML += `<option value="${s.subunidade_id}">${s.subunidade_nome}</option>`;
-            });
-        });
+        const badgeStatus = {
+            pendente:  '<span class="badge badge--pendente">Pendente</span>',
+            atendido:  '<span class="badge badge--atendido">Atendido</span>',
+            cancelado: '<span class="badge badge--cancelado">Cancelado</span>'
+        };
+
+        let itensNovoPedido = [];
+
+        function renderizarListaItensDialog() {
+            if (itensNovoPedido.length === 0) {
+                listaItensEl.innerHTML = '<p class="pedido-lista-vazia">Nenhum item adicionado ainda.</p>';
+                return;
+            }
+            listaItensEl.innerHTML = itensNovoPedido.map((item, idx) => `
+                <div class="pedido-item flex align--items--center gap--10">
+                    <span class="pedido-item-codigo">${item.codigo_produto || "—"}</span>
+                    <span class="pedido-item-descricao flex--1">${item.descricao_produto}</span>
+                    <span class="pedido-item-qtd">Qtd: ${item.quantidade}</span>
+                    <button type="button" class="pedido-item-remover" data-idx="${idx}" title="Remover">✕</button>
+                </div>
+            `).join("");
+        }
 
         function renderizarPedidos() {
-            elements.listaTiposRecursos.innerHTML = "";
             carregarDados("pedidos-almoxarifado").then((pedidos) => {
+                listaPedidos.innerHTML = "";
+                if (!pedidos || pedidos.length === 0) {
+                    listaPedidos.innerHTML = '<p class="pedido-lista-vazia" style="padding:15px">Nenhum pedido encontrado.</p>';
+                    return;
+                }
                 pedidos.forEach((p) => {
                     const div = document.createElement("div");
-                    div.classList.add("dados", "flex", "align--items--center", "cursor--pointer");
+                    div.classList.add("dados", "flex", "align--items--center");
                     div.innerHTML = `
-                        <div class="dado flex flex--2">${p.id_pedido}</div>
-                        <div class="dado flex flex--4">${p.subunidade_nome || "—"}</div>
-                        <div class="dado flex flex--7">${p.descricao_itens}</div>
-                        <div class="dado flex flex--2">${p.quantidade || "—"}</div>
+                        <div class="dado flex flex--1">${p.id_pedido}</div>
+                        <div class="dado flex flex--3">${p.subunidade_sigla || p.subunidade_nome || "—"}</div>
+                        <div class="dado flex flex--1">${p.total_itens}</div>
                         <div class="dado flex flex--3">${formatarData(p.data_pedido)}</div>
-                        <div class="dado flex flex--3">${p.status}</div>
-                        <div class="dado flex flex--2 font--size--20">
-                            <i class="bi bi-pencil-square editar" title="Editar"
-                                data-id_pedido="${p.id_pedido}"
-                                data-subunidade_id="${p.subunidade_id}"
-                                data-descricao_itens="${p.descricao_itens}"
-                                data-quantidade="${p.quantidade || ""}"
-                                data-data_pedido="${p.data_pedido || ""}"
-                                data-status="${p.status}"
-                                data-observacao="${p.observacao || ""}"></i>
-                            <i class="bi bi-x-square excluir" title="Excluir"
-                                data-id_pedido="${p.id_pedido}"></i>
+                        <div class="dado flex flex--3">${badgeStatus[p.status] || p.status}</div>
+                        <div class="dado flex flex--2 gap--10 font--size--20">
+                            <i class="bi bi-eye ver-itens cursor--pointer" title="Ver itens"
+                                data-id="${p.id_pedido}"></i>
+                            ${p.status !== "atendido"
+                                ? `<i class="bi bi-x-square excluir cursor--pointer" title="Excluir"
+                                    data-id="${p.id_pedido}"></i>`
+                                : ""}
                         </div>
                     `;
-                    elements.listaTiposRecursos.appendChild(div);
+                    listaPedidos.appendChild(div);
                 });
             });
         }
 
-        elements.btnAdicionar.addEventListener("click", function(event) {
-            event.preventDefault();
-            elements.fieldsetLegend.textContent = "Registrar Pedido";
-            elements.btnAtualizar.style.display = "none";
-            elements.btnAtualizar.disabled = true;
-            elements.btnCadastrar.style.display = "inline-block";
-            elements.btnCadastrar.disabled = false;
-            elements.frmUnidade.reset();
-            elements.dialogPainel.showModal();
+        // Abrir dialog de novo pedido
+        btnNovoPedido.addEventListener("click", () => {
+            itensNovoPedido = [];
+            renderizarListaItensDialog();
+            document.getElementById("pedidoObservacao").value = "";
+            pedidoErro.hidden = true;
+            dialogNovoPedido.showModal();
         });
 
-        elements.btnCancelar.addEventListener("click", function(event) {
-            event.preventDefault();
-            elements.frmUnidade.reset();
-            elements.dialogPainel.close();
+        btnCancelarNovoPedido.addEventListener("click", () => dialogNovoPedido.close());
+
+        // Adicionar item à lista temporária
+        btnAdicionarItem.addEventListener("click", () => {
+            const codigo   = document.getElementById("itemCodigo").value.trim();
+            const descricao= document.getElementById("itemDescricao").value.trim();
+            const qtd      = parseInt(document.getElementById("itemQtd").value) || 1;
+            if (!descricao) {
+                document.getElementById("itemDescricao").focus();
+                return;
+            }
+            itensNovoPedido.push({ codigo_produto: codigo || null, descricao_produto: descricao, quantidade: qtd });
+            document.getElementById("itemCodigo").value = "";
+            document.getElementById("itemDescricao").value = "";
+            document.getElementById("itemQtd").value = "1";
+            document.getElementById("itemDescricao").focus();
+            renderizarListaItensDialog();
         });
 
-        elements.btnCadastrar.addEventListener("click", function(event) {
-            event.preventDefault();
-            const objData = Object.fromEntries(new FormData(elements.frmUnidade).entries());
-            fetch(`${apiUrl}/pedidos-almoxarifado`, {
-                method: "POST",
-                body: JSON.stringify({
-                    subunidade_id: objData.subunidade_id,
-                    descricao_itens: objData.descricao_itens,
-                    quantidade: objData.quantidade || null,
-                    data_pedido: objData.data_pedido || null,
-                    status: objData.status || "pendente",
-                    observacao: objData.observacao || null
-                })
-            }).then(() => {
-                renderizarPedidos();
-                elements.frmUnidade.reset();
-                elements.dialogPainel.close();
-            });
+        // Remover item da lista temporária
+        listaItensEl.addEventListener("click", (e) => {
+            if (e.target.classList.contains("pedido-item-remover")) {
+                itensNovoPedido.splice(parseInt(e.target.dataset.idx), 1);
+                renderizarListaItensDialog();
+            }
         });
 
-        elements.btnAtualizar.addEventListener("click", function(event) {
-            event.preventDefault();
-            const objData = Object.fromEntries(new FormData(elements.frmUnidade).entries());
-            fetch(`${apiUrl}/pedidos-almoxarifado/${objData.id_pedido}`, {
-                method: "PUT",
-                body: JSON.stringify({
-                    subunidade_id: objData.subunidade_id,
-                    descricao_itens: objData.descricao_itens,
-                    quantidade: objData.quantidade || null,
-                    data_pedido: objData.data_pedido || null,
-                    status: objData.status || "pendente",
-                    observacao: objData.observacao || null
-                })
-            }).then(() => {
-                renderizarPedidos();
-                elements.frmUnidade.reset();
-                elements.dialogPainel.close();
-            });
+        // Enviar pedido para a secretaria
+        btnEnviarPedido.addEventListener("click", async () => {
+            pedidoErro.hidden = true;
+            if (itensNovoPedido.length === 0) {
+                pedidoErro.textContent = "Adicione pelo menos um item antes de enviar.";
+                pedidoErro.hidden = false;
+                return;
+            }
+            const observacao = document.getElementById("pedidoObservacao").value.trim();
+            try {
+                const response = await fetch(`${apiUrl}/pedidos-almoxarifado`, {
+                    method: "POST",
+                    body: JSON.stringify({ observacao: observacao || null, itens: itensNovoPedido })
+                });
+                const data = await response.json();
+                if (data.status === "success") {
+                    dialogNovoPedido.close();
+                    renderizarPedidos();
+                } else {
+                    pedidoErro.textContent = data.message || "Erro ao enviar pedido.";
+                    pedidoErro.hidden = false;
+                }
+            } catch {
+                pedidoErro.textContent = "Erro de conexão. Tente novamente.";
+                pedidoErro.hidden = false;
+            }
         });
 
-        elements.listaTiposRecursos.addEventListener("click", function(event) {
-            if (event.target.classList.contains("editar")) {
-                const d = event.target.dataset;
-                elements.fieldsetLegend.textContent = "Editar Pedido";
-                elements.btnCadastrar.style.display = "none";
-                elements.btnCadastrar.disabled = true;
-                elements.btnAtualizar.style.display = "inline-block";
-                elements.btnAtualizar.disabled = false;
-
-                document.querySelector("#id_pedido").value = d.id_pedido;
-                elements.listaSelect[0].value = d.subunidade_id;
-                document.querySelector("#descricao_itens").value = d.descricao_itens;
-                document.querySelector("#quantidade").value = d.quantidade;
-                document.querySelector("#data_pedido").value = d.data_pedido;
-                document.querySelector("#status").value = d.status;
-                document.querySelector("#observacao").value = d.observacao;
-
-                elements.dialogPainel.showModal();
+        // Ações na lista (ver itens / excluir)
+        listaPedidos.addEventListener("click", async (e) => {
+            if (e.target.classList.contains("ver-itens")) {
+                const id = e.target.dataset.id;
+                dialogVerItensLegend.textContent = `Itens do Pedido #${id}`;
+                dialogVerItensConteudo.innerHTML = "Carregando...";
+                dialogVerItens.showModal();
+                const response = await fetch(`${apiUrl}/pedidos-almoxarifado/${id}/itens`);
+                const data = await response.json();
+                if (data.status === "success" && data.data.length > 0) {
+                    dialogVerItensConteudo.innerHTML = data.data.map(item => `
+                        <div class="pedido-item flex gap--10">
+                            <span class="pedido-item-codigo">${item.codigo_produto || "—"}</span>
+                            <span class="pedido-item-descricao flex--1">${item.descricao_produto}</span>
+                            <span class="pedido-item-qtd">Qtd: ${item.quantidade}</span>
+                        </div>
+                    `).join("");
+                } else {
+                    dialogVerItensConteudo.innerHTML = '<p class="pedido-lista-vazia">Nenhum item encontrado.</p>';
+                }
             }
 
-            if (event.target.classList.contains("excluir")) {
-                const d = event.target.dataset;
-                if (confirm("Deseja excluir este pedido? Essa ação não pode ser desfeita.")) {
-                    excluirDado(d.id_pedido, "pedidos-almoxarifado").then(() => {
+            if (e.target.classList.contains("excluir")) {
+                const id = e.target.dataset.id;
+                if (!confirm("Deseja excluir este pedido? Essa ação não pode ser desfeita.")) return;
+                try {
+                    const response = await fetch(`${apiUrl}/pedidos-almoxarifado/${id}`, { method: "DELETE" });
+                    const data = await response.json();
+                    if (data.status === "success") {
                         renderizarPedidos();
-                    });
+                    } else {
+                        alert(data.message);
+                    }
+                } catch {
+                    alert("Erro de conexão.");
                 }
             }
         });
+
+        btnFecharVerItens.addEventListener("click", () => dialogVerItens.close());
 
         renderizarPedidos();
     }

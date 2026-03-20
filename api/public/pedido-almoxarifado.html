@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SICCR - Sistema Integrado Centro de Ciências Rurais</title>
+    <title>SICCR - Pedidos de Almoxarifado</title>
     <link rel="shortcut icon" href="./img/favicon.png" type="image/x-icon">
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/dialogs.css">
@@ -29,22 +29,21 @@
 
             <section class="titulo_secao flex justify--space--between align--items--center">
                 <h1>Pedidos de Almoxarifado</h1>
-                <button class="btn_adicionar">+ Adicionar</button>
+                <button class="btn_adicionar" id="btnNovoPedido">+ Novo Pedido</button>
             </section>
 
+            <!-- Lista de pedidos -->
             <section class="divListaTiposRecursos informacoes_painel">
                 <div class="cabecalho flex">
-                    <div class="titulo flex flex--2">Cód.</div>
-                    <div class="titulo flex flex--4">Subunidade</div>
-                    <div class="titulo flex flex--7">Itens Solicitados</div>
-                    <div class="titulo flex flex--2">Qtd.</div>
+                    <div class="titulo flex flex--1">Nº</div>
+                    <div class="titulo flex flex--3">Setor</div>
+                    <div class="titulo flex flex--1">Itens</div>
                     <div class="titulo flex flex--3">Data</div>
                     <div class="titulo flex flex--3">Status</div>
                     <div class="titulo flex flex--2">Ações</div>
                 </div>
-
-                <div class="listaTiposRecursos">
-                    <!-- Pedidos serão carregados dinamicamente -->
+                <div id="listaPedidos">
+                    <!-- Pedidos carregados via JS -->
                 </div>
             </section>
 
@@ -52,12 +51,10 @@
         <footer>Rodapé</footer>
     </div>
 
-
     <!-- Formulário de Login DIALOG -->
     <dialog id="dialogLogin">
         <fieldset>
             <legend>Login</legend>
-
             <form id="frmLogin">
                 <div class="row">
                     <input type="text" name="txtLogin" id="txtLogin" class="formInput" placeholder="Digite o seu login">
@@ -65,68 +62,78 @@
                 <div class="row">
                     <input type="password" name="txtSenha" id="txtSenha" class="formInput" placeholder="Digite a sua senha">
                 </div>
+                <p id="loginErro" class="login-erro" hidden></p>
                 <div class="row">
-                    <button id="btnLogin">Entrar</button>
-                    <button id="btnCancelarLogin">Cancelar</button>
+                    <button id="btnLogin" type="button">Entrar</button>
+                    <button id="btnCancelarLogin" type="button">Cancelar</button>
                 </div>
             </form>
         </fieldset>
     </dialog>
-    <!-- Fim formulário de Login DIALOG -->
 
-    <!-- Formulário de pedido -->
-    <dialog class="dialogPainel unidades">
+    <!-- Dialog: Novo Pedido -->
+    <dialog id="dialogNovoPedido">
         <fieldset>
-            <legend>Registrar Pedido de Almoxarifado</legend>
+            <legend>Novo Pedido de Almoxarifado</legend>
+            <form id="frmNovoPedido" class="flex flex--column gap--15">
 
-            <form class="frmCadastroPainel frmUnidade flex flex--column gap--15">
-                <input type="hidden" name="id_pedido" id="id_pedido">
-
-                <div class="row">
-                    <select name="subunidade_id" id="subunidade_id" class="listaSelect formInput width--100">
-                        <option value="">Selecione a subunidade...</option>
-                    </select>
-                    <label for="subunidade_id" class="painelLabel">Subunidade solicitante</label>
+                <!-- Seção: adicionar item à lista -->
+                <div class="pedido-secao-titulo">Itens do Pedido</div>
+                <div class="pedido-add-item flex gap--10 align--items--end">
+                    <div class="flex flex--column gap--5 flex--1">
+                        <label class="painelLabel" for="itemCodigo">Código (opcional)</label>
+                        <input type="text" id="itemCodigo" class="formInput" placeholder="Ex: 001234">
+                    </div>
+                    <div class="flex flex--column gap--5 flex--4">
+                        <label class="painelLabel" for="itemDescricao">Descrição do produto <span class="obrigatorio">*</span></label>
+                        <input type="text" id="itemDescricao" class="formInput" placeholder="Ex: Resma de papel A4 75g">
+                    </div>
+                    <div class="flex flex--column gap--5 flex--1">
+                        <label class="painelLabel" for="itemQtd">Qtd. <span class="obrigatorio">*</span></label>
+                        <input type="number" id="itemQtd" class="formInput" value="1" min="1">
+                    </div>
+                    <button type="button" id="btnAdicionarItem" class="btnPainelFormulario" style="height:38px">+ Adicionar</button>
                 </div>
 
-                <div class="row">
-                    <textarea name="descricao_itens" id="descricao_itens" class="formInput width--100" placeholder="Descreva os itens solicitados..."></textarea>
-                    <label for="descricao_itens" class="painelLabel">Itens solicitados</label>
+                <!-- Lista de itens adicionados -->
+                <div id="listaItensNovoPedido" class="pedido-lista-itens">
+                    <p class="pedido-lista-vazia">Nenhum item adicionado ainda.</p>
                 </div>
 
-                <div class="row">
-                    <input type="number" name="quantidade" id="quantidade" class="formInput width--100" placeholder="Quantidade (opcional)" min="1">
-                    <label for="quantidade" class="painelLabel">Quantidade total (opcional)</label>
+                <!-- Observação geral -->
+                <div class="flex flex--column gap--5">
+                    <label class="painelLabel" for="pedidoObservacao">Observação (opcional)</label>
+                    <textarea id="pedidoObservacao" class="formInput" rows="2" placeholder="Informações adicionais para a secretaria..."></textarea>
                 </div>
 
-                <div class="row">
-                    <input type="date" name="data_pedido" id="data_pedido" class="formInput width--100">
-                    <label for="data_pedido" class="painelLabel">Data do pedido</label>
-                </div>
+                <p id="pedidoErro" class="login-erro" hidden></p>
 
                 <div class="row">
-                    <select name="status" id="status" class="formInput width--100">
-                        <option value="pendente">Pendente</option>
-                        <option value="atendido">Atendido</option>
-                        <option value="cancelado">Cancelado</option>
-                    </select>
-                    <label for="status" class="painelLabel">Status</label>
-                </div>
-
-                <div class="row">
-                    <textarea name="observacao" id="observacao" class="formInput width--100" placeholder="Observações (opcional)..."></textarea>
-                    <label for="observacao" class="painelLabel">Observação (opcional)</label>
-                </div>
-
-                <div class="row">
-                    <button type="button" class="btnPainelFormulario cadastrarUnidade">Cadastrar</button>
-                    <button type="button" class="btnPainelFormulario atualizarUnidade">Atualizar</button>
-                    <button type="button" class="btnPainelFormulario cancelarUnidade">Cancelar</button>
+                    <button type="button" id="btnEnviarPedido" class="btnPainelFormulario cadastrarUnidade">Enviar para Secretaria</button>
+                    <button type="button" id="btnCancelarNovoPedido" class="btnPainelFormulario cancelarUnidade">Cancelar</button>
                 </div>
             </form>
         </fieldset>
     </dialog>
-    <!-- Fim formulário de pedido -->
+
+    <!-- Dialog: Ver itens de um pedido -->
+    <dialog id="dialogVerItens">
+        <fieldset>
+            <legend id="dialogVerItensLegend">Itens do Pedido #0</legend>
+            <div id="dialogVerItensConteudo" class="pedido-lista-itens pedido-lista-itens--view">
+                <!-- Itens carregados via JS -->
+            </div>
+            <div class="row" style="margin-top:15px">
+                <button type="button" id="btnFecharVerItens" class="btnPainelFormulario cancelarUnidade">Fechar</button>
+            </div>
+        </fieldset>
+    </dialog>
+
+    <!-- Toast de notificação WS -->
+    <div id="wsToast" class="ws-toast" hidden>
+        <i class="bi bi-bell-fill"></i>
+        <span id="wsToastMsg"></span>
+    </div>
 
     <script type="module" src="./js/components/index.js"></script>
 </body>

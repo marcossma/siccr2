@@ -9,6 +9,7 @@ const http = require("http");
 const cors = require("cors");
 const helmet = require("helmet");
 const WebSocket = require("ws");
+const jwt = require("jsonwebtoken");
 
 // Importar rotas dos usuários
 const usuariosRoutes = require("./routes/usuarios.js");
@@ -32,8 +33,6 @@ const tiposDespesas = require("./routes/tipos-despesas.js");
 const despesas = require("./routes/despesas.js");
 // Importar rotas para recursos recebidos
 const recursosRecebidos = require("./routes/recursos-recebidos.js");
-// Importar rotas para pedidos de almoxarifado
-const pedidosAlmoxarifado = require("./routes/pedidos-almoxarifado.js");
 // Importar rotas para previsões de despesas
 const previsoesDespesas = require("./routes/previsoes-despesas.js");
 // Importar rotas para relatórios
@@ -57,7 +56,7 @@ const app = express();
 app.use(express.json());
 app.use(cors({
     origin: process.env.CORS_ORIGIN || "http://localhost:15000",
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
 app.use(helmet({
@@ -68,6 +67,48 @@ app.use(helmet({
         }
     }
 }));
+
+// ────────────────────────────────────────────────────────────
+//  Criar servidor HTTP e WebSocket antes de registrar rotas
+//  (necessário para passar wss ao factory de pedidos)
+// ────────────────────────────────────────────────────────────
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+
+// Autenticação WebSocket via token enviado na primeira mensagem
+wss.on("connection", (ws) => {
+    ws.autenticado = false;
+
+    // Timeout: se não autenticar em 10s, encerra
+    const authTimeout = setTimeout(() => {
+        if (!ws.autenticado) ws.terminate();
+    }, 10000);
+
+    ws.on("message", (data) => {
+        try {
+            const msg = JSON.parse(data);
+            if (msg.tipo === "auth" && msg.token) {
+                const usuario = jwt.verify(msg.token, process.env.JWT_SECRET);
+                ws.usuario = usuario;
+                ws.autenticado = true;
+                clearTimeout(authTimeout);
+                ws.send(JSON.stringify({ tipo: "auth_ok" }));
+            }
+        } catch {
+            // Ignora mensagens inválidas
+        }
+    });
+
+    ws.on("close", () => {
+        clearTimeout(authTimeout);
+    });
+});
+
+// ──────────────────────────────────────────────────────
+//  Rotas de pedidos de almoxarifado (recebe wss)
+// ──────────────────────────────────────────────────────
+const pedidosAlmoxarifadoFactory = require("./routes/pedidos-almoxarifado.js");
+const pedidosAlmoxarifado = pedidosAlmoxarifadoFactory(wss);
 
 // ##############
 //  Rotas de API
@@ -98,16 +139,14 @@ app.use("/api/eventos", eventos);
 // Usuários: chefe gerencia seu setor, diretor gerencia centro, super_admin tudo
 app.use("/api/usuarios",          autenticar, autorizar("chefe"),       usuariosRoutes);
 
-// Estrutura (unidades, subunidades, prédios): somente diretor+ pode criar/editar
-// A rota GET fica aberta para autenticados; POST/PUT/DELETE exigem diretor+
-// O controle granular é feito dentro de cada rota
+// Estrutura (unidades, subunidades, prédios)
 app.use("/api/unidades",          autenticar, autorizar("diretor"),      unidadesRoutes);
 app.use("/api/predios",           autenticar, autorizar("chefe"),        prediosRoutes);
 app.use("/api/subunidades",       autenticar, autorizar("chefe"),        subunidadesRoutes);
 app.use("/api/salas",             autenticar, autorizar("chefe"),        salasRoutes);
 app.use("/api/salas-tipo",        autenticar, autorizar("chefe"),        salasTipoRoutes);
 
-// Financeiro: chefe+ (ou servidor com permissão — controlado dentro das rotas)
+// Financeiro
 app.use("/api/tipos-recursos",       autenticar, autorizar("chefe"),        tiposRecursos);
 app.use("/api/tipos-despesas",       autenticar, autorizar("chefe"),        tiposDespesas);
 app.use("/api/despesas",             autenticar, autorizar("chefe"),        despesas);
@@ -137,40 +176,6 @@ app.get("/*", (req, res) => {
                 message: "Página não encontrada!"
             });
         }
-    });
-});
-
-
-
-
-// Criar o servidor HTTP
-const server = http.createServer(app);
-
-// Criar o servidor WebSocket
-const wss = new WebSocket.Server({ server });
-
-// Configurando os eventos WebSocket
-wss.on("connection", (ws) => {
-    console.log("Novo cliente conectado!");
-
-    // Enviar mensagem ao cliente conectado
-    ws.send("Bem vindo ao WebSocket Server!");
-
-    // Evento: Quando o servidor recebe uma mensagem do cliente
-    ws.on("message", (message) => {
-        console.log(`Mensagem recebida do cliente: ${message}`);
-
-        // Enviar uma resposta para todos os clientes conectados
-        wss.clients.forEach((cliente) => {
-            if (cliente.readyState === WebSocket.OPEN) {
-                cliente.send(`Servidor recebeu: ${message}`);
-            }
-        });
-    });
-
-    // Evento: Quando o cliente se desconecta
-    ws.on("close", () => {
-        console.log("Cliente desconectado!");
     });
 });
 

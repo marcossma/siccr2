@@ -18,21 +18,31 @@ document.addEventListener("DOMContentLoaded", function() {
     const apiUrl = "http://localhost:15000/api";
     const urlParam = window.location.pathname;
 
-    // Exibir nome do admin no cabeçalho e configurar logout
+    // Exibir usuário logado no cabeçalho
     const siccr = JSON.parse(localStorage.getItem("siccr") || "null");
-    const adminNomeEl = document.querySelector("#adminNome");
-    const btnSair = document.querySelector("#btnSair");
+    const acesso = document.querySelector(".acesso");
 
-    if (siccr && adminNomeEl) adminNomeEl.textContent = siccr.nome;
+    if (siccr && acesso) {
+        const primeiroNome = siccr.nome.trim().split(" ")[0];
+        const inicial = primeiroNome[0].toUpperCase();
+        const labels = {
+            super_admin:  "Super Admin",
+            diretor:      "Diretor",
+            vice_diretor: "Vice-Diretor",
+            chefe:        "Chefe",
+            subchefe:     "Subchefe"
+        };
+        const cargo = labels[siccr.permissao] || "Servidor";
+        const sigla = siccr.subunidade_sigla || "";
 
-    if (btnSair) {
-        btnSair.addEventListener("click", function(e) {
-            e.preventDefault();
-            localStorage.removeItem("siccr");
-            localStorage.removeItem("siccr_token");
-            localStorage.removeItem("permissao");
-            window.location.replace("/adm/login");
-        });
+        acesso.classList.add("acesso--logado");
+        acesso.innerHTML = `
+            <div class="usuario-avatar">${inicial}</div>
+            <div class="usuario-info">
+                <span class="usuario-nome">${primeiroNome}</span>
+                <span class="usuario-cargo">${cargo}${sigla ? ` · ${sigla}` : ""}</span>
+            </div>
+        `;
     }
 
     // ─── Funções de carregamento de dados ───────────────────────────────────
