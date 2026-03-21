@@ -14,7 +14,7 @@ const pool = require("./config/database.js");
 async function setAdmin(siape) {
     try {
         const result = await pool.query(
-            "UPDATE users SET permissao = 'admin' WHERE siape = $1 RETURNING user_id, nome, siape, permissao",
+            "UPDATE users SET permissao = 'super_admin' WHERE siape = $1 RETURNING user_id, nome, siape, permissao",
             [siape]
         );
 
@@ -36,7 +36,7 @@ async function setAdmin(siape) {
 const [,, siape] = process.argv;
 
 if (!siape) {
-    console.error("Uso: node set-admin.js <siape>");
+    console.error("Uso: node set-super-admin.js <siape>");
     process.exit(1);
 }
 

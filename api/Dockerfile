@@ -1,7 +1,7 @@
 FROM node:20-alpine
 
 # Instalar bash e curl (necessários para o entrypoint e healthcheck)
-RUN apk add --no-cache bash curl
+RUN apk add --no-cache bash curl dos2unix
 
 WORKDIR /app
 
@@ -13,8 +13,8 @@ RUN npm ci --omit=dev
 # Copiar o restante do código
 COPY . .
 
-# Tornar o entrypoint executável
-RUN chmod +x entrypoint.sh
+# Corrigir line endings (CRLF→LF) e tornar executável
+RUN dos2unix entrypoint.sh && chmod +x entrypoint.sh
 
 EXPOSE 15000
 
