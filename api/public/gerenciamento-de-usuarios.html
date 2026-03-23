@@ -29,6 +29,9 @@
 
             <section class="titulo_secao flex justify--space--between align--items--center">
                 <h1>Gerenciamento de Usuários</h1>
+                <button type="button" id="btnNovoUsuario" class="btnPainelFormulario cadastrarUnidade">
+                    + Novo Usuário
+                </button>
             </section>
 
             <!-- Lista de usuários -->
@@ -38,7 +41,7 @@
                     <div class="titulo flex flex--2">SIAPE</div>
                     <div class="titulo flex flex--3">Cargo</div>
                     <div class="titulo flex flex--3">Subunidade</div>
-                    <div class="titulo flex flex--2">Ações</div>
+                    <div class="titulo flex flex--3">Ações</div>
                 </div>
                 <div id="listaUsuarios">
                     <!-- Carregado via JS -->
@@ -64,6 +67,64 @@
                 <div class="row">
                     <button id="btnLogin" type="button">Entrar</button>
                     <button id="btnCancelarLogin" type="button">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+
+    <!-- Dialog: Cadastro / Edição de usuário -->
+    <dialog id="dialogUsuario" class="dialogPainel">
+        <fieldset>
+            <legend id="dialogUsuarioLegend">Novo Usuário</legend>
+            <form id="frmUsuario" class="frmCadastroPainel flex flex--column gap--15">
+
+                <div class="row">
+                    <input type="text" id="usuNome" class="formInput width--100" placeholder="Nome completo do servidor">
+                    <label class="painelLabel" for="usuNome">Nome completo *</label>
+                </div>
+                <div class="row">
+                    <input type="text" id="usuSiape" class="formInput width--100" placeholder="Ex.: 1234567">
+                    <label class="painelLabel" for="usuSiape">SIAPE *</label>
+                </div>
+                <div class="row">
+                    <input type="email" id="usuEmail" class="formInput width--100" placeholder="email@ufsm.br">
+                    <label class="painelLabel" for="usuEmail">E-mail institucional</label>
+                </div>
+                <div class="row">
+                    <input type="text" id="usuWhatsapp" class="formInput width--100" placeholder="(55) 99999-9999">
+                    <label class="painelLabel" for="usuWhatsapp">WhatsApp</label>
+                </div>
+                <div class="row">
+                    <input type="date" id="usuDataNasc" class="formInput width--100">
+                    <label class="painelLabel" for="usuDataNasc">Data de nascimento</label>
+                </div>
+                <div class="row">
+                    <select id="usuPermissao" class="formInput width--100">
+                        <!-- Preenchido via JS conforme nível do usuário logado -->
+                    </select>
+                    <label class="painelLabel" for="usuPermissao">Cargo / Permissão</label>
+                </div>
+
+                <!-- Subunidade — visível apenas para diretor e super_admin -->
+                <div class="row" id="rowSubunidade">
+                    <select id="usuSubunidade" class="formInput width--100">
+                        <option value="">Selecione a subunidade...</option>
+                    </select>
+                    <label class="painelLabel" for="usuSubunidade">Subunidade de lotação</label>
+                </div>
+
+                <!-- Senha — obrigatória no cadastro, opcional na edição -->
+                <div class="row">
+                    <input type="password" id="usuSenha" class="formInput width--100" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+                    <label class="painelLabel" for="usuSenha" id="labelSenha">Senha *</label>
+                </div>
+
+                <p id="usuarioErro" class="login-erro" hidden></p>
+
+                <div class="row">
+                    <button type="button" id="btnCadastrarUsuario" class="btnPainelFormulario cadastrarUnidade">Cadastrar</button>
+                    <button type="button" id="btnAtualizarUsuario" class="btnPainelFormulario atualizarUnidade" hidden>Atualizar</button>
+                    <button type="button" id="btnCancelarUsuario" class="btnPainelFormulario cancelarUnidade">Cancelar</button>
                 </div>
             </form>
         </fieldset>

@@ -3,12 +3,13 @@ class MenuNavegacaoAdm extends HTMLElement {
         const pagina = window.location.pathname;
 
         const itens = [
-            { href: "/adm/unidades",    icone: "bi-globe",        label: "Unidades" },
+            { href: "/adm/unidades",    icone: "bi-globe",         label: "Unidades" },
             { href: "/adm/subunidades", icone: "bi-globe-americas", label: "Subunidades" },
-            { href: "/adm/usuarios",    icone: "bi-people",        label: "Usuários" },
-            { href: "/adm/predios",     icone: "bi-buildings",     label: "Prédios" },
-            { href: "/adm/salas",       icone: "bi-door-closed",   label: "Salas" },
-            { href: "/adm/salas-tipo",  icone: "bi-bookmarks",     label: "Tipos de sala" },
+            { href: "/adm/usuarios",    icone: "bi-people",         label: "Usuários" },
+            { href: "/adm/predios",     icone: "bi-buildings",      label: "Prédios" },
+            { href: "/adm/salas",       icone: "bi-door-closed",    label: "Salas" },
+            { href: "/adm/salas-tipo",  icone: "bi-bookmarks",      label: "Tipos de sala" },
+            { href: "/adm/api-keys",    icone: "bi-key",            label: "API Keys" },
         ];
 
         this.innerHTML = `

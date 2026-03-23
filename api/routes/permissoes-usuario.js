@@ -80,6 +80,23 @@ router.post("/", async (req, res) => {
                     data: null
                 });
             }
+
+            // Verificar se o chefe tem autoridade sobre esta funcionalidade
+            const { rows: func } = await pool.query(
+                "SELECT subunidade_responsavel_id FROM funcionalidades WHERE id = $1",
+                [funcionalidade_id]
+            );
+            if (!func.length) {
+                return res.status(404).json({ status: "error", message: "Funcionalidade não encontrada.", data: null });
+            }
+            const subResp = func[0].subunidade_responsavel_id;
+            if (subResp !== null && subResp !== solicitante.subunidade) {
+                return res.status(403).json({
+                    status: "error",
+                    message: "Esta permissão só pode ser concedida pelo chefe do setor responsável.",
+                    data: null
+                });
+            }
         }
 
         await pool.query(
@@ -115,12 +132,29 @@ router.delete("/:id", async (req, res) => {
         }
 
         const nivelSolicitante = getNivelAcesso(solicitante);
-        if (nivelSolicitante === "chefe" && rows[0].subunidade_id !== solicitante.subunidade) {
-            return res.status(403).json({
-                status: "error",
-                message: "Acesso negado. Usuário não pertence à sua subunidade.",
-                data: null
-            });
+        if (nivelSolicitante === "chefe") {
+            if (rows[0].subunidade_id !== solicitante.subunidade) {
+                return res.status(403).json({
+                    status: "error",
+                    message: "Acesso negado. Usuário não pertence à sua subunidade.",
+                    data: null
+                });
+            }
+            // Verificar se o chefe tem autoridade sobre esta funcionalidade
+            const { rows: func } = await pool.query(
+                "SELECT subunidade_responsavel_id FROM funcionalidades WHERE id = $1",
+                [rows[0].funcionalidade_id]
+            );
+            if (func.length) {
+                const subResp = func[0].subunidade_responsavel_id;
+                if (subResp !== null && subResp !== solicitante.subunidade) {
+                    return res.status(403).json({
+                        status: "error",
+                        message: "Esta permissão só pode ser revogada pelo chefe do setor responsável.",
+                        data: null
+                    });
+                }
+            }
         }
 
         await pool.query("DELETE FROM permissoes_usuario WHERE id = $1", [id]);

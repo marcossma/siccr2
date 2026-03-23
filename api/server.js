@@ -57,7 +57,7 @@ app.use(express.json());
 app.use(cors({
     origin: process.env.CORS_ORIGIN || "http://localhost:15000",
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: ["Content-Type", "Authorization", "X-Api-Key"]
 }));
 app.use(helmet({
     contentSecurityPolicy: {
@@ -160,6 +160,10 @@ app.use("/api/funcionalidades",   autenticar, autorizar("chefe"),        funcion
 
 // Permissões de usuário: chefe concede/revoga permissões aos seus servidores
 app.use("/api/permissoes-usuario",autenticar, autorizar("chefe"),        permissoesUsuario);
+
+// API Keys: geração e gerenciamento (super_admin via painel, validação via middleware)
+const apiKeysRoutes = require("./routes/api-keys.js");
+app.use("/api/api-keys", autenticar, apiKeysRoutes);
 
 // Configurar o uso de arquivos estáticos
 app.use(express.static(path.join(__dirname, "public")));

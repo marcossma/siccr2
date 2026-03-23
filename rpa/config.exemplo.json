@@ -1,0 +1,8 @@
+{
+    "api_base_url": "http://IP_DO_SERVIDOR:15000/api",
+    "api_key": "siccr_COLE_AQUI_A_CHAVE_GERADA_NO_PAINEL_ADMIN",
+    "sie_exe_path": "\\\\saccr3.ccr.ufsm.br\\appufsm\\Executaveis\\GCANavegacao.exe",
+    "sie_window_title": "GCA",
+    "sie_usuario": "usuario_do_sie",
+    "sie_senha": "senha_do_sie"
+}

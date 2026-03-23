@@ -938,4 +938,144 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     } // fim /adm/salas-tipo
 
+    // ── /adm/api-keys ──────────────────────────────────────────────────────
+    if (urlParam === "/adm/api-keys") {
+        const listaApiKeys      = document.querySelector(".listaApiKeys");
+        const dialogGerar       = document.querySelector(".dialogPainel.apiKeys");
+        const dialogKeyGerada   = document.querySelector(".dialogPainel.apiKeyGerada");
+        const legendApiKeyGerada= document.getElementById("legendApiKeyGerada");
+        const apiKeyValor       = document.getElementById("apiKeyValor");
+        const apiKeySubunidade  = document.getElementById("apiKeySubunidade");
+        const apiKeyDescricao   = document.getElementById("apiKeyDescricao");
+
+        async function carregarSubunidades() {
+            const r = await fetch(`${apiUrl}/subunidades`);
+            const d = await r.json();
+            if (d.status === "success") {
+                apiKeySubunidade.innerHTML = '<option value="">Selecione a subunidade...</option>'
+                    + d.data.map(s =>
+                        `<option value="${s.subunidade_id}">${s.subunidade_nome}${s.subunidade_sigla ? " (" + s.subunidade_sigla + ")" : ""}</option>`
+                    ).join("");
+            }
+        }
+
+        function badgeAtivo(ativo) {
+            return ativo
+                ? '<span style="color:#009536;font-weight:bold">Ativa</span>'
+                : '<span style="color:red;font-weight:bold">Inativa</span>';
+        }
+
+        async function renderizarApiKeys() {
+            const r = await fetch(`${apiUrl}/api-keys`);
+            const d = await r.json();
+            listaApiKeys.innerHTML = "";
+            if (!d.data || d.data.length === 0) {
+                listaApiKeys.innerHTML = '<p style="padding:15px">Nenhuma API Key cadastrada.</p>';
+                return;
+            }
+            d.data.forEach(k => {
+                const div = document.createElement("div");
+                div.classList.add("dados", "flex", "align--items--center");
+                div.innerHTML = `
+                    <div class="dado flex flex--4">${k.subunidade_nome}</div>
+                    <div class="dado flex flex--2">${k.subunidade_sigla || "—"}</div>
+                    <div class="dado flex flex--5">${k.descricao || "—"}</div>
+                    <div class="dado flex flex--4" style="font-family:monospace;font-size:11px">${k.api_key_preview}</div>
+                    <div class="dado flex flex--2">${badgeAtivo(k.is_active)}</div>
+                    <div class="dado flex flex--2" style="font-size:11px">${k.created_at ? new Date(k.created_at).toLocaleDateString("pt-BR") : "—"}</div>
+                    <div class="dado flex flex--2 gap--10 font--size--20">
+                        <i class="bi bi-arrow-repeat cursor--pointer regenerar-key" title="Regenerar chave"
+                           data-id="${k.id}" data-sub="${k.subunidade_nome}"></i>
+                        <i class="bi ${k.is_active ? "bi-toggle-on" : "bi-toggle-off"} cursor--pointer toggle-key"
+                           title="${k.is_active ? "Desativar" : "Ativar"}"
+                           data-id="${k.id}" data-ativo="${k.is_active}"></i>
+                        <i class="bi bi-trash excluir cursor--pointer excluir-key" title="Excluir chave"
+                           data-id="${k.id}" data-sub="${k.subunidade_nome}"></i>
+                    </div>
+                `;
+                listaApiKeys.appendChild(div);
+            });
+        }
+
+        function exibirKeyGerada(chaveCompleta, titulo) {
+            legendApiKeyGerada.textContent = titulo || "Chave gerada";
+            apiKeyValor.textContent = chaveCompleta;
+            dialogKeyGerada.showModal();
+        }
+
+        document.querySelector(".btnNovaApiKey").addEventListener("click", () => {
+            carregarSubunidades();
+            apiKeyDescricao.value = "";
+            dialogGerar.showModal();
+        });
+
+        document.querySelector(".cadastrarApiKey").addEventListener("click", async () => {
+            const subId = apiKeySubunidade.value;
+            if (!subId) { alert("Selecione uma subunidade."); return; }
+            const r = await fetch(`${apiUrl}/api-keys`, {
+                method: "POST",
+                body: JSON.stringify({
+                    subunidade_id: parseInt(subId),
+                    descricao: apiKeyDescricao.value.trim() || null
+                })
+            });
+            const d = await r.json();
+            if (d.status === "success") {
+                dialogGerar.close();
+                exibirKeyGerada(d.data.api_key_full, "Chave gerada — copie agora!");
+                renderizarApiKeys();
+            } else {
+                alert(d.message || "Erro ao gerar chave.");
+            }
+        });
+
+        document.querySelectorAll(".cancelarApiKey").forEach(btn => {
+            btn.addEventListener("click", () => { dialogGerar.close(); dialogKeyGerada.close(); });
+        });
+
+        document.querySelector(".btnCopiarKey").addEventListener("click", () => {
+            navigator.clipboard.writeText(apiKeyValor.textContent)
+                .then(() => alert("Chave copiada para a área de transferência."));
+        });
+
+        document.querySelector(".btnFecharKeyGerada").addEventListener("click", () => {
+            dialogKeyGerada.close();
+        });
+
+        listaApiKeys.addEventListener("click", async (e) => {
+            const iconRegen = e.target.closest(".regenerar-key");
+            if (iconRegen) {
+                const { id, sub } = iconRegen.dataset;
+                if (!confirm(`Regenerar a chave de "${sub}"?\nA chave anterior será invalidada imediatamente.`)) return;
+                const r = await fetch(`${apiUrl}/api-keys/${id}/regenerar`, { method: "PATCH" });
+                const d = await r.json();
+                if (d.status === "success") { exibirKeyGerada(d.data.api_key_full, "Nova chave — copie agora!"); renderizarApiKeys(); }
+                else { alert(d.message || "Erro ao regenerar."); }
+                return;
+            }
+            const iconToggle = e.target.closest(".toggle-key");
+            if (iconToggle) {
+                const novoEstado = iconToggle.dataset.ativo === "true" ? false : true;
+                const r = await fetch(`${apiUrl}/api-keys/${iconToggle.dataset.id}/ativar`, {
+                    method: "PATCH",
+                    body: JSON.stringify({ is_active: novoEstado })
+                });
+                const d = await r.json();
+                if (d.status === "success") { renderizarApiKeys(); }
+                else { alert(d.message || "Erro ao alterar status."); }
+                return;
+            }
+            const iconExcluir = e.target.closest(".excluir-key");
+            if (iconExcluir) {
+                if (!confirm(`Excluir permanentemente a chave de "${iconExcluir.dataset.sub}"?`)) return;
+                const r = await fetch(`${apiUrl}/api-keys/${iconExcluir.dataset.id}`, { method: "DELETE" });
+                const d = await r.json();
+                if (d.status === "success") { renderizarApiKeys(); }
+                else { alert(d.message || "Erro ao excluir."); }
+            }
+        });
+
+        renderizarApiKeys();
+    } // fim /adm/api-keys
+
 }); // fim DOMContentLoaded

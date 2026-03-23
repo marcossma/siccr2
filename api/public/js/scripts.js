@@ -1432,12 +1432,34 @@ document.addEventListener("DOMContentLoaded", function() {
     if (urlParam === "/gerenciamento-de-usuarios") {
         const siccr              = JSON.parse(localStorage.getItem("siccr") || "null");
         const listaUsuarios      = document.getElementById("listaUsuarios");
-        const dialogPermissoes   = document.getElementById("dialogPermissoes");
+        const btnNovoUsuario     = document.getElementById("btnNovoUsuario");
+
+        // Dialog cadastro/edição
+        const dialogUsuario      = document.getElementById("dialogUsuario");
+        const dialogUsuarioLegend= document.getElementById("dialogUsuarioLegend");
+        const frmUsuario         = document.getElementById("frmUsuario");
+        const usuNome            = document.getElementById("usuNome");
+        const usuSiape           = document.getElementById("usuSiape");
+        const usuEmail           = document.getElementById("usuEmail");
+        const usuWhatsapp        = document.getElementById("usuWhatsapp");
+        const usuDataNasc        = document.getElementById("usuDataNasc");
+        const usuPermissao       = document.getElementById("usuPermissao");
+        const usuSubunidade      = document.getElementById("usuSubunidade");
+        const rowSubunidade      = document.getElementById("rowSubunidade");
+        const usuSenha           = document.getElementById("usuSenha");
+        const labelSenha         = document.getElementById("labelSenha");
+        const usuarioErro        = document.getElementById("usuarioErro");
+        const btnCadastrarUsuario= document.getElementById("btnCadastrarUsuario");
+        const btnAtualizarUsuario= document.getElementById("btnAtualizarUsuario");
+        const btnCancelarUsuario = document.getElementById("btnCancelarUsuario");
+
+        // Dialog permissões
+        const dialogPermissoes       = document.getElementById("dialogPermissoes");
         const dialogPermissoesLegend = document.getElementById("dialogPermissoesLegend");
         const dialogPermissoesInfo   = document.getElementById("dialogPermissoesInfo");
-        const listaPermissoes    = document.getElementById("listaPermissoes");
-        const permissoesErro     = document.getElementById("permissoesErro");
-        const btnFecharPermissoes= document.getElementById("btnFecharPermissoes");
+        const listaPermissoes        = document.getElementById("listaPermissoes");
+        const permissoesErro         = document.getElementById("permissoesErro");
+        const btnFecharPermissoes    = document.getElementById("btnFecharPermissoes");
 
         const labelPermissao = {
             super_admin: "Super Admin", diretor: "Diretor",
@@ -1452,12 +1474,143 @@ document.addEventListener("DOMContentLoaded", function() {
                     : (perm === "diretor" || perm === "vice_diretor" || isDC) ? 3
                     : (perm === "chefe"   || perm === "subchefe") ? 2 : 1;
 
-        let todasFuncionalidades = [];  // carregadas uma vez
-        let usuarioAtual = null;        // usuário cujo dialog está aberto
+        let todasFuncionalidades = [];
+        let usuarioAtual = null;    // usuário sendo editado/com permissões abertas
+        let editandoId   = null;    // ID do usuário em edição
 
-        // Carrega todas as funcionalidades disponíveis (uma vez)
+        // ── Configura opções de permissão conforme nível ────────────────
+        function preencherOpcoesPermissao() {
+            const opcoes = nivel >= 4
+                ? ["servidor","subchefe","chefe","vice_diretor","diretor","super_admin"]
+                : nivel >= 3
+                    ? ["servidor","subchefe","chefe","vice_diretor","diretor"]
+                    : ["servidor","subchefe"]; // chefe só pode criar servidor/subchefe
+
+            usuPermissao.innerHTML = opcoes.map(o =>
+                `<option value="${o}">${labelPermissao[o]}</option>`
+            ).join("");
+        }
+
+        // ── Configura visibilidade do campo subunidade ───────────────────
+        function configurarFormulario() {
+            preencherOpcoesPermissao();
+            if (nivel <= 2) {
+                // Chefe: subunidade fixa — não exibe o seletor
+                rowSubunidade.hidden = true;
+            } else {
+                // Diretor/super_admin: mostra seletor e carrega opções
+                rowSubunidade.hidden = false;
+                carregarDados("subunidades").then((subs) => {
+                    usuSubunidade.innerHTML = '<option value="">Selecione a subunidade...</option>'
+                        + (subs || []).map(s =>
+                            `<option value="${s.subunidade_id}">${s.subunidade_nome}</option>`
+                        ).join("");
+                });
+            }
+        }
+
+        // ── Abre dialog para NOVO usuário ────────────────────────────────
+        btnNovoUsuario.addEventListener("click", () => {
+            editandoId = null;
+            frmUsuario.reset();
+            dialogUsuarioLegend.textContent = "Novo Usuário";
+            labelSenha.textContent = "Senha *";
+            usuSenha.placeholder = "Mínimo 8 caracteres";
+            usuSenha.required = true;
+            usuarioErro.hidden = true;
+            btnCadastrarUsuario.hidden = false;
+            btnAtualizarUsuario.hidden = true;
+            configurarFormulario();
+            dialogUsuario.showModal();
+        });
+
+        // ── Abre dialog para EDITAR usuário ─────────────────────────────
+        function abrirEdicao(u) {
+            editandoId = u.user_id;
+            dialogUsuarioLegend.textContent = "Editar Usuário";
+            usuNome.value      = u.nome || "";
+            usuSiape.value     = u.siape || "";
+            usuEmail.value     = u.email || "";
+            usuWhatsapp.value  = u.whatsapp || "";
+            usuDataNasc.value  = u.data_nascimento ? u.data_nascimento.slice(0, 10) : "";
+            usuSenha.value     = "";
+            labelSenha.textContent = "Senha (deixe em branco para não alterar)";
+            usuSenha.placeholder   = "Deixe em branco para manter a senha atual";
+            usuSenha.required = false;
+            usuarioErro.hidden = true;
+            btnCadastrarUsuario.hidden = true;
+            btnAtualizarUsuario.hidden = false;
+            configurarFormulario();
+            // Seta permissão e subunidade após configurar o form
+            usuPermissao.value  = u.permissao || "servidor";
+            if (nivel >= 3) usuSubunidade.value = u.subunidade_id || "";
+            dialogUsuario.showModal();
+        }
+
+        btnCancelarUsuario.addEventListener("click", () => dialogUsuario.close());
+
+        // ── CADASTRAR ────────────────────────────────────────────────────
+        btnCadastrarUsuario.addEventListener("click", async () => {
+            usuarioErro.hidden = true;
+            const body = {
+                nome:           usuNome.value.trim(),
+                siape:          usuSiape.value.trim(),
+                email:          usuEmail.value.trim() || null,
+                whatsapp:       usuWhatsapp.value.trim() || null,
+                data_nascimento:usuDataNasc.value || null,
+                permissao:      usuPermissao.value,
+                senha:          usuSenha.value,
+                subunidade_id:  nivel <= 2 ? siccr.subunidade_id : (usuSubunidade.value || null)
+            };
+            if (!body.nome || !body.siape || !body.senha) {
+                usuarioErro.textContent = "Nome, SIAPE e Senha são obrigatórios.";
+                usuarioErro.hidden = false;
+                return;
+            }
+            const resp = await fetch(`${apiUrl}/usuarios`, { method: "POST", body: JSON.stringify(body) });
+            const data = await resp.json();
+            if (data.status === "success") {
+                dialogUsuario.close();
+                renderizarUsuarios();
+            } else {
+                usuarioErro.textContent = data.message || "Erro ao cadastrar.";
+                usuarioErro.hidden = false;
+            }
+        });
+
+        // ── ATUALIZAR ────────────────────────────────────────────────────
+        btnAtualizarUsuario.addEventListener("click", async () => {
+            usuarioErro.hidden = true;
+            const body = {
+                nome:           usuNome.value.trim(),
+                siape:          usuSiape.value.trim(),
+                email:          usuEmail.value.trim() || null,
+                whatsapp:       usuWhatsapp.value.trim() || null,
+                data_nascimento:usuDataNasc.value || null,
+                permissao:      usuPermissao.value,
+                subunidade_id:  nivel <= 2 ? siccr.subunidade_id : (usuSubunidade.value || null)
+            };
+            if (usuSenha.value) body.senha = usuSenha.value;
+            if (!body.nome || !body.siape) {
+                usuarioErro.textContent = "Nome e SIAPE são obrigatórios.";
+                usuarioErro.hidden = false;
+                return;
+            }
+            const resp = await fetch(`${apiUrl}/usuarios/${editandoId}`, { method: "PUT", body: JSON.stringify(body) });
+            const data = await resp.json();
+            if (data.status === "success") {
+                dialogUsuario.close();
+                renderizarUsuarios();
+            } else {
+                usuarioErro.textContent = data.message || "Erro ao atualizar.";
+                usuarioErro.hidden = false;
+            }
+        });
+
+        // ── Carrega funcionalidades (uma vez) ────────────────────────────
         carregarDados("funcionalidades").then(f => { todasFuncionalidades = f || []; });
 
+        // ── Renderiza lista de usuários ──────────────────────────────────
         function renderizarUsuarios() {
             carregarDados("usuarios").then((usuarios) => {
                 listaUsuarios.innerHTML = "";
@@ -1466,8 +1619,9 @@ document.addEventListener("DOMContentLoaded", function() {
                     return;
                 }
                 usuarios.forEach((u) => {
-                    // Chefe só pode gerenciar permissões de servidores; diretor/super_admin podem gerenciar qualquer um
-                    const podeGerenciar = nivel >= 3 || u.permissao === "servidor" || u.permissao === "subchefe";
+                    const ehProprioUsuario = u.user_id === siccr?.user_id;
+                    // Chefe só edita/gerencia servidores e subchefes; diretor/super_admin gerenciam qualquer um
+                    const podeGerenciar = nivel >= 3 || ["servidor","subchefe"].includes(u.permissao);
                     const div = document.createElement("div");
                     div.classList.add("dados", "flex", "align--items--center");
                     div.innerHTML = `
@@ -1475,17 +1629,18 @@ document.addEventListener("DOMContentLoaded", function() {
                         <div class="dado flex flex--2">${u.siape}</div>
                         <div class="dado flex flex--3">${labelPermissao[u.permissao] || u.permissao}</div>
                         <div class="dado flex flex--3">${u.subunidade_nome || "—"}</div>
-                        <div class="dado flex flex--2">
-                            ${podeGerenciar
-                                ? `<button type="button" class="btn-permissoes btnPainelFormulario"
-                                    style="font-size:12px;padding:4px 10px"
+                        <div class="dado flex flex--3 font--size--20 gap--10">
+                            ${podeGerenciar ? `
+                                <i class="bi bi-pencil editar-usuario cursor--pointer" title="Editar usuário"
+                                    data-json='${JSON.stringify(u)}'></i>
+                                <i class="bi bi-key btn-permissoes cursor--pointer" title="Permissões"
                                     data-id="${u.user_id}"
                                     data-nome="${u.nome}"
                                     data-permissao="${u.permissao}"
-                                    data-subunidade="${u.subunidade_nome || ""}">
-                                    Permissões
-                                   </button>`
-                                : "—"}
+                                    data-subunidade="${u.subunidade_nome || ""}"></i>
+                                ${!ehProprioUsuario ? `<i class="bi bi-trash excluir-usuario cursor--pointer" title="Excluir usuário"
+                                    data-id="${u.user_id}" data-nome="${u.nome}"></i>` : ""}
+                            ` : "—"}
                         </div>
                     `;
                     listaUsuarios.appendChild(div);
@@ -1493,6 +1648,42 @@ document.addEventListener("DOMContentLoaded", function() {
             });
         }
 
+        // ── Delegação de eventos na lista ────────────────────────────────
+        listaUsuarios.addEventListener("click", async (e) => {
+            // Editar
+            const iconEditar = e.target.closest(".editar-usuario");
+            if (iconEditar) {
+                const u = JSON.parse(iconEditar.dataset.json);
+                abrirEdicao(u);
+                return;
+            }
+            // Permissões
+            const iconPerm = e.target.closest(".btn-permissoes");
+            if (iconPerm) {
+                abrirDialogPermissoes(
+                    iconPerm.dataset.id,
+                    iconPerm.dataset.nome,
+                    iconPerm.dataset.permissao,
+                    iconPerm.dataset.subunidade
+                );
+                return;
+            }
+            // Excluir
+            const iconExcluir = e.target.closest(".excluir-usuario");
+            if (iconExcluir) {
+                const { id, nome } = iconExcluir.dataset;
+                if (!confirm(`Deseja excluir o usuário "${nome}"?`)) return;
+                const resp = await fetch(`${apiUrl}/usuarios/${id}`, { method: "DELETE" });
+                const data = await resp.json();
+                if (data.status === "success") {
+                    renderizarUsuarios();
+                } else {
+                    alert(data.message || "Erro ao excluir usuário.");
+                }
+            }
+        });
+
+        // ── Dialog de permissões ─────────────────────────────────────────
         async function abrirDialogPermissoes(userId, nomeUsuario, permissaoUsuario, subunidade) {
             usuarioAtual = { id: userId, nome: nomeUsuario };
             dialogPermissoesLegend.textContent = `Permissões — ${nomeUsuario}`;
@@ -1501,7 +1692,6 @@ document.addEventListener("DOMContentLoaded", function() {
             listaPermissoes.innerHTML = "Carregando...";
             dialogPermissoes.showModal();
 
-            // Busca permissões atuais do usuário
             let permissoesAtuais = [];
             try {
                 const resp = await fetch(`${apiUrl}/permissoes-usuario/${userId}`);
@@ -1517,14 +1707,11 @@ document.addEventListener("DOMContentLoaded", function() {
                 listaPermissoes.innerHTML = '<p>Nenhuma funcionalidade cadastrada.</p>';
                 return;
             }
-
-            // Agrupa por módulo
             const porModulo = {};
             todasFuncionalidades.forEach(f => {
                 if (!porModulo[f.modulo]) porModulo[f.modulo] = [];
                 porModulo[f.modulo].push(f);
             });
-
             let html = "";
             for (const modulo of Object.keys(porModulo).sort()) {
                 html += `<div class="gerenciar-permissoes-modulo">${modulo}</div>`;
@@ -1551,60 +1738,34 @@ document.addEventListener("DOMContentLoaded", function() {
             listaPermissoes.innerHTML = html;
         }
 
-        // Delegação de eventos na lista de usuários
-        listaUsuarios.addEventListener("click", (e) => {
-            const btn = e.target.closest(".btn-permissoes");
-            if (!btn) return;
-            abrirDialogPermissoes(
-                btn.dataset.id,
-                btn.dataset.nome,
-                btn.dataset.permissao,
-                btn.dataset.subunidade
-            );
-        });
-
-        // Delegação de eventos no dialog de permissões
         listaPermissoes.addEventListener("click", async (e) => {
             permissoesErro.hidden = true;
 
             if (e.target.classList.contains("btn-conceder-perm")) {
-                const funcionalidadeId = e.target.dataset.funcId;
-                try {
-                    const resp = await fetch(`${apiUrl}/permissoes-usuario`, {
-                        method: "POST",
-                        body: JSON.stringify({ user_id: usuarioAtual.id, funcionalidade_id: parseInt(funcionalidadeId) })
-                    });
-                    const data = await resp.json();
-                    if (data.status === "success") {
-                        // Recarrega permissões atuais
-                        const r2 = await fetch(`${apiUrl}/permissoes-usuario/${usuarioAtual.id}`);
-                        const d2 = await r2.json();
-                        renderizarPermissoesDialog(d2.status === "success" ? d2.data : []);
-                    } else {
-                        permissoesErro.textContent = data.message || "Erro ao conceder permissão.";
-                        permissoesErro.hidden = false;
-                    }
-                } catch {
-                    permissoesErro.textContent = "Erro de conexão.";
+                const resp = await fetch(`${apiUrl}/permissoes-usuario`, {
+                    method: "POST",
+                    body: JSON.stringify({ user_id: usuarioAtual.id, funcionalidade_id: parseInt(e.target.dataset.funcId) })
+                });
+                const data = await resp.json();
+                if (data.status === "success") {
+                    const r2 = await fetch(`${apiUrl}/permissoes-usuario/${usuarioAtual.id}`);
+                    const d2 = await r2.json();
+                    renderizarPermissoesDialog(d2.status === "success" ? d2.data : []);
+                } else {
+                    permissoesErro.textContent = data.message || "Erro ao conceder permissão.";
                     permissoesErro.hidden = false;
                 }
             }
 
             if (e.target.classList.contains("btn-revogar-perm")) {
-                const permId = e.target.dataset.permId;
-                try {
-                    const resp = await fetch(`${apiUrl}/permissoes-usuario/${permId}`, { method: "DELETE" });
-                    const data = await resp.json();
-                    if (data.status === "success") {
-                        const r2 = await fetch(`${apiUrl}/permissoes-usuario/${usuarioAtual.id}`);
-                        const d2 = await r2.json();
-                        renderizarPermissoesDialog(d2.status === "success" ? d2.data : []);
-                    } else {
-                        permissoesErro.textContent = data.message || "Erro ao revogar permissão.";
-                        permissoesErro.hidden = false;
-                    }
-                } catch {
-                    permissoesErro.textContent = "Erro de conexão.";
+                const resp = await fetch(`${apiUrl}/permissoes-usuario/${e.target.dataset.permId}`, { method: "DELETE" });
+                const data = await resp.json();
+                if (data.status === "success") {
+                    const r2 = await fetch(`${apiUrl}/permissoes-usuario/${usuarioAtual.id}`);
+                    const d2 = await r2.json();
+                    renderizarPermissoesDialog(d2.status === "success" ? d2.data : []);
+                } else {
+                    permissoesErro.textContent = data.message || "Erro ao revogar permissão.";
                     permissoesErro.hidden = false;
                 }
             }

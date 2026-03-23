@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICCR - API Keys</title>
+    <link rel="shortcut icon" href="../img/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/dialogs.css">
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/ui-kit.css">
+    <link rel="stylesheet" href="./css/dialogs.css">
+    <script src="./js/guard.js"></script>
+    <script type="module" src="./js/script.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/">
+                <img src="../img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo">
+            </a>
+            <div class="acesso">
+                <span id="adminNome"></span>
+                <a href="#" id="btnSair">Sair</a>
+            </div>
+        </header>
+        <div>
+            <responsive-menu></responsive-menu>
+        </div>
+        <main class="flex flex--column">
+            <section class="titulo_painel flex justify--space--between align--items--center">
+                <h1 class="flex align--items--center gap--15">
+                    <i class="bi bi-key font--size--30"></i>
+                    Painel Administrativo - API Keys
+                </h1>
+                <button class="btn_adicionar btnNovaApiKey flex align--items--center gap--10 cursor--pointer">
+                    Gerar nova chave <i class="bi bi-plus-circle font--size--20"></i>
+                </button>
+            </section>
+
+            <div>
+                <menu-navegacao-adm></menu-navegacao-adm>
+            </div>
+
+            <section class="informacoes_painel">
+                <div class="cabecalho flex">
+                    <div class="titulo flex flex--4">Subunidade</div>
+                    <div class="titulo flex flex--2">Sigla</div>
+                    <div class="titulo flex flex--5">Descrição</div>
+                    <div class="titulo flex flex--4">Chave (prévia)</div>
+                    <div class="titulo flex flex--2">Status</div>
+                    <div class="titulo flex flex--2">Gerada em</div>
+                    <div class="titulo flex flex--2">Ações</div>
+                </div>
+                <div class="listaApiKeys">
+                    <!-- Carregado via JS -->
+                </div>
+            </section>
+        </main>
+        <footer>Rodapé</footer>
+    </div>
+
+    <!-- Dialog: Gerar nova API Key -->
+    <dialog class="dialogPainel apiKeys">
+        <fieldset>
+            <legend>Gerar API Key</legend>
+            <form class="frmCadastroPainel frmApiKey flex flex--column gap--15">
+                <div class="row">
+                    <select id="apiKeySubunidade" class="formInput width--100">
+                        <option value="">Selecione a subunidade...</option>
+                    </select>
+                    <label class="painelLabel" for="apiKeySubunidade">Subunidade que usará a chave</label>
+                </div>
+                <div class="row">
+                    <input type="text" id="apiKeyDescricao" class="formInput width--100"
+                           placeholder="Ex.: RPA almoxarifado — DFT">
+                    <label class="painelLabel" for="apiKeyDescricao">Descrição / finalidade (opcional)</label>
+                </div>
+                <div class="row">
+                    <button type="button" class="btnPainelFormulario cadastrarApiKey">Gerar chave</button>
+                    <button type="button" class="btnPainelFormulario cancelarApiKey cancelarUnidade">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+
+    <!-- Dialog: Exibir chave gerada (único momento que aparece completa) -->
+    <dialog class="dialogPainel apiKeyGerada" style="min-width:520px">
+        <fieldset>
+            <legend id="legendApiKeyGerada">Chave gerada</legend>
+            <p class="painelLabel" style="margin-bottom:8px">
+                Copie e guarde em local seguro — esta é a única vez que a chave completa é exibida.
+            </p>
+            <div class="row">
+                <div id="apiKeyValor" class="formInput width--100"
+                     style="font-family:monospace;font-size:11px;word-break:break-all;
+                            background:#f5f5f5;padding:10px;border-radius:5px;
+                            border:1px solid #ccc;user-select:all"></div>
+            </div>
+            <div class="row" style="margin-top:12px">
+                <button type="button" class="btnPainelFormulario cadastrarApiKey btnCopiarKey">
+                    <i class="bi bi-clipboard"></i> Copiar
+                </button>
+                <button type="button" class="btnPainelFormulario cancelarApiKey cancelarUnidade btnFecharKeyGerada">
+                    Fechar
+                </button>
+            </div>
+        </fieldset>
+    </dialog>
+
+    <script type="module" src="../js/components/index.js"></script>
+</body>
+</html>
