@@ -18,22 +18,21 @@ class SICCRClient:
     def testar_conexao(self) -> bool:
         """Verifica se a API está acessível e a chave é válida."""
         try:
-            r = self.session.get(f"{self.base_url}/pedidos-almoxarifado", timeout=5)
+            r = self.session.get(f"{self.base_url}/rpa/pedidos", timeout=5)
             return r.status_code == 200
         except requests.RequestException:
             return False
 
     def listar_pedidos_pendentes(self) -> list[dict]:
-        """Retorna todos os pedidos com status 'pendente'."""
-        r = self.session.get(f"{self.base_url}/pedidos-almoxarifado", timeout=10)
+        """Retorna todos os pedidos pendentes (rota exclusiva RPA)."""
+        r = self.session.get(f"{self.base_url}/rpa/pedidos", timeout=10)
         r.raise_for_status()
-        todos = r.json().get("data", [])
-        return [p for p in todos if p.get("status") == "pendente"]
+        return r.json().get("data", [])
 
     def listar_itens(self, pedido_id: int) -> list[dict]:
         """Retorna os itens de um pedido específico."""
         r = self.session.get(
-            f"{self.base_url}/pedidos-almoxarifado/{pedido_id}/itens", timeout=10
+            f"{self.base_url}/rpa/pedidos/{pedido_id}/itens", timeout=10
         )
         r.raise_for_status()
         return r.json().get("data", [])
@@ -41,8 +40,7 @@ class SICCRClient:
     def marcar_atendido(self, pedido_id: int) -> dict:
         """Marca o pedido como atendido na plataforma."""
         r = self.session.patch(
-            f"{self.base_url}/pedidos-almoxarifado/{pedido_id}/status",
-            json={"status": "atendido"},
+            f"{self.base_url}/rpa/pedidos/{pedido_id}/atender",
             timeout=10,
         )
         r.raise_for_status()

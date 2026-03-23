@@ -165,6 +165,11 @@ app.use("/api/permissoes-usuario",autenticar, autorizar("chefe"),        permiss
 const apiKeysRoutes = require("./routes/api-keys.js");
 app.use("/api/api-keys", autenticar, apiKeysRoutes);
 
+// Rotas RPA: autenticação via X-Api-Key (agente Python de almoxarifado)
+const autenticarApiKey = require("./middlewares/authApiKey.js");
+const rpaRoutes = require("./routes/rpa.js");
+app.use("/api/rpa", autenticarApiKey, rpaRoutes);
+
 // Configurar o uso de arquivos estáticos
 app.use(express.static(path.join(__dirname, "public")));
 
