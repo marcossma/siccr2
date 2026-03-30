@@ -133,9 +133,14 @@ document.addEventListener("DOMContentLoaded", function() {
         try {
             const response = await fetch(`${apiUrl}/${endpoint}`);
             const dados = await response.json();
+            if (!response.ok) {
+                console.error(`Erro ${response.status} em /${endpoint}:`, dados?.message || dados);
+                return null;
+            }
             return dados.data;
         } catch(error) {
             console.error("Erro ao listar dados de " + endpoint + ":", error);
+            return null;
         }
     }
 
@@ -1920,6 +1925,11 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         carregarDados("relatorios/resumo").then((dados) => {
+            if (!dados) {
+                document.querySelectorAll(".card-valor").forEach(el => el.textContent = "—");
+                console.error("Falha ao carregar resumo do relatório.");
+                return;
+            }
             const escopoGeral = dados.escopo === "geral";
 
             // Badge de escopo
