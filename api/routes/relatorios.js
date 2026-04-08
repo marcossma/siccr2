@@ -5,91 +5,97 @@ const { getNivelAcesso } = require("../middlewares/autorizar.js");
 const router = express.Router();
 
 // GET /resumo — totais consolidados, filtrados pelo nível do usuário
+// Query param: ?ano=2026 (opcional)
 router.get("/resumo", async (req, res) => {
     try {
         const nivel = getNivelAcesso(req.usuario);
         const isRestrito = nivel === "chefe" || nivel === "servidor";
         const subunidadeId = req.usuario.subunidade;
+        const ano = req.query.ano ? parseInt(req.query.ano) : null;
 
         if (isRestrito) {
-            // Chefe/servidor: vê apenas os dados da própria subunidade
+            const params = [subunidadeId];
+            const anoClause = ano ? `AND EXTRACT(YEAR FROM d.data_despesa) = $${params.push(ano)}` : "";
+            const anoClauseSimple = ano ? `AND EXTRACT(YEAR FROM data_despesa) = $2` : "";
+
             const [despesas, porSubunidade, porTipoDespesa] = await Promise.all([
                 pool.query(
                     `SELECT COALESCE(SUM(valor_despesa), 0) AS total_despesas
-                     FROM despesas WHERE id_subunidade = $1`,
-                    [subunidadeId]
+                     FROM despesas WHERE id_subunidade = $1 ${anoClauseSimple}`,
+                    ano ? [subunidadeId, ano] : [subunidadeId]
                 ),
                 pool.query(
                     `SELECT s.subunidade_nome, COALESCE(SUM(d.valor_despesa), 0) AS total
                      FROM subunidades s
-                     LEFT JOIN despesas d ON d.id_subunidade = s.subunidade_id
+                     LEFT JOIN despesas d ON d.id_subunidade = s.subunidade_id ${anoClause}
                      WHERE s.subunidade_id = $1
                      GROUP BY s.subunidade_id, s.subunidade_nome`,
-                    [subunidadeId]
+                    params
                 ),
                 pool.query(
                     `SELECT td.tipo_despesa, COALESCE(SUM(d.valor_despesa), 0) AS total
                      FROM tipos_despesas td
                      LEFT JOIN despesas d ON d.id_tipo_despesa = td.id_tipo_despesa
-                                         AND d.id_subunidade = $1
+                                         AND d.id_subunidade = $1 ${anoClause}
                      GROUP BY td.id_tipo_despesa, td.tipo_despesa
                      ORDER BY total DESC`,
-                    [subunidadeId]
+                    params
                 )
             ]);
 
             return res.status(200).json({
-                status: "success",
-                message: "",
+                status: "success", message: "",
                 data: {
-                    escopo:          "subunidade",
-                    total_recursos:  null,
-                    total_despesas:  parseFloat(despesas.rows[0].total_despesas),
-                    saldo:           null,
-                    por_subunidade:  porSubunidade.rows,
+                    escopo:           "subunidade",
+                    ano:              ano,
+                    total_recursos:   null,
+                    total_despesas:   parseFloat(despesas.rows[0].total_despesas),
+                    saldo:            null,
+                    por_subunidade:   porSubunidade.rows,
                     por_tipo_despesa: porTipoDespesa.rows
                 }
             });
         }
 
-        // Diretor / super_admin: visão geral de todas as subunidades
+        // Diretor / super_admin: visão geral
+        const params = ano ? [ano] : [];
+        const anoWhereD  = ano ? `WHERE EXTRACT(YEAR FROM data_despesa) = $1`  : "";
+        const anoWhereR  = ano ? `WHERE EXTRACT(YEAR FROM data_recebimento) = $1` : "";
+        const anoJoinD   = ano ? `AND EXTRACT(YEAR FROM d.data_despesa) = $1`  : "";
+
         const [recursos, despesas, porSubunidade, porTipoDespesa] = await Promise.all([
             pool.query(
                 `SELECT COALESCE(SUM(valor_recurso_recebido), 0) AS total_recursos
-                 FROM recursos_recebidos`
-            ),
+                 FROM recursos_recebidos ${anoWhereR}`, params),
             pool.query(
                 `SELECT COALESCE(SUM(valor_despesa), 0) AS total_despesas
-                 FROM despesas`
-            ),
+                 FROM despesas ${anoWhereD}`, params),
             pool.query(
                 `SELECT s.subunidade_nome, COALESCE(SUM(d.valor_despesa), 0) AS total
                  FROM subunidades s
-                 LEFT JOIN despesas d ON d.id_subunidade = s.subunidade_id
+                 LEFT JOIN despesas d ON d.id_subunidade = s.subunidade_id ${anoJoinD}
                  GROUP BY s.subunidade_id, s.subunidade_nome
-                 ORDER BY total DESC`
-            ),
+                 ORDER BY total DESC`, params),
             pool.query(
                 `SELECT td.tipo_despesa, COALESCE(SUM(d.valor_despesa), 0) AS total
                  FROM tipos_despesas td
-                 LEFT JOIN despesas d ON d.id_tipo_despesa = td.id_tipo_despesa
+                 LEFT JOIN despesas d ON d.id_tipo_despesa = td.id_tipo_despesa ${anoJoinD}
                  GROUP BY td.id_tipo_despesa, td.tipo_despesa
-                 ORDER BY total DESC`
-            )
+                 ORDER BY total DESC`, params)
         ]);
 
         const totalRecursos = parseFloat(recursos.rows[0].total_recursos);
         const totalDespesas = parseFloat(despesas.rows[0].total_despesas);
 
         return res.status(200).json({
-            status: "success",
-            message: "",
+            status: "success", message: "",
             data: {
-                escopo:          "geral",
-                total_recursos:  totalRecursos,
-                total_despesas:  totalDespesas,
-                saldo:           totalRecursos - totalDespesas,
-                por_subunidade:  porSubunidade.rows,
+                escopo:           "geral",
+                ano:              ano,
+                total_recursos:   totalRecursos,
+                total_despesas:   totalDespesas,
+                saldo:            totalRecursos - totalDespesas,
+                por_subunidade:   porSubunidade.rows,
                 por_tipo_despesa: porTipoDespesa.rows
             }
         });

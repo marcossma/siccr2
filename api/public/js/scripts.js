@@ -917,17 +917,29 @@ document.addEventListener("DOMContentLoaded", function() {
             elements.dialogPainel.close();
         });
 
+        function parsearValorMonetario(valor) {
+            // Aceita "1.234,56" ou "1234.56" ou "1234,56"
+            const normalizado = String(valor).trim().replace(/\./g, "").replace(",", ".");
+            const num = parseFloat(normalizado);
+            return isNaN(num) || num < 0 ? null : num;
+        }
+
         // Botão Cadastrar (POST)
         elements.btnCadastrar.addEventListener("click", function(event) {
             event.preventDefault();
             const formData = new FormData(elements.frmUnidade);
             const objData = Object.fromEntries(formData.entries());
+            const valorParsed = parsearValorMonetario(objData.valor_despesa);
+            if (valorParsed === null) {
+                alert("Valor da despesa inválido. Use o formato: 1234,56");
+                return;
+            }
             fetch(`${apiUrl}/despesas`, {
                 method: "POST",
                 body: JSON.stringify({
                     id_tipo_despesa: objData.id_tipo_despesa,
                     id_subunidade: objData.id_subunidade,
-                    valor_despesa: objData.valor_despesa,
+                    valor_despesa: valorParsed,
                     data_despesa: objData.data_despesa || null,
                     numero_documento_despesa: objData.numero_documento_despesa || null,
                     observacao_despesa: objData.observacao_despesa || null
@@ -944,12 +956,17 @@ document.addEventListener("DOMContentLoaded", function() {
             event.preventDefault();
             const formData = new FormData(elements.frmUnidade);
             const objData = Object.fromEntries(formData.entries());
+            const valorParsed = parsearValorMonetario(objData.valor_despesa);
+            if (valorParsed === null) {
+                alert("Valor da despesa inválido. Use o formato: 1234,56");
+                return;
+            }
             fetch(`${apiUrl}/despesas/${objData.id_despesa}`, {
                 method: "PUT",
                 body: JSON.stringify({
                     id_tipo_despesa: objData.id_tipo_despesa,
                     id_subunidade: objData.id_subunidade,
-                    valor_despesa: objData.valor_despesa,
+                    valor_despesa: valorParsed,
                     data_despesa: objData.data_despesa || null,
                     numero_documento_despesa: objData.numero_documento_despesa || null,
                     observacao_despesa: objData.observacao_despesa || null
@@ -1847,15 +1864,26 @@ document.addEventListener("DOMContentLoaded", function() {
             elements.dialogPainel.close();
         });
 
+        function parsearValorMonetario(valor) {
+            const normalizado = String(valor).trim().replace(/\./g, "").replace(",", ".");
+            const num = parseFloat(normalizado);
+            return isNaN(num) || num < 0 ? null : num;
+        }
+
         elements.btnCadastrar.addEventListener("click", function(event) {
             event.preventDefault();
             const objData = Object.fromEntries(new FormData(elements.frmUnidade).entries());
+            const valorParsed = parsearValorMonetario(objData.valor_previsto);
+            if (valorParsed === null) {
+                alert("Valor previsto inválido. Use o formato: 5000,00");
+                return;
+            }
             fetch(`${apiUrl}/previsoes-despesas`, {
                 method: "POST",
                 body: JSON.stringify({
                     subunidade_id: objData.subunidade_id,
                     id_tipo_despesa: objData.id_tipo_despesa,
-                    valor_previsto: objData.valor_previsto,
+                    valor_previsto: valorParsed,
                     ano_referencia: objData.ano_referencia,
                     observacao: objData.observacao || null
                 })
@@ -1869,12 +1897,17 @@ document.addEventListener("DOMContentLoaded", function() {
         elements.btnAtualizar.addEventListener("click", function(event) {
             event.preventDefault();
             const objData = Object.fromEntries(new FormData(elements.frmUnidade).entries());
+            const valorParsed = parsearValorMonetario(objData.valor_previsto);
+            if (valorParsed === null) {
+                alert("Valor previsto inválido. Use o formato: 5000,00");
+                return;
+            }
             fetch(`${apiUrl}/previsoes-despesas/${objData.id_previsao}`, {
                 method: "PUT",
                 body: JSON.stringify({
                     subunidade_id: objData.subunidade_id,
                     id_tipo_despesa: objData.id_tipo_despesa,
-                    valor_previsto: objData.valor_previsto,
+                    valor_previsto: valorParsed,
                     ano_referencia: objData.ano_referencia,
                     observacao: objData.observacao || null
                 })
@@ -1920,25 +1953,99 @@ document.addEventListener("DOMContentLoaded", function() {
     // Rotinas para a página relatorios.html
     // -------------------------------------
     if (urlParam === "/relatorios") {
+        const CORES_GRAFICOS = [
+            "#009536","#007a2e","#4caf7d","#81c995","#2196F3",
+            "#FF9800","#E91E63","#9C27B0","#00BCD4","#FF5722",
+            "#607D8B","#795548","#FFEB3B","#3F51B5","#8BC34A"
+        ];
+
+        let chartSub  = null;
+        let chartTipo = null;
+        let dadosAtual = null;
+
         function formatarMoeda(valor) {
-            return parseFloat(valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+            return parseFloat(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
         }
 
-        carregarDados("relatorios/resumo").then((dados) => {
+        // Popula select de anos (ano atual até 5 anos atrás + opção "Todos")
+        const filtroAno = document.querySelector("#filtroAno");
+        const anoAtual  = new Date().getFullYear();
+        filtroAno.innerHTML = `<option value="">Todos os anos</option>` +
+            Array.from({ length: 6 }, (_, i) => anoAtual - i)
+                 .map(a => `<option value="${a}"${a === anoAtual ? " selected" : ""}>${a}</option>`)
+                 .join("");
+
+        function renderizarGraficoBarras(dados) {
+            const ctx = document.querySelector("#graficoSubunidades");
+            if (!ctx) return;
+            if (chartSub) chartSub.destroy();
+            const labels = dados.map(d => d.subunidade_nome || "—");
+            const values = dados.map(d => parseFloat(d.total));
+            chartSub = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels,
+                    datasets: [{
+                        label: "Despesas (R$)",
+                        data: values,
+                        backgroundColor: "#009536cc",
+                        borderColor: "#007a2e",
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    indexAxis: "y",
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { callback: v => `R$ ${v.toLocaleString("pt-BR")}` } }
+                    }
+                }
+            });
+        }
+
+        function renderizarGraficoDoughnut(dados) {
+            const ctx = document.querySelector("#graficoTipos");
+            if (!ctx) return;
+            if (chartTipo) chartTipo.destroy();
+            const comValor = dados.filter(d => parseFloat(d.total) > 0);
+            if (!comValor.length) return;
+            chartTipo = new Chart(ctx, {
+                type: "doughnut",
+                data: {
+                    labels: comValor.map(d => d.tipo_despesa),
+                    datasets: [{
+                        data: comValor.map(d => parseFloat(d.total)),
+                        backgroundColor: CORES_GRAFICOS.slice(0, comValor.length),
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: "bottom", labels: { font: { size: 11 } } },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ` ${formatarMoeda(ctx.parsed)}`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderizarRelatorio(dados) {
             if (!dados) {
                 document.querySelectorAll(".card-valor").forEach(el => el.textContent = "—");
-                console.error("Falha ao carregar resumo do relatório.");
                 return;
             }
+            dadosAtual = dados;
             const escopoGeral = dados.escopo === "geral";
 
-            // Badge de escopo
             const badgeEl = document.querySelector("#escopoRelatorio");
-            if (badgeEl) {
-                badgeEl.textContent = escopoGeral ? "Visão geral" : "Visão da sua subunidade";
-            }
+            if (badgeEl) badgeEl.textContent = escopoGeral ? "Visão geral" : "Visão da sua subunidade";
 
-            // Cards de recursos e saldo só aparecem na visão geral
             const cardRecursos = document.querySelector("#cardRecursos");
             const cardSaldo    = document.querySelector("#cardSaldo");
             if (!escopoGeral) {
@@ -1953,6 +2060,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
             document.querySelector("#totalDespesas").textContent = formatarMoeda(dados.total_despesas);
 
+            // Tabela por subunidade
             const listaSub = document.querySelector("#listaPorSubunidade");
             listaSub.innerHTML = "";
             dados.por_subunidade.forEach((item) => {
@@ -1965,6 +2073,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 listaSub.appendChild(div);
             });
 
+            // Tabela por tipo
             const listaTipo = document.querySelector("#listaPorTipo");
             listaTipo.innerHTML = "";
             dados.por_tipo_despesa.forEach((item) => {
@@ -1976,7 +2085,60 @@ document.addEventListener("DOMContentLoaded", function() {
                 `;
                 listaTipo.appendChild(div);
             });
+
+            renderizarGraficoBarras(dados.por_subunidade);
+            renderizarGraficoDoughnut(dados.por_tipo_despesa);
+        }
+
+        function carregarRelatorio() {
+            const ano = filtroAno.value;
+            const endpoint = ano ? `relatorios/resumo?ano=${ano}` : "relatorios/resumo";
+            document.querySelectorAll(".card-valor").forEach(el => el.textContent = "Carregando...");
+            carregarDados(endpoint).then(renderizarRelatorio);
+        }
+
+        // Exportação CSV
+        document.querySelector("#btnExportarCSV")?.addEventListener("click", () => {
+            if (!dadosAtual) return;
+            const linhas = [];
+            const ano = filtroAno.value || "todos";
+
+            linhas.push(`"SICCR2 — Relatório Financeiro — Ano: ${ano}"`);
+            linhas.push("");
+
+            if (dadosAtual.escopo === "geral") {
+                linhas.push('"RESUMO"');
+                linhas.push(`"Total de Recursos Recebidos";"${formatarMoeda(dadosAtual.total_recursos)}"`);
+                linhas.push(`"Total de Despesas";"${formatarMoeda(dadosAtual.total_despesas)}"`);
+                linhas.push(`"Saldo";"${formatarMoeda(dadosAtual.saldo)}"`);
+                linhas.push("");
+            }
+
+            linhas.push('"DESPESAS POR SUBUNIDADE"');
+            linhas.push('"Subunidade";"Total (R$)"');
+            dadosAtual.por_subunidade.forEach(d =>
+                linhas.push(`"${d.subunidade_nome}";"${formatarMoeda(d.total)}"`)
+            );
+            linhas.push("");
+
+            linhas.push('"DESPESAS POR TIPO"');
+            linhas.push('"Tipo de Despesa";"Total (R$)"');
+            dadosAtual.por_tipo_despesa.forEach(d =>
+                linhas.push(`"${d.tipo_despesa}";"${formatarMoeda(d.total)}"`)
+            );
+
+            const bom = "\uFEFF"; // BOM para UTF-8 no Excel
+            const blob = new Blob([bom + linhas.join("\n")], { type: "text/csv;charset=utf-8;" });
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement("a");
+            a.href     = url;
+            a.download = `relatorio-financeiro-${ano}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
         });
+
+        filtroAno.addEventListener("change", carregarRelatorio);
+        carregarRelatorio();
     }
 
 

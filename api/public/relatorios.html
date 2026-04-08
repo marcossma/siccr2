@@ -3,79 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SICCR - Sistema Integrado Centro de Ciências Rurais</title>
+    <title>SICCR - Relatórios Financeiros</title>
     <link rel="shortcut icon" href="./img/favicon.png" type="image/x-icon">
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/dialogs.css">
     <link rel="stylesheet" href="./adm/css/style.css">
     <link rel="stylesheet" href="./adm/css/dialogs.css">
     <link rel="stylesheet" href="./css/ui-kit.css">
+    <script src="./js/vendor/chart.min.js"></script>
     <script type="module" src="./js/scripts.js"></script>
+    <style>
+        .relatorio-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .relatorio-toolbar select,
+        .relatorio-toolbar button {
+            padding: 7px 14px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-family: verdana, sans-serif;
+            font-size: 12px;
+            cursor: pointer;
+            background: white;
+        }
+        .btn-exportar-csv {
+            background: #007a2e !important;
+            color: white !important;
+            border-color: #007a2e !important;
+            transition: background 0.2s;
+        }
+        .btn-exportar-csv:hover { background: #009536 !important; }
+
+        .relatorio-graficos {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 1.5rem 0;
+            width: 100%;
+        }
+        .relatorio-grafico-box {
+            flex: 1;
+            min-width: 280px;
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        .relatorio-grafico-box h3 {
+            font-size: 13px;
+            color: #555;
+            margin: 0 0 12px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .relatorio-grafico-box canvas { max-height: 260px; }
+
+        .relatorio-tabelas {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+        .relatorio-tabela-box {
+            flex: 1;
+            min-width: 280px;
+        }
+        .relatorio-tabela-box h2 {
+            font-size: 14px;
+            margin-bottom: 0.5rem;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <a href="/">
-                <img src="./img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo">
-            </a>
-            <div class="acesso">
-                <a href="#" id="btnEntrar" class="">Entrar</a>
-            </div>
+            <a href="/"><img src="./img/logo.png" alt="Logo do CCR" class="logo"></a>
+            <div class="acesso"><a href="#" id="btnEntrar">Entrar</a></div>
         </header>
-        <div>
-            <responsive-menu></responsive-menu>
-        </div>
+        <div><responsive-menu></responsive-menu></div>
+
         <main class="flex flex--column flex--center">
 
-            <section class="titulo_secao flex justify--space--between align--items--center">
+            <!-- Título + controles -->
+            <section class="titulo_secao flex justify--space--between align--items--center" style="flex-wrap:wrap;gap:10px">
                 <h1>Relatórios Financeiros</h1>
-                <span id="escopoRelatorio" class="relatorio-escopo-badge"></span>
+                <div class="relatorio-toolbar">
+                    <span id="escopoRelatorio" class="relatorio-escopo-badge"></span>
+                    <select id="filtroAno" title="Filtrar por ano">
+                        <!-- Populado via JS -->
+                    </select>
+                    <button class="btn-exportar-csv" id="btnExportarCSV" title="Exportar dados como CSV">
+                        ⬇ Exportar CSV
+                    </button>
+                </div>
             </section>
 
-            <!-- Cards de resumo -->
             <section class="informacoes_painel" style="width:100%">
+
+                <!-- Cards de resumo -->
                 <div class="flex gap--15" style="flex-wrap:wrap; margin-bottom:1.5rem;">
                     <div class="relatorio-card" id="cardRecursos">
                         <div class="relatorio-card-titulo">Total de Recursos Recebidos</div>
-                        <div class="relatorio-card-valor" id="totalRecursos">Carregando...</div>
+                        <div class="relatorio-card-valor card-valor" id="totalRecursos">Carregando...</div>
                     </div>
                     <div class="relatorio-card" id="cardDespesas">
                         <div class="relatorio-card-titulo">Total de Despesas</div>
-                        <div class="relatorio-card-valor" id="totalDespesas">Carregando...</div>
+                        <div class="relatorio-card-valor card-valor" id="totalDespesas">Carregando...</div>
                     </div>
                     <div class="relatorio-card" id="cardSaldo">
                         <div class="relatorio-card-titulo">Saldo</div>
-                        <div class="relatorio-card-valor" id="totalSaldo">Carregando...</div>
+                        <div class="relatorio-card-valor card-valor" id="totalSaldo">Carregando...</div>
                     </div>
                 </div>
 
-                <!-- Despesas por subunidade -->
-                <h2 style="margin-bottom:0.5rem;">Despesas por Subunidade</h2>
-                <div class="cabecalho flex">
-                    <div class="titulo flex flex--8">Subunidade</div>
-                    <div class="titulo flex flex--4">Total (R$)</div>
+                <!-- Gráficos -->
+                <div class="relatorio-graficos">
+                    <div class="relatorio-grafico-box">
+                        <h3>Despesas por Subunidade</h3>
+                        <canvas id="graficoSubunidades"></canvas>
+                    </div>
+                    <div class="relatorio-grafico-box" style="max-width:340px">
+                        <h3>Despesas por Tipo</h3>
+                        <canvas id="graficoTipos"></canvas>
+                    </div>
                 </div>
-                <div id="listaPorSubunidade" class="listaTiposRecursos"></div>
 
-                <!-- Despesas por tipo -->
-                <h2 style="margin-top:1.5rem; margin-bottom:0.5rem;">Despesas por Tipo</h2>
-                <div class="cabecalho flex">
-                    <div class="titulo flex flex--8">Tipo de Despesa</div>
-                    <div class="titulo flex flex--4">Total (R$)</div>
+                <!-- Tabelas -->
+                <div class="relatorio-tabelas">
+                    <div class="relatorio-tabela-box">
+                        <h2>Despesas por Subunidade</h2>
+                        <div class="cabecalho flex">
+                            <div class="titulo flex flex--8">Subunidade</div>
+                            <div class="titulo flex flex--4">Total (R$)</div>
+                        </div>
+                        <div id="listaPorSubunidade" class="listaTiposRecursos"></div>
+                    </div>
+
+                    <div class="relatorio-tabela-box">
+                        <h2>Despesas por Tipo</h2>
+                        <div class="cabecalho flex">
+                            <div class="titulo flex flex--8">Tipo de Despesa</div>
+                            <div class="titulo flex flex--4">Total (R$)</div>
+                        </div>
+                        <div id="listaPorTipo" class="listaTiposRecursos"></div>
+                    </div>
                 </div>
-                <div id="listaPorTipo" class="listaTiposRecursos"></div>
+
             </section>
-
         </main>
         <footer>Rodapé</footer>
     </div>
 
-
-    <!-- Formulário de Login DIALOG -->
+    <!-- Login Dialog -->
     <dialog id="dialogLogin">
         <fieldset>
             <legend>Login</legend>
-
             <form id="frmLogin">
                 <div class="row">
                     <input type="text" name="txtLogin" id="txtLogin" class="formInput" placeholder="Digite o seu login">
@@ -83,14 +168,14 @@
                 <div class="row">
                     <input type="password" name="txtSenha" id="txtSenha" class="formInput" placeholder="Digite a sua senha">
                 </div>
+                <p id="loginErro" class="login-erro" hidden></p>
                 <div class="row">
-                    <button id="btnLogin">Entrar</button>
-                    <button id="btnCancelarLogin">Cancelar</button>
+                    <button id="btnLogin" type="button">Entrar</button>
+                    <button id="btnCancelarLogin" type="button">Cancelar</button>
                 </div>
             </form>
         </fieldset>
     </dialog>
-    <!-- Fim formulário de Login DIALOG -->
 
     <script type="module" src="./js/components/index.js"></script>
 </body>
