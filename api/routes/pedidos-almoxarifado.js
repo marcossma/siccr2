@@ -25,6 +25,19 @@ module.exports = function (wss) {
         });
     }
 
+    // Broadcast para a subunidade solicitante quando pedido for atendido
+    function broadcastPedidoAtendido(pedido) {
+        if (!wss) return;
+        const msg = JSON.stringify({ tipo: "pedido_atendido", pedido });
+        wss.clients.forEach((client) => {
+            if (client.readyState !== WebSocket.OPEN || !client.usuario) return;
+            // Notifica apenas quem NÃO pode atender (solicitantes) da subunidade do pedido
+            if (!podeAtender(client.usuario) && client.usuario.subunidade === pedido.subunidade_id) {
+                client.send(msg);
+            }
+        });
+    }
+
     // GET / — lista pedidos (com contagem de itens, filtrado por escopo)
     router.get("/", async (req, res) => {
         try {
@@ -41,7 +54,7 @@ module.exports = function (wss) {
 
             const { rows } = await pool.query(
                 `SELECT pa.id_pedido, pa.subunidade_id, pa.observacao,
-                        pa.status, pa.data_pedido, pa.createdat,
+                        pa.status, pa.data_pedido, pa.data_conclusao, pa.createdat,
                         s.subunidade_nome, s.subunidade_sigla,
                         COUNT(i.id_item)::int AS total_itens
                  FROM pedidos_almoxarifado pa
@@ -178,12 +191,18 @@ module.exports = function (wss) {
         }
 
         try {
+            const setConclusao = status === "atendido" ? ", data_conclusao = NOW()" : "";
             const { rows, rowCount } = await pool.query(
-                `UPDATE pedidos_almoxarifado SET status = $1
+                `UPDATE pedidos_almoxarifado SET status = $1${setConclusao}
                  WHERE id_pedido = $2 RETURNING *`,
                 [status, id]
             );
             if (rowCount === 0) return res.status(404).json({ status: "error", message: "Pedido não encontrado.", data: null });
+
+            if (status === "atendido") {
+                broadcastPedidoAtendido(rows[0]);
+            }
+
             return res.status(200).json({ status: "success", message: "Status atualizado.", data: rows[0] });
         } catch (error) {
             console.error("Erro ao atualizar status:", error);

@@ -36,6 +36,21 @@
             transition: background 0.2s;
         }
         .btn-exportar-csv:hover { background: #009536 !important; }
+        .btn-imprimir {
+            background: #555 !important;
+            color: white !important;
+            border-color: #555 !important;
+            transition: background 0.2s;
+        }
+        .btn-imprimir:hover { background: #333 !important; }
+
+        @media print {
+            header, footer, .relatorio-toolbar, responsive-menu,
+            #btnEntrar, .btn_adicionar { display: none !important; }
+            body { background: white; }
+            .container { box-shadow: none; }
+            .relatorio-grafico-box canvas { max-height: 200px; }
+        }
 
         .relatorio-graficos {
             display: flex;
@@ -97,6 +112,9 @@
                     </select>
                     <button class="btn-exportar-csv" id="btnExportarCSV" title="Exportar dados como CSV">
                         ⬇ Exportar CSV
+                    </button>
+                    <button class="btn-imprimir" id="btnImprimir" title="Imprimir / salvar como PDF">
+                        🖨 Imprimir
                     </button>
                 </div>
             </section>

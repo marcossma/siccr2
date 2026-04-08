@@ -768,12 +768,14 @@ document.addEventListener("DOMContentLoaded", function() {
                         <div class="dado flex flex--2">${r.id_recurso_recebido}</div>
                         <div class="dado flex flex--3">${r.tipo_recurso || "—"}</div>
                         <div class="dado flex flex--3">${parseFloat(r.valor_recurso_recebido).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
-                        <div class="dado flex flex--7">${r.descricao_recurso_recebido || "—"}</div>
+                        <div class="dado flex flex--3">${formatarData(r.data_recebimento)}</div>
+                        <div class="dado flex flex--5">${r.descricao_recurso_recebido || "—"}</div>
                         <div class="dado flex flex--2 font--size--20">
                             <i class="bi bi-pencil-square editar" title="Editar"
                                 data-id_recurso_recebido="${r.id_recurso_recebido}"
                                 data-tipo_recurso_recebido="${r.tipo_recurso_recebido}"
                                 data-valor_recurso_recebido="${r.valor_recurso_recebido}"
+                                data-data_recebimento="${r.data_recebimento ? r.data_recebimento.substring(0, 10) : ""}"
                                 data-descricao_recurso_recebido="${r.descricao_recurso_recebido || ""}"></i>
                             <i class="bi bi-x-square excluir" title="Excluir"
                                 data-id_recurso_recebido="${r.id_recurso_recebido}"></i>
@@ -810,6 +812,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 body: JSON.stringify({
                     tipo_recurso_recebido: objData.id_recurso_recebido,
                     valor_recurso_recebido: objData.valor_recurso_recebido,
+                    data_recebimento: objData.data_recebimento || null,
                     descricao_recurso_recebido: objData.descricao_recurso_recebido || null
                 })
             }).then(() => {
@@ -828,6 +831,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 body: JSON.stringify({
                     tipo_recurso_recebido: objData.id_recurso_recebido,
                     valor_recurso_recebido: objData.valor_recurso_recebido,
+                    data_recebimento: objData.data_recebimento || null,
                     descricao_recurso_recebido: objData.descricao_recurso_recebido || null
                 })
             }).then(() => {
@@ -848,6 +852,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 document.querySelector("#id_recurso_recebido").value = d.tipo_recurso_recebido;
                 document.querySelector("#valor_recurso_recebido").value = d.valor_recurso_recebido;
+                document.querySelector("#data_recebimento").value = d.data_recebimento || "";
                 document.querySelector("#descricao_recurso_recebido").value = d.descricao_recurso_recebido;
 
                 // Armazena o id para o PUT
@@ -1052,6 +1057,7 @@ document.addEventListener("DOMContentLoaded", function() {
     if (urlParam === "/pedido-almoxarifado") {
         const siccr                 = JSON.parse(localStorage.getItem("siccr") || "null");
         const listaPedidos          = document.getElementById("listaPedidos");
+        const filtroPedidoStatus    = document.getElementById("filtroPedidoStatus");
         const btnNovoPedido         = document.getElementById("btnNovoPedido");
         const dialogNovoPedido      = document.getElementById("dialogNovoPedido");
         const btnCancelarNovoPedido = document.getElementById("btnCancelarNovoPedido");
@@ -1107,13 +1113,15 @@ document.addEventListener("DOMContentLoaded", function() {
 
         function renderizarPedidos() {
             carregarDados("pedidos-almoxarifado").then((pedidos) => {
+                const filtro = filtroPedidoStatus ? filtroPedidoStatus.value : "todos";
+                const filtrados = filtro === "todos" ? (pedidos || []) : (pedidos || []).filter(p => p.status === filtro);
                 listaPedidos.innerHTML = "";
-                if (!pedidos || pedidos.length === 0) {
+                if (!filtrados || filtrados.length === 0) {
                     listaPedidos.innerHTML = '<p class="pedido-lista-vazia" style="padding:15px">Nenhum pedido encontrado.</p>';
                     return;
                 }
-                pedidos.forEach((p) => {
-                    // SID não vê botão excluir de outros setores; usuário comum não vê pedidos atendidos com excluir
+                filtrados.forEach((p) => {
+                    // SID não vê botão excluir de outros setores; usuário comum não pode excluir atendidos
                     const podeExcluir = !ehSID && p.status !== "atendido";
                     const div = document.createElement("div");
                     div.classList.add("dados", "flex", "align--items--center");
@@ -1122,7 +1130,8 @@ document.addEventListener("DOMContentLoaded", function() {
                         <div class="dado flex flex--3">${p.subunidade_sigla || p.subunidade_nome || "—"}</div>
                         <div class="dado flex flex--1">${p.total_itens}</div>
                         <div class="dado flex flex--3">${formatarData(p.data_pedido)}</div>
-                        <div class="dado flex flex--3">${badgeStatus[p.status] || p.status}</div>
+                        <div class="dado flex flex--3">${p.data_conclusao ? formatarData(p.data_conclusao) : "—"}</div>
+                        <div class="dado flex flex--2">${badgeStatus[p.status] || p.status}</div>
                         <div class="dado flex flex--2 gap--10 font--size--20">
                             <i class="bi bi-eye ver-itens cursor--pointer" title="Ver itens"
                                 data-id="${p.id_pedido}"
@@ -1137,6 +1146,10 @@ document.addEventListener("DOMContentLoaded", function() {
                     listaPedidos.appendChild(div);
                 });
             });
+        }
+
+        if (filtroPedidoStatus) {
+            filtroPedidoStatus.addEventListener("change", renderizarPedidos);
         }
 
         // Abrir dialog de novo pedido
@@ -1278,8 +1291,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
         btnFecharVerItens.addEventListener("click", () => dialogVerItens.close());
 
-        // WebSocket — notificações em tempo real para SID
-        if (ehSID) {
+        // WebSocket — notificações em tempo real
+        {
             const wsProto = location.protocol === "https:" ? "wss:" : "ws:";
             const ws = new WebSocket(`${wsProto}//${location.host}`);
             ws.addEventListener("open", () => {
@@ -1289,9 +1302,13 @@ document.addEventListener("DOMContentLoaded", function() {
             ws.addEventListener("message", (event) => {
                 try {
                     const msg = JSON.parse(event.data);
-                    if (msg.tipo === "pedido_pendente") {
+                    if (msg.tipo === "pedido_pendente" && ehSID) {
                         const setor = msg.pedido?.subunidade_sigla || msg.pedido?.subunidade_nome || "setor";
                         mostrarToast(`Novo pedido de almoxarifado de: ${setor}`);
+                        renderizarPedidos();
+                    }
+                    if (msg.tipo === "pedido_atendido" && !ehSID) {
+                        mostrarToast(`Seu pedido #${msg.pedido?.id_pedido || ""} foi atendido pela secretaria!`);
                         renderizarPedidos();
                     }
                 } catch { /* ignora mensagens malformadas */ }
@@ -1358,13 +1375,15 @@ document.addEventListener("DOMContentLoaded", function() {
                         <div class="dado flex flex--3">${p.subunidade_sigla || p.subunidade_nome || "—"}</div>
                         <div class="dado flex flex--1">${p.total_itens}</div>
                         <div class="dado flex flex--3">${formatarData(p.data_pedido)}</div>
-                        <div class="dado flex flex--3">${badgeStatus[p.status] || p.status}</div>
+                        <div class="dado flex flex--3">${p.data_conclusao ? formatarData(p.data_conclusao) : "—"}</div>
+                        <div class="dado flex flex--2">${badgeStatus[p.status] || p.status}</div>
                         <div class="dado flex flex--2 font--size--20">
                             <i class="bi bi-eye ver-itens-sid cursor--pointer" title="Ver itens e atender"
                                 data-id="${p.id_pedido}"
                                 data-status="${p.status}"
                                 data-setor="${p.subunidade_sigla || p.subunidade_nome || ""}"
                                 data-data="${formatarData(p.data_pedido)}"
+                                data-conclusao="${p.data_conclusao ? formatarData(p.data_conclusao) : ""}"
                                 data-obs="${p.observacao || ""}"></i>
                         </div>
                     `;
@@ -1379,16 +1398,20 @@ document.addEventListener("DOMContentLoaded", function() {
             const icon = e.target.closest(".ver-itens-sid");
             if (!icon) return;
 
-            const id     = icon.dataset.id;
-            const status = icon.dataset.status;
-            const setor  = icon.dataset.setor;
-            const data   = icon.dataset.data;
-            const obs    = icon.dataset.obs;
+            const id        = icon.dataset.id;
+            const status    = icon.dataset.status;
+            const setor     = icon.dataset.setor;
+            const data      = icon.dataset.data;
+            const conclusao = icon.dataset.conclusao;
+            const obs       = icon.dataset.obs;
 
             dialogVerItensSID.dataset.pedidoId     = id;
             dialogVerItensSID.dataset.pedidoStatus = status;
             dialogVerItensSIDLegend.textContent = `Pedido #${id} — ${setor}`;
-            dialogVerItensSIDInfo.textContent   = `Data: ${data}${obs ? " · " + obs : ""}`;
+            const infoParts = [`Solicitado: ${data}`];
+            if (conclusao) infoParts.push(`Concluído: ${conclusao}`);
+            if (obs) infoParts.push(obs);
+            dialogVerItensSIDInfo.textContent = infoParts.join(" · ");
             dialogVerItensSIDConteudo.innerHTML = "Carregando...";
             btnAtenderPedidoSID.hidden = status !== "pendente";
             dialogVerItensSID.showModal();
@@ -2135,6 +2158,10 @@ document.addEventListener("DOMContentLoaded", function() {
             a.download = `relatorio-financeiro-${ano}.csv`;
             a.click();
             URL.revokeObjectURL(url);
+        });
+
+        document.querySelector("#btnImprimir")?.addEventListener("click", () => {
+            window.print();
         });
 
         filtroAno.addEventListener("change", carregarRelatorio);

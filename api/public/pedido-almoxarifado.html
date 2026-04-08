@@ -27,9 +27,18 @@
         </div>
         <main class="flex flex--column flex--center">
 
-            <section class="titulo_secao flex justify--space--between align--items--center">
+            <section class="titulo_secao flex justify--space--between align--items--center" style="flex-wrap:wrap;gap:10px">
                 <h1>Pedidos de Almoxarifado</h1>
-                <button class="btn_adicionar" id="btnNovoPedido">+ Novo Pedido</button>
+                <div class="flex gap--10 align--items--center">
+                    <label class="painelLabel" for="filtroPedidoStatus" style="white-space:nowrap">Exibir:</label>
+                    <select id="filtroPedidoStatus" class="formInput" style="padding:6px 10px">
+                        <option value="todos">Todos</option>
+                        <option value="pendente" selected>Pendentes</option>
+                        <option value="atendido">Atendidos</option>
+                        <option value="cancelado">Cancelados</option>
+                    </select>
+                    <button class="btn_adicionar" id="btnNovoPedido">+ Novo Pedido</button>
+                </div>
             </section>
 
             <!-- Lista de pedidos -->
@@ -38,8 +47,9 @@
                     <div class="titulo flex flex--1">Nº</div>
                     <div class="titulo flex flex--3">Setor</div>
                     <div class="titulo flex flex--1">Itens</div>
-                    <div class="titulo flex flex--3">Data</div>
-                    <div class="titulo flex flex--3">Status</div>
+                    <div class="titulo flex flex--3">Solicitado</div>
+                    <div class="titulo flex flex--3">Concluído</div>
+                    <div class="titulo flex flex--2">Status</div>
                     <div class="titulo flex flex--2">Ações</div>
                 </div>
                 <div id="listaPedidos">
