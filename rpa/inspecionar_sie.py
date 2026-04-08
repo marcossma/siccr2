@@ -42,25 +42,32 @@ def listar_janelas_abertas():
 
 
 def inspecionar_janela(titulo_parcial: str):
-    """Mostra todos os controles de uma janela pelo título parcial."""
-    print("\n" + "="*60)
-    print(f"  CONTROLES DA JANELA: {titulo_parcial!r}")
-    print("="*60)
-    try:
-        app = Application(backend="win32").connect(
-            title_re=f".*{titulo_parcial}.*", timeout=5
-        )
-        janela = app.top_window()
-        print(f"\n  Título completo : {janela.window_text()!r}")
-        print(f"  Classe          : {janela.class_name()}")
-        print("\n  Controles filhos:")
-        print("  " + "-"*50)
-        janela.print_control_identifiers()
-    except ElementNotFoundError:
+    """Mostra todos os controles de janelas que contenham o título parcial."""
+    desktop = Desktop(backend="win32")
+    janelas = [
+        w for w in desktop.windows()
+        if titulo_parcial.lower() in w.window_text().lower() and w.window_text().strip()
+    ]
+
+    if not janelas:
         print(f"\n  Janela com '{titulo_parcial}' não encontrada.")
         print("  Verifique se o GCA está aberto e tente novamente.")
-    except Exception as e:
-        print(f"\n  Erro: {e}")
+        return
+
+    for idx, janela in enumerate(janelas):
+        print("\n" + "="*60)
+        print(f"  JANELA {idx + 1} de {len(janelas)}: {janela.window_text()!r}")
+        print("="*60)
+        try:
+            print(f"\n  Título completo : {janela.window_text()!r}")
+            print(f"  Classe          : {janela.class_name()}")
+            print("\n  Controles filhos:")
+            print("  " + "-"*50)
+            # Conecta pelo handle exato para evitar ambiguidade
+            app = Application(backend="win32").connect(handle=janela.handle)
+            app.window(handle=janela.handle).print_control_identifiers()
+        except Exception as e:
+            print(f"\n  Erro ao inspecionar: {e}")
 
 
 if __name__ == "__main__":

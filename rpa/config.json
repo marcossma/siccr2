@@ -2,7 +2,7 @@
     "api_base_url": "http://localhost:15000/api",
     "api_key": "siccr_COLE_AQUI_A_CHAVE_GERADA_NO_PAINEL",
     "sie_exe_path": "\\\\saccr3.ccr.ufsm.br\\appufsm\\Executaveis\\GCANavegacao.exe",
-    "sie_window_title": "GCA",
+    "sie_window_title": "SGCA",
     "sie_usuario": "seu_usuario_sie",
     "sie_senha": "sua_senha_sie"
 }

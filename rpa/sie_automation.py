@@ -82,8 +82,9 @@ class SIEAutomacao:
 
         # Tenta conectar a uma instância já aberta
         try:
+            # Conecta pela classe exata da janela principal (mais confiável que pelo título)
             self.app = Application(backend="win32").connect(
-                title_re=f".*{self.window_title}.*", timeout=3
+                class_name="TfrNavegacao", timeout=3
             )
         except ElementNotFoundError:
             # Abre o executável
@@ -92,12 +93,57 @@ class SIEAutomacao:
                     "sie_exe_path não configurado em config.json"
                 )
             self.app = Application(backend="win32").start(self.exe_path)
+
+            # O Windows exibe "Abrir Arquivo - Aviso de Segurança" ao abrir
+            # executáveis de caminhos de rede — clica em "Executar" automaticamente
+            self._fechar_aviso_seguranca()
+
             time.sleep(4)   # aguarda o SIE inicializar
 
-        self.janela = self.app.top_window()
+        self.janela = self.app.window(class_name="TfrNavegacao")
 
         # Se aparecer tela de login, autentica automaticamente
         self._fazer_login()
+
+    def _fechar_aviso_seguranca(self) -> None:
+        """
+        Fecha o dialog "Abrir Arquivo - Aviso de Segurança" que o Windows exibe
+        ao executar aplicativos de caminhos de rede (UNC \\servidor\...).
+        Clica em "Executar" se o dialog aparecer dentro de 8 segundos.
+        """
+        from pywinauto import Desktop
+        deadline = time.time() + 8
+        while time.time() < deadline:
+            try:
+                desktop = Desktop(backend="win32")
+                aviso = desktop.window(title_re=".*Aviso de Segurança.*|.*Security Warning.*")
+                if aviso.exists(timeout=1):
+                    for titulo in ("Executar", "Run"):
+                        try:
+                            aviso.child_window(title=titulo, class_name="Button").click()
+                            time.sleep(0.5)
+                            return
+                        except Exception:
+                            continue
+            except Exception:
+                pass
+            time.sleep(0.5)
+
+    def _fechar_mensagem_pos_login(self) -> None:
+        """
+        Fecha o dialog de avisos/comunicados que o SGCA exibe logo após o login.
+        O dialog tem título 'Mensagem' e botão 'Fechar'.
+        Aguarda até 10 segundos — se não aparecer, segue em frente normalmente.
+        """
+        try:
+            from pywinauto import Desktop
+            # Classe mapeada: TfrmMensagem, botão classe TBitBtn título "&Fechar"
+            aviso = Desktop(backend="win32").window(class_name="TfrmMensagem")
+            aviso.wait("ready", timeout=10)
+            aviso.child_window(title="&Fechar", class_name="TBitBtn").click()
+            time.sleep(0.5)
+        except Exception:
+            pass   # dialog não apareceu ou já foi fechado
 
     def _fazer_login(self) -> None:
         """
@@ -107,31 +153,92 @@ class SIEAutomacao:
               Rode print_control_identifiers() na tela de login para identificar.
         """
         try:
-            # Verifica se a tela de login está visível (timeout curto)
-            tela_login = self.app.window(title_re=".*[Ll]ogin.*|.*[Ee]ntrar.*|.*[Aa]cesso.*")
+            # Tela de login do SGCA: título "SGCA - Controle de Acesso", classe TfrmSenha
+            tela_login = self.app.window(class_name="TfrmSenha")
             tela_login.wait("ready", timeout=5)
         except Exception:
             # Tela de login não encontrada — SIE já está logado
             return
 
-        # ── Preencha conforme os controles reais da tela de login ────────────
-        #
-        # Exemplo genérico (ajuste found_index conforme print_control_identifiers):
-        #
-        #   campo_usuario = tela_login.child_window(class_name="Edit", found_index=0)
-        #   campo_usuario.set_text(self.usuario)
-        #
-        #   campo_senha = tela_login.child_window(class_name="Edit", found_index=1)
-        #   campo_senha.set_text(self.senha)
-        #
-        #   btn_ok = tela_login.child_window(title="OK", class_name="Button")
-        #   btn_ok.click()
-        #   time.sleep(2)   # aguarda o SIE abrir a tela principal
-        #
-        raise NotImplementedError(
-            "Implemente _fazer_login() em sie_automation.py\n"
-            "Use print_control_identifiers() para mapear os campos."
-        )
+        # Controles mapeados via print_control_identifiers() em TfrmSenha:
+        #   TEdit found_index=0 → Usuário
+        #   TEdit found_index=1 → Senha  (aparece como "Edit2" na árvore — 2º TEdit)
+        #   TComboBox           → Banco (mantém "Banco de Produção", não altera)
+        #   TButton title="OK"  → confirmar
+
+        campo_usuario = tela_login.child_window(class_name="TEdit", found_index=0)
+        campo_usuario.set_text(self.usuario)
+        time.sleep(PAUSA / 2)
+
+        campo_senha = tela_login.child_window(class_name="TEdit", found_index=1)
+        campo_senha.set_text(self.senha)
+        time.sleep(PAUSA / 2)
+
+        tela_login.child_window(title="OK", class_name="TButton").click()
+        time.sleep(3)   # aguarda o SGCA abrir a tela principal
+
+        # Após o login o SGCA exibe um dialog "Mensagem" com avisos/comunicados.
+        # Fecha automaticamente clicando em "Fechar".
+        self._fechar_mensagem_pos_login()
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Navegação na árvore de aplicações
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def _navegar_para_solicitacao(self, log: LogFn | None = None) -> None:
+        """
+        Navega na árvore 'Aplicações' até abrir a tela de Solicitação de Produtos.
+
+        Caminho: 5 Serviços Gerais → 5.4 Material → 5.4.2 Funções → 5.4.2.04 Solicitação de Produtos
+
+        Estratégia: foca a TBsDBTreeList, usa type_keys com o código numérico de cada
+        nível para fazer jump (a maioria dos controles Delphi suporta type-ahead),
+        expande com a tecla de seta e abre com Enter/duplo clique.
+        """
+        self._log(log, "Navegando até Solicitação de Produtos...")
+
+        arvore = self.janela.child_window(class_name="TBsDBTreeList")
+        arvore.set_focus()
+        time.sleep(PAUSA)
+
+        # Cada tupla: (texto para type-ahead, tecla para expandir/abrir)
+        # type_keys envia os caracteres para o controle fazer jump até o item
+        passos = [
+            "5",          # 5 Serviços Gerais  → expandir com seta direita
+            "5.4",        # 5.4 Material        → expandir
+            "5.4.2",      # 5.4.2 Funções       → expandir
+            "5.4.2.04",   # 5.4.2.04 Solicitação de Produtos → abrir (Enter/duplo clique)
+        ]
+
+        for i, codigo in enumerate(passos):
+            # Tenta encontrar o item pelo texto dentro da árvore
+            try:
+                item = arvore.child_window(title_re=f".*{codigo}.*")
+                if i < len(passos) - 1:
+                    item.click_input()          # seleciona o nó
+                    time.sleep(PAUSA / 2)
+                    arvore.type_keys("{RIGHT}")  # expande
+                else:
+                    item.double_click_input()   # abre a tela no último nível
+                time.sleep(PAUSA)
+                continue
+            except Exception:
+                pass
+
+            # Fallback: type-ahead teclado no controle da árvore
+            # Digita apenas os dígitos do código para pular até o item
+            digitos = codigo.replace(".", "")
+            arvore.type_keys(digitos, pause=0.15)
+            time.sleep(PAUSA / 2)
+            if i < len(passos) - 1:
+                arvore.type_keys("{RIGHT}")     # expande o nó
+            else:
+                arvore.type_keys("{ENTER}")     # abre a tela
+            time.sleep(PAUSA)
+
+        # Aguarda a tela de Solicitação de Produtos abrir
+        time.sleep(2)
+        self._log(log, "Módulo de Solicitação de Produtos aberto.")
 
     # ─────────────────────────────────────────────────────────────────────────
     # Fluxo principal de pedido
@@ -141,46 +248,90 @@ class SIEAutomacao:
         """
         Executa um pedido de almoxarifado no SIE para a lista de itens.
 
-        Parâmetros
-        ----------
-        itens : list[dict]
-            Cada item contém:
-                codigo_produto   (str | None)
-                descricao_produto (str)
-                quantidade       (int)
-        log : callable | None
-            Função para enviar mensagens de progresso à GUI.
-
-        O fluxo típico de pedido de almoxarifado no SIE costuma ser:
-            1. Navegar ao módulo de almoxarifado / requisições
-            2. Criar nova requisição
-            3. Para cada item: preencher código/descrição + quantidade + adicionar
-            4. Confirmar/salvar a requisição
-            5. Fechar ou voltar para a tela principal
-
-        Implemente cada passo abaixo conforme o SIE real.
+        Fluxo:
+            1. Navega até 5.4.2.04 Solicitação de Produtos na árvore
+            2. Clica em Novo → formulário pre-preenchido → clica Salvar
+            3. Na aba Itens: para cada item digita código + qtd e confirma
+            4. Clica Tramitar para finalizar
         """
         self._log(log, "Iniciando fluxo de pedido no SIE...")
 
-        # ── PASSO 1: Navegar ao módulo de almoxarifado ────────────────────────
-        # Exemplo com menu:
-        #   self.janela.menu_select("Almoxarifado->Requisições->Nova Requisição")
-        #   time.sleep(PAUSA)
-        #
-        # Ou clicando em botão/ícone:
-        #   self.janela.child_window(title="Almoxarifado").click()
-        #   time.sleep(PAUSA)
-        #
-        # Após navegar, captura a nova tela:
-        #   tela_requisicao = self.app.window(title_re=".*[Rr]equisi.*")
-        #   tela_requisicao.wait("ready", timeout=10)
+        # ── PASSO 1: Navegar ao módulo ────────────────────────────────────────
+        self._navegar_para_solicitacao(log)
+
+        # Captura a janela do módulo pelo título/classe mapeados
+        tela = self.app.window(class_name="TfrCESolProdutosPrincipal")
+        tela.wait("ready", timeout=15)
 
         # ── PASSO 2: Criar nova requisição ────────────────────────────────────
-        #   btn_nova = tela_requisicao.child_window(title="Nova", class_name="Button")
-        #   btn_nova.click()
-        #   time.sleep(PAUSA)
+        self._nova_requisicao(tela, log)
 
-        # ── PASSO 3: Adicionar cada item ──────────────────────────────────────
+        # ── PASSO 3: Adicionar itens ──────────────────────────────────────────
+        self._inserir_itens(tela, itens, log)
+
+        # ── PASSO 4: Tramitar ────────────────────────────────────────────────
+        self._tramitar(tela, log)
+
+        self._log(log, "Pedido concluído no SIE.")
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Sub-rotinas do fluxo de pedido
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def _nova_requisicao(self, tela, log: LogFn | None = None) -> None:
+        """
+        Clica no botão Novo da toolbar → aguarda o formulário habilitar
+        (os campos já vêm pre-preenchidos com os dados da subunidade) →
+        clica Salvar para gerar o número da requisição.
+        """
+        self._log(log, "Criando nova requisição...")
+
+        # Botão "Novo" é o 1º botão da toolbar (caption="Novo", found_index=0)
+        toolbar = tela.child_window(class_name="TToolBar")
+        try:
+            toolbar.child_window(title="Novo", found_index=0).click_input()
+        except Exception:
+            # Fallback: pelo índice (0 = primeiro botão)
+            toolbar.button(0).click_input()
+        time.sleep(PAUSA * 1.5)
+
+        # Aguarda Salvar/Cancelar ficarem visíveis (o formulário habilitou)
+        # Botão Salvar fica no canto inferior direito da aba Requisição
+        try:
+            btn_salvar = tela.child_window(title="Salvar")
+            btn_salvar.wait("visible", timeout=8)
+            btn_salvar.click_input()
+        except Exception:
+            # Tenta pelo menu Arquivo → Salvar como fallback
+            tela.child_window(class_name="TMenuBar").type_keys("%a")  # Alt+A = Arquivo
+            time.sleep(0.3)
+            tela.type_keys("s")  # Salvar
+        time.sleep(PAUSA * 2)
+
+        # Fecha possível confirmação/popup após salvar
+        self._fechar_popup_se_existir()
+        self._log(log, "Requisição criada.")
+
+    def _inserir_itens(self, tela_principal, itens: list[dict], log: LogFn | None = None) -> None:
+        """
+        Na aba 'Itens' da requisição, clica em Novo para cada produto,
+        preenche o código e a quantidade e clica em Salvar.
+
+        Controles mapeados em TfrCESolProdutosItens (5.4.2.59):
+            TBsEdit   found_index=0 → Edit6 (Descrição — auto-preenchida após Tab)
+            TBsEdit   found_index=1 → Edit8 (Código do produto, ao lado de btnLocProduto)
+            TBsCurrencyEdit found_index=4 → Edit5 (Quantidade Solicitada, L=638)
+            TBitBtn   title="Salvar"  → salva o item atual na grade
+            TBsQuantumGrid            → grade com itens já inseridos
+        """
+        self._log(log, "Navegando para aba Itens...")
+
+        # Clica na aba "Itens" na janela principal da requisição
+        tela_principal.child_window(title="Itens", class_name="TBsTabSheet").click_input()
+        time.sleep(PAUSA)
+
+        toolbar = tela_principal.child_window(class_name="TToolBar")
+
         for i, item in enumerate(itens):
             codigo    = item.get("codigo_produto") or ""
             descricao = item.get("descricao_produto", "")
@@ -188,34 +339,57 @@ class SIEAutomacao:
 
             self._log(log, f"  [{i+1}/{len(itens)}] {descricao}  (cód: {codigo or '—'}  qtd: {qtd})")
 
-            # Exemplo de preenchimento por item:
-            #
-            #   tela_item = self.app.window(title_re=".*[Ii]tem.*")
-            #   tela_item.wait("ready", timeout=8)
-            #
-            #   tela_item.child_window(class_name="Edit", found_index=0).set_text(codigo)
-            #   time.sleep(PAUSA / 2)
-            #
-            #   tela_item.child_window(class_name="Edit", found_index=1).set_text(qtd)
-            #   time.sleep(PAUSA / 2)
-            #
-            #   tela_item.child_window(title="Adicionar", class_name="Button").click()
-            #   time.sleep(PAUSA)
-            #
-            #   # Trata possível popup de confirmação ou erro
-            #   self._fechar_popup_se_existir()
+            # Clica em "Novo" da toolbar → abre/limpa TfrCESolProdutosItens
+            try:
+                toolbar.child_window(title="Novo", found_index=1).click_input()
+            except Exception:
+                toolbar.button(5).click_input()   # fallback: 6º botão (Novo dos itens)
+            time.sleep(PAUSA)
 
-            raise NotImplementedError(
-                "Implemente o preenchimento de itens em sie_automation.py → fazer_pedido()"
-            )
+            # Captura a janela de inserção de item (abre como janela filha separada)
+            tela_item = self.app.window(class_name="TfrCESolProdutosItens")
+            tela_item.wait("ready", timeout=10)
 
-        # ── PASSO 4: Confirmar/salvar a requisição ────────────────────────────
-        #   btn_salvar = tela_requisicao.child_window(title="Salvar", class_name="Button")
-        #   btn_salvar.click()
-        #   time.sleep(PAUSA)
-        #   self._fechar_popup_se_existir(titulo_esperado="Requisição salva")
+            # ── Campo: Código do produto (Edit8, TBsEdit found_index=1) ──────
+            campo_codigo = tela_item.child_window(class_name="TBsEdit", found_index=1)
+            campo_codigo.set_focus()
+            campo_codigo.set_text(codigo)
+            campo_codigo.type_keys("{TAB}")   # Tab → SIE auto-preenche descrição
+            time.sleep(PAUSA)
 
-        self._log(log, "Pedido concluído no SIE.")
+            # Fecha popup de "produto não encontrado" se aparecer
+            self._fechar_popup_se_existir()
+
+            # ── Campo: Quantidade (Edit5, TBsCurrencyEdit found_index=4) ─────
+            campo_qtd = tela_item.child_window(class_name="TBsCurrencyEdit", found_index=4)
+            campo_qtd.set_focus()
+            campo_qtd.set_text(qtd)
+            time.sleep(PAUSA / 2)
+
+            # ── Salvar o item ─────────────────────────────────────────────────
+            tela_item.child_window(title="Salvar", class_name="TBitBtn").click_input()
+            time.sleep(PAUSA)
+
+            # Fecha popup de confirmação/erro se aparecer
+            self._fechar_popup_se_existir()
+
+        self._log(log, f"Todos os {len(itens)} itens inseridos.")
+
+    def _tramitar(self, tela, log: LogFn | None = None) -> None:
+        """Clica no botão Tramitar da toolbar para finalizar a requisição."""
+        self._log(log, "Tramitando requisição...")
+
+        toolbar = tela.child_window(class_name="TToolBar")
+        try:
+            toolbar.child_window(title="Tramitar").click_input()
+        except Exception:
+            toolbar.button(7).click_input()   # fallback: último botão da toolbar
+        time.sleep(PAUSA)
+
+        # O SIE pode abrir um dialog de confirmação de tramitação
+        self._fechar_popup_se_existir(titulo_esperado="Tramit")
+        time.sleep(PAUSA)
+        self._log(log, "Requisição tramitada.")
 
     # ─────────────────────────────────────────────────────────────────────────
     # Utilitários
