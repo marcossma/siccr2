@@ -315,22 +315,42 @@ class SIEAutomacao:
     def _inserir_itens(self, tela_principal, itens: list[dict], log: LogFn | None = None) -> None:
         """
         Na aba 'Itens' da requisição, clica em Novo para cada produto,
-        preenche o código e a quantidade e clica em Salvar.
+        usa a janela 'Localizar Produto' para buscar pelo código reduzido,
+        preenche a quantidade e salva.
 
-        Controles mapeados em TfrCESolProdutosItens (5.4.2.59):
-            TBsEdit   found_index=0 → Edit6 (Descrição — auto-preenchida após Tab)
-            TBsEdit   found_index=1 → Edit8 (Código do produto, ao lado de btnLocProduto)
-            TBsCurrencyEdit found_index=4 → Edit5 (Quantidade Solicitada, L=638)
-            TBitBtn   title="Salvar"  → salva o item atual na grade
-            TBsQuantumGrid            → grade com itens já inseridos
+        Fluxo por item:
+            1. Toolbar "Novo" (found_index=1) → abre TfrCESolProdutosItens
+            2. Clica lupa (btnLocProduto, TBitBtn found_index=0) → abre TfrLocalizarProduto
+            3. Em TfrLocalizarProduto: digita código em TMaskEdit → clica OK
+            4. Volta a TfrCESolProdutosItens: SIE preenche descrição automaticamente
+            5. Preenche quantidade (TBsCurrencyEdit found_index=4)
+            6. Clica Salvar (TBitBtn title="Salvar")
+
+        Controles mapeados em TfrCESolProdutosItens:
+            TBitBtn   found_index=0  → lupa (btnLocProduto) — abre busca de produto
+            TBsCurrencyEdit found_index=4 → Qt.Total Solic. (Quantidade)
+            TBitBtn   title="Salvar" → confirma o item
+
+        Controles mapeados em TfrLocalizarProduto:
+            TMaskEdit (único)        → campo "Código Reduzido"
+            TBitBtn   title="OK"     → confirma a busca
         """
         self._log(log, "Navegando para aba Itens...")
-
-        # Clica na aba "Itens" na janela principal da requisição
         tela_principal.child_window(title="Itens", class_name="TBsTabSheet").click_input()
         time.sleep(PAUSA)
 
+        # "Novo" é clicado UMA vez para habilitar o formulário de inserção de itens.
+        # O formulário TfrCESolProdutosItens permanece aberto durante toda a inserção —
+        # para cada produto basta usar a lupa, preencher e salvar.
         toolbar = tela_principal.child_window(class_name="TToolBar")
+        try:
+            toolbar.child_window(title="Novo", found_index=1).click_input()
+        except Exception:
+            toolbar.button(5).click_input()
+        time.sleep(PAUSA)
+
+        tela_item = self.app.window(class_name="TfrCESolProdutosItens")
+        tela_item.wait("ready", timeout=10)
 
         for i, item in enumerate(itens):
             codigo    = item.get("codigo_produto") or ""
@@ -339,57 +359,146 @@ class SIEAutomacao:
 
             self._log(log, f"  [{i+1}/{len(itens)}] {descricao}  (cód: {codigo or '—'}  qtd: {qtd})")
 
-            # Clica em "Novo" da toolbar → abre/limpa TfrCESolProdutosItens
+            # ── 1. Abre janela de busca via lupa ───────────────────────────────
+            self._localizar_produto(tela_item, codigo, log)
+
+            # ── 3. Fecha popup se produto não encontrado ───────────────────────
+            if self._fechar_popup_se_existir():
+                self._log(log, f"    ⚠ Produto '{codigo}' não encontrado — item ignorado.")
+                # Cancela o item atual e segue para o próximo
+                try:
+                    tela_item.child_window(title="Cancelar", class_name="TBitBtn").click_input()
+                except Exception:
+                    pass
+                time.sleep(PAUSA / 2)
+                continue
+
+            # ── 4. Quantidade ──────────────────────────────────────────────────
             try:
-                toolbar.child_window(title="Novo", found_index=1).click_input()
-            except Exception:
-                toolbar.button(5).click_input()   # fallback: 6º botão (Novo dos itens)
-            time.sleep(PAUSA)
+                campo_qtd = tela_item.child_window(class_name="TBsCurrencyEdit", found_index=4)
+                campo_qtd.set_focus()
+                campo_qtd.set_text(qtd)
+                time.sleep(PAUSA / 2)
+            except Exception as e:
+                self._log(log, f"    ⚠ Erro ao preencher quantidade: {e}")
 
-            # Captura a janela de inserção de item (abre como janela filha separada)
-            tela_item = self.app.window(class_name="TfrCESolProdutosItens")
-            tela_item.wait("ready", timeout=10)
-
-            # ── Campo: Código do produto (Edit8, TBsEdit found_index=1) ──────
-            campo_codigo = tela_item.child_window(class_name="TBsEdit", found_index=1)
-            campo_codigo.set_focus()
-            campo_codigo.set_text(codigo)
-            campo_codigo.type_keys("{TAB}")   # Tab → SIE auto-preenche descrição
-            time.sleep(PAUSA)
-
-            # Fecha popup de "produto não encontrado" se aparecer
-            self._fechar_popup_se_existir()
-
-            # ── Campo: Quantidade (Edit5, TBsCurrencyEdit found_index=4) ─────
-            campo_qtd = tela_item.child_window(class_name="TBsCurrencyEdit", found_index=4)
-            campo_qtd.set_focus()
-            campo_qtd.set_text(qtd)
-            time.sleep(PAUSA / 2)
-
-            # ── Salvar o item ─────────────────────────────────────────────────
+            # ── 5. Salvar item ─────────────────────────────────────────────────
             tela_item.child_window(title="Salvar", class_name="TBitBtn").click_input()
             time.sleep(PAUSA)
-
-            # Fecha popup de confirmação/erro se aparecer
             self._fechar_popup_se_existir()
 
         self._log(log, f"Todos os {len(itens)} itens inseridos.")
 
+        # ── Fecha TfrCESolProdutosItens e volta para a tela principal ──────────
+        # Necessário para que o botão Tramitar fique ativo na aba Requisição.
+        try:
+            tela_item.type_keys("%{F4}")   # Alt+F4 fecha a janela de itens
+        except Exception:
+            try:
+                tela_item.close()
+            except Exception:
+                pass
+        time.sleep(PAUSA)
+
+        # Clica na aba "Requisição" para reativar o botão Tramitar na toolbar
+        try:
+            tela_principal.child_window(title="Requisição", class_name="TBsTabSheet").click_input()
+        except Exception:
+            tela_principal.child_window(class_name="TBsTabSheet", found_index=0).click_input()
+        time.sleep(PAUSA)
+        self._log(log, "Janela de itens fechada — aba Requisição ativa.")
+
+    def _localizar_produto(self, tela_item, codigo: str, log: LogFn | None = None) -> None:
+        """
+        Clica na lupa (btnLocProduto) em TfrCESolProdutosItens,
+        preenche o código reduzido em TfrLocalizarProduto e confirma com OK.
+
+        TfrLocalizarProduto:
+            TMaskEdit (único)    → campo "Código Reduzido" (radio já selecionado por padrão)
+            TBitBtn title="OK"   → confirma
+        """
+        # Clica na lupa — primeiro TBitBtn do formulário (antes de Salvar/Cancelar)
+        try:
+            tela_item.child_window(class_name="TBitBtn", found_index=0).click_input()
+        except Exception as e:
+            self._log(log, f"    ⚠ Não encontrou botão lupa: {e}")
+            return
+        time.sleep(PAUSA)
+
+        # Aguarda a janela de busca abrir
+        tela_busca = self.app.window(class_name="TfrLocalizarProduto")
+        tela_busca.wait("ready", timeout=8)
+
+        # Garante que o radio "Código Reduzido" está selecionado (padrão)
+        try:
+            radio = tela_busca.child_window(title="Código Reduzido", class_name="TRadioButton")
+            if not radio.get_toggle_state():
+                radio.click_input()
+                time.sleep(PAUSA / 4)
+        except Exception:
+            pass
+
+        # Digita o código no campo TMaskEdit
+        campo = tela_busca.child_window(class_name="TMaskEdit")
+        campo.set_focus()
+        campo.set_text(codigo)
+        time.sleep(PAUSA / 2)
+
+        # Confirma
+        tela_busca.child_window(title="OK", class_name="TBitBtn").click_input()
+        time.sleep(PAUSA)
+
     def _tramitar(self, tela, log: LogFn | None = None) -> None:
-        """Clica no botão Tramitar da toolbar para finalizar a requisição."""
+        """
+        Clica em Tramitar na toolbar e confirma o dialog TfrmEnvioDocFluxo.
+
+        TfrmEnvioDocFluxo ('Tramitação'):
+            TBsLookupComboBox → destino do fluxo (já vem pré-selecionado)
+            TMemo             → campo "Despacho" (deixamos em branco)
+            TButton title="OK"       → confirma tramitação
+            TButton title="Cancelar" → cancela
+        """
         self._log(log, "Tramitando requisição...")
 
         toolbar = tela.child_window(class_name="TToolBar")
         try:
             toolbar.child_window(title="Tramitar").click_input()
         except Exception:
-            toolbar.button(7).click_input()   # fallback: último botão da toolbar
-        time.sleep(PAUSA)
+            toolbar.button(7).click_input()
+        time.sleep(PAUSA * 1.5)
 
-        # O SIE pode abrir um dialog de confirmação de tramitação
-        self._fechar_popup_se_existir(titulo_esperado="Tramit")
-        time.sleep(PAUSA)
-        self._log(log, "Requisição tramitada.")
+        # ── 1. Dialog principal de tramitação (TfrmEnvioDocFluxo) ────────────
+        try:
+            tela_tramit = self.app.window(class_name="TfrmEnvioDocFluxo")
+            tela_tramit.wait("ready", timeout=10)
+            # Destino já vem pré-selecionado; "Despacho" deixamos em branco.
+            tela_tramit.child_window(title="OK", class_name="TButton").click_input()
+            time.sleep(PAUSA * 1.5)
+            self._log(log, "  Dialog de tramitação confirmado.")
+        except Exception as e:
+            self._log(log, f"  ⚠ TfrmEnvioDocFluxo não apareceu: {e}")
+
+        # ── 2. Confirmação: "Deseja tramitar?" → clicar &Sim ─────────────────
+        try:
+            confirmacao = self.app.window(class_name="TMensagemCPDForm", title="Confirmação")
+            confirmacao.wait("ready", timeout=8)
+            confirmacao.child_window(title="&Sim", class_name="TButton").click_input()
+            time.sleep(PAUSA * 1.5)
+            self._log(log, "  Confirmação: &Sim clicado.")
+        except Exception as e:
+            self._log(log, f"  ⚠ Dialog Confirmação não apareceu: {e}")
+
+        # ── 3. Informação: "Tramitação realizada" → clicar OK ────────────────
+        try:
+            informacao = self.app.window(class_name="TMensagemCPDForm", title="Informação")
+            informacao.wait("ready", timeout=8)
+            informacao.child_window(title="OK", class_name="TButton").click_input()
+            time.sleep(PAUSA)
+            self._log(log, "  Informação: OK clicado.")
+        except Exception as e:
+            self._log(log, f"  ⚠ Dialog Informação não apareceu: {e}")
+
+        self._log(log, "Requisição tramitada com sucesso.")
 
     # ─────────────────────────────────────────────────────────────────────────
     # Utilitários
