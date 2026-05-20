@@ -1,7 +1,7 @@
 // Redirecionar se já estiver autenticado como super_admin
 (function () {
-    var siccr = JSON.parse(localStorage.getItem("siccr") || "null");
-    var token = localStorage.getItem("siccr_token");
+    const siccr = JSON.parse(localStorage.getItem("siccr") || "null");
+    const token = localStorage.getItem("siccr_token");
     if (token && siccr && siccr.permissao === "super_admin") {
         window.location.replace("/adm/painel");
     }

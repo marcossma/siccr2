@@ -4,7 +4,11 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "keywords": [],
   "author": "",
@@ -21,5 +25,12 @@
     "sequelize-cli": "^6.6.2",
     "ws": "^8.18.0"
   },
-  "description": "SICCR - Sistema Integrado Centro de Ciências Rurais"
+  "description": "SICCR - Sistema Integrado Centro de Ciências Rurais",
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^9.1.2",
+    "globals": "^15.15.0",
+    "prettier": "^3.8.3"
+  }
 }
