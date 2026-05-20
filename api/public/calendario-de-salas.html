@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICCR - Calendário de Salas</title>
+    <link rel="shortcut icon" href="./img/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/dialogs.css">
+    <link rel="stylesheet" href="./adm/css/style.css">
+    <link rel="stylesheet" href="./css/ui-kit.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/locales/pt-br.global.min.js"></script>
+    <script type="module" src="./js/scripts.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/">
+                <img src="./img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo">
+            </a>
+            <div class="acesso">
+                <a href="#" id="btnEntrar" class="">Entrar</a>
+            </div>
+        </header>
+        <div>
+            <responsive-menu></responsive-menu>
+        </div>
+        <main class="flex flex--column" style="padding:20px">
+            <section class="titulo_secao flex justify--space--between align--items--center" style="flex-wrap:wrap;gap:10px;margin-bottom:15px">
+                <h1>Calendário de Salas</h1>
+                <div class="flex gap--10 align--items--center">
+                    <label class="painelLabel" for="calFiltroSala" style="white-space:nowrap">Sala:</label>
+                    <select id="calFiltroSala" class="formInput" style="padding:6px 10px;min-width:240px">
+                        <option value="">Todas as salas agendáveis</option>
+                    </select>
+                    <label class="flex align--items--center gap--5" id="calIncluirPendentesWrapper" hidden>
+                        <input type="checkbox" id="calIncluirPendentes"> Mostrar pendentes
+                    </label>
+                    <a href="/solicitar-agendamento" class="btn_adicionar">+ Solicitar</a>
+                </div>
+            </section>
+
+            <div id="calendarioSalas" style="background:#fff;border-radius:8px;padding:15px;box-shadow:0 1px 3px rgba(0,0,0,0.08)"></div>
+        </main>
+        <footer>Rodapé</footer>
+    </div>
+
+    <!-- Dialog evento -->
+    <dialog id="dialogEventoCal" class="dialogPainel" style="min-width:480px">
+        <fieldset>
+            <legend>Detalhe do agendamento</legend>
+            <div id="dialogEventoConteudo"></div>
+            <div class="row" style="margin-top:15px">
+                <button type="button" id="btnFecharEventoCal" class="btnPainelFormulario">Fechar</button>
+            </div>
+        </fieldset>
+    </dialog>
+
+    <!-- Formulário de Login DIALOG -->
+    <dialog id="dialogLogin">
+        <fieldset>
+            <legend>Login</legend>
+            <form id="frmLogin">
+                <div class="row">
+                    <input type="text" name="txtLogin" id="txtLogin" class="formInput" placeholder="Digite o seu login">
+                </div>
+                <div class="row">
+                    <input type="password" name="txtSenha" id="txtSenha" class="formInput" placeholder="Digite a sua senha">
+                </div>
+                <p id="loginErro" class="login-erro" hidden></p>
+                <div class="row">
+                    <button id="btnLogin" type="button">Entrar</button>
+                    <button id="btnCancelarLogin" type="button">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+
+    <script type="module" src="./js/components/index.js"></script>
+</body>
+</html>

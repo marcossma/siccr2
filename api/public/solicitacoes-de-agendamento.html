@@ -3,18 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SICCR - Sistema Integrado Centro de Ciências Rurais</title>
+    <title>SICCR - Solicitações de Agendamento</title>
     <link rel="shortcut icon" href="./img/favicon.png" type="image/x-icon">
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/dialogs.css">
-    <script type="module" src="js/scripts.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/dialogs.css">
+    <link rel="stylesheet" href="./adm/css/style.css">
+    <link rel="stylesheet" href="./adm/css/dialogs.css">
+    <link rel="stylesheet" href="./css/ui-kit.css">
+    <script type="module" src="./js/scripts.js"></script>
 </head>
 <body>
+    <div class="container">
+        <header>
+            <a href="/">
+                <img src="./img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo">
+            </a>
+            <div class="acesso">
+                <a href="#" id="btnEntrar" class="">Entrar</a>
+            </div>
+        </header>
+        <div>
+            <responsive-menu></responsive-menu>
+        </div>
+        <main class="flex flex--column flex--center">
+            <section class="titulo_secao flex justify--space--between align--items--center" style="flex-wrap:wrap;gap:10px">
+                <h1>Solicitações de Agendamento</h1>
+                <div class="flex gap--10 align--items--center">
+                    <label class="painelLabel" for="filtroAgendamentoStatus" style="white-space:nowrap">Status:</label>
+                    <select id="filtroAgendamentoStatus" class="formInput" style="padding:6px 10px">
+                        <option value="todos">Todos</option>
+                        <option value="pendente" selected>Pendentes</option>
+                        <option value="aprovada">Aprovadas</option>
+                        <option value="rejeitada">Rejeitadas</option>
+                        <option value="cancelada">Canceladas</option>
+                    </select>
+                    <a href="/calendario-de-salas" class="btn_adicionar">Ver calendário</a>
+                    <a href="/solicitar-agendamento" class="btn_adicionar">+ Solicitar</a>
+                </div>
+            </section>
+
+            <section class="divListaTiposRecursos informacoes_painel">
+                <div class="cabecalho flex">
+                    <div class="titulo flex flex--1">Nº</div>
+                    <div class="titulo flex flex--3">Sala</div>
+                    <div class="titulo flex flex--3">Solicitante</div>
+                    <div class="titulo flex flex--3">Motivo</div>
+                    <div class="titulo flex flex--2">Período</div>
+                    <div class="titulo flex flex--2">Recorrência</div>
+                    <div class="titulo flex flex--1">Ocorrências</div>
+                    <div class="titulo flex flex--2">Status</div>
+                    <div class="titulo flex flex--2">Ações</div>
+                </div>
+                <div id="listaAgendamentos">
+                    <!-- carregado via JS -->
+                </div>
+            </section>
+        </main>
+        <footer>Rodapé</footer>
+    </div>
+
+    <!-- Dialog: detalhe -->
+    <dialog id="dialogDetalheAgendamento" class="dialogPainel" style="min-width:560px" data-id="">
+        <fieldset>
+            <legend id="dialogDetalheLegend">Detalhe do agendamento</legend>
+            <div id="dialogDetalheConteudo"></div>
+            <div class="row" style="margin-top:15px">
+                <button type="button" id="btnAprovarAgendamento" class="btnPainelFormulario cadastrarUnidade" hidden>✓ Aprovar</button>
+                <button type="button" id="btnRejeitarAgendamento" class="btnPainelFormulario cancelarUnidade" hidden>✕ Rejeitar</button>
+                <button type="button" id="btnCancelarAgendamento" class="btnPainelFormulario cancelarUnidade" hidden>Cancelar solicitação</button>
+                <button type="button" id="btnFecharDetalhe" class="btnPainelFormulario">Fechar</button>
+            </div>
+        </fieldset>
+    </dialog>
+
+    <!-- Dialog: rejeitar (pede motivo) -->
+    <dialog id="dialogRejeitar" class="dialogPainel">
+        <fieldset>
+            <legend>Rejeitar solicitação</legend>
+            <div class="flex flex--column gap--10">
+                <label class="painelLabel" for="motivoRejeicao">Motivo da rejeição <span class="obrigatorio">*</span></label>
+                <textarea id="motivoRejeicao" class="formInput" rows="3" placeholder="Explique o motivo para o solicitante..."></textarea>
+                <p id="rejeitarErro" class="login-erro" hidden></p>
+                <div class="row">
+                    <button type="button" id="btnConfirmarRejeicao" class="btnPainelFormulario cadastrarUnidade">Confirmar rejeição</button>
+                    <button type="button" id="btnCancelarRejeicao" class="btnPainelFormulario cancelarUnidade">Voltar</button>
+                </div>
+            </div>
+        </fieldset>
+    </dialog>
+
     <!-- Formulário de Login DIALOG -->
     <dialog id="dialogLogin">
         <fieldset>
             <legend>Login</legend>
-
             <form id="frmLogin">
                 <div class="row">
                     <input type="text" name="txtLogin" id="txtLogin" class="formInput" placeholder="Digite o seu login">
@@ -22,32 +103,19 @@
                 <div class="row">
                     <input type="password" name="txtSenha" id="txtSenha" class="formInput" placeholder="Digite a sua senha">
                 </div>
+                <p id="loginErro" class="login-erro" hidden></p>
                 <div class="row">
-                    <button id="btnLogin">Entrar</button>
-                    <button id="btnCancelarLogin">Cancelar</button>
+                    <button id="btnLogin" type="button">Entrar</button>
+                    <button id="btnCancelarLogin" type="button">Cancelar</button>
                 </div>
             </form>
         </fieldset>
     </dialog>
-    <!-- Fim formulário de Login DIALOG -->
-    <div class="container">
-        <header>
-            <a href="/">
-                <img src="./img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo">
-            </a>
-            <div class="acesso">
-                <a href="#" id="btnEntrar">Entrar</a>
-            </div>
-        </header>
-        <div>
-            <responsive-menu></responsive-menu>
-        </div>
-        <main>
-            <section>
-                <h3>Solicitações de agendamento</h3>
-            </section>
-        </main>
-        <footer>Rodapé</footer>
+
+    <!-- Toast de notificação WS -->
+    <div id="wsToast" class="ws-toast" hidden>
+        <i class="bi bi-bell-fill"></i>
+        <span id="wsToastMsg"></span>
     </div>
 
     <script type="module" src="./js/components/index.js"></script>

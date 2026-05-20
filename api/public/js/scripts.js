@@ -73,6 +73,22 @@ document.addEventListener("DOMContentLoaded", function() {
                         );
                     }
                 }
+                if (msg.tipo === "agendamento_pendente") {
+                    const p = wsSiccr.permissao;
+                    const ehDirecao = p === "super_admin" || p === "diretor" ||
+                                      p === "vice_diretor" || wsSiccr.is_direcao_centro;
+                    if (ehDirecao) {
+                        const a = msg.agendamento;
+                        mostrarToastWS(
+                            `Nova solicitação de sala — ${a.sala_nome || ""} ` +
+                            `por ${(a.solicitante_nome || "").split(" ")[0]}`
+                        );
+                    }
+                }
+                if (msg.tipo === "agendamento_decidido") {
+                    const decisao = msg.decisao === "aprovada" ? "aprovada ✓" : "rejeitada ✕";
+                    mostrarToastWS(`Sua solicitação foi ${decisao}`);
+                }
             } catch {}
         };
     })();
@@ -2168,5 +2184,511 @@ document.addEventListener("DOMContentLoaded", function() {
         carregarRelatorio();
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // Agendamento — Solicitar
+    // ═══════════════════════════════════════════════════════════════
+    if (urlParam === "/solicitar-agendamento") {
+        const siccr = JSON.parse(localStorage.getItem("siccr") || "null");
+        if (!siccr) { dialogLogin.showModal(); return; }
+
+        const agSolicitante = document.getElementById("agSolicitante");
+        const agSala = document.getElementById("agSala");
+        const agSalaDetalhe = document.getElementById("agSalaDetalhe");
+        const agMotivo = document.getElementById("agMotivo");
+        const agHorariosBlock = document.getElementById("agHorariosBlock");
+        const agHoraInicio = document.getElementById("agHoraInicio");
+        const agHoraFim = document.getElementById("agHoraFim");
+        const agDataInicio = document.getElementById("agDataInicio");
+        const agDataFimBlock = document.getElementById("agDataFimBlock");
+        const agDataFim = document.getElementById("agDataFim");
+        const agSemanaBlock = document.getElementById("agSemanaBlock");
+        const agObservacao = document.getElementById("agObservacao");
+        const agErro = document.getElementById("agErro");
+        const agPreviewBlock = document.getElementById("agPreviewBlock");
+        const agPreviewLista = document.getElementById("agPreviewLista");
+        const agPreviewResumo = document.getElementById("agPreviewResumo");
+        const btnVerificar = document.getElementById("btnVerificarDisponibilidade");
+        const btnConfirmar = document.getElementById("btnConfirmarSolicitacao");
+        const btnCancelarPreview = document.getElementById("btnCancelarPreview");
+
+        let salasCache = [];
+        let ultimoPreview = null;
+
+        agSolicitante.value = siccr.nome || "";
+
+        function mostrarErro(msg) {
+            agErro.textContent = msg;
+            agErro.hidden = false;
+            setTimeout(() => { agErro.hidden = true; }, 6000);
+        }
+
+        function getTipoHorario() {
+            return document.querySelector('input[name="agTipoHorario"]:checked').value;
+        }
+        function getTipoRecorrencia() {
+            return document.querySelector('input[name="agRecorrencia"]:checked').value;
+        }
+        function getDiasSemana() {
+            return Array.from(document.querySelectorAll("#agDiasSemana input[type=checkbox]:checked"))
+                .map((c) => c.value).join(",");
+        }
+
+        function atualizarVisibilidade() {
+            const tipoH = getTipoHorario();
+            agHorariosBlock.style.display = tipoH === "intervalo" ? "" : "none";
+            const tipoR = getTipoRecorrencia();
+            agDataFimBlock.hidden = tipoR === "pontual";
+            agSemanaBlock.hidden = tipoR !== "semanal";
+        }
+
+        document.querySelectorAll('input[name="agTipoHorario"]').forEach((r) =>
+            r.addEventListener("change", atualizarVisibilidade)
+        );
+        document.querySelectorAll('input[name="agRecorrencia"]').forEach((r) =>
+            r.addEventListener("change", atualizarVisibilidade)
+        );
+        atualizarVisibilidade();
+
+        // Default: hoje
+        const hoje = new Date();
+        const hojeStr = hoje.toISOString().slice(0, 10);
+        agDataInicio.value = hojeStr;
+        agDataFim.value = hojeStr;
+
+        // Carrega salas agendáveis
+        fetch(apiUrl + "/agendamentos/salas/agendaveis")
+            .then((r) => r.json())
+            .then((resp) => {
+                if (resp.status !== "success") return;
+                salasCache = resp.data || [];
+                agSala.innerHTML = '<option value="">— Selecione uma sala —</option>' +
+                    salasCache.map((s) =>
+                        `<option value="${s.sala_id}">${s.sala_nome}${s.predio_nome ? ` — ${s.predio_nome}` : ""}</option>`
+                    ).join("");
+            })
+            .catch(() => mostrarErro("Erro ao carregar salas."));
+
+        agSala.addEventListener("change", () => {
+            const s = salasCache.find((x) => String(x.sala_id) === agSala.value);
+            agSalaDetalhe.textContent = s && s.sala_descricao ? s.sala_descricao : "";
+        });
+
+        function montarPayload() {
+            const tipoH = getTipoHorario();
+            const tipoR = getTipoRecorrencia();
+            return {
+                sala_id: parseInt(agSala.value, 10) || null,
+                motivo: agMotivo.value.trim(),
+                observacao: agObservacao.value.trim() || null,
+                dia_inteiro: tipoH === "dia_inteiro",
+                hora_inicio: tipoH === "intervalo" ? agHoraInicio.value : null,
+                hora_fim: tipoH === "intervalo" ? agHoraFim.value : null,
+                data_inicio: agDataInicio.value,
+                data_fim_recorrencia: tipoR === "pontual" ? null : agDataFim.value,
+                tipo_recorrencia: tipoR,
+                dias_semana: tipoR === "semanal" ? getDiasSemana() : null,
+                intervalo_semanas: 1,
+            };
+        }
+
+        function validarLocal(payload) {
+            if (!payload.sala_id) return "Selecione uma sala.";
+            if (!payload.motivo) return "Informe o motivo da reserva.";
+            if (!payload.data_inicio) return "Informe a data de início.";
+            if (!payload.dia_inteiro && payload.hora_inicio >= payload.hora_fim) {
+                return "Hora de início deve ser anterior à hora de fim.";
+            }
+            if (payload.tipo_recorrencia !== "pontual" && !payload.data_fim_recorrencia) {
+                return "Informe a data final da recorrência.";
+            }
+            if (payload.tipo_recorrencia === "semanal" && !payload.dias_semana) {
+                return "Selecione ao menos um dia da semana.";
+            }
+            return null;
+        }
+
+        btnVerificar.addEventListener("click", async () => {
+            const payload = montarPayload();
+            const erroLocal = validarLocal(payload);
+            if (erroLocal) { mostrarErro(erroLocal); return; }
+
+            try {
+                const resp = await fetch(apiUrl + "/agendamentos/preview", {
+                    method: "POST",
+                    body: JSON.stringify(payload),
+                });
+                const data = await resp.json();
+                if (data.status !== "success") {
+                    mostrarErro(data.message || "Erro ao verificar disponibilidade.");
+                    return;
+                }
+                ultimoPreview = { payload, ocorrencias: data.data.ocorrencias };
+                renderizarPreview(data.data);
+            } catch (err) {
+                mostrarErro("Erro de comunicação com o servidor.");
+            }
+        });
+
+        function renderizarPreview(dados) {
+            const { total, conflitos, ocorrencias } = dados;
+            const livres = total - conflitos;
+            agPreviewResumo.innerHTML =
+                `<strong>${total}</strong> ocorrência(s) prevista(s) — ` +
+                `<span style="color:#007a2e">${livres} livre(s)</span>` +
+                (conflitos > 0 ? ` · <span style="color:#c92a2a">${conflitos} em conflito</span>` : "");
+
+            agPreviewLista.innerHTML = ocorrencias.map((o) => {
+                const dt = new Date(o.data + "T00:00:00");
+                const diaSemana = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"][dt.getDay()];
+                const cor = o.conflito ? "#c92a2a" : "#007a2e";
+                const detalhe = o.conflito && o.detalhe_conflito
+                    ? ` — conflito com "${o.detalhe_conflito.motivo}" (${o.detalhe_conflito.solicitante})`
+                    : "";
+                return `
+                    <div class="pedido-item flex align--items--center gap--10">
+                        <label class="flex align--items--center gap--10 flex--1" style="cursor:pointer">
+                            <input type="checkbox" class="preview-occ" value="${o.data}" ${o.conflito ? "" : "checked"}>
+                            <span style="color:${cor};font-weight:600">${diaSemana} · ${formatarData(o.data)}</span>
+                            <span style="color:#666;font-size:0.9em">${detalhe}</span>
+                        </label>
+                    </div>
+                `;
+            }).join("");
+            agPreviewBlock.hidden = false;
+            window.scrollTo({ top: agPreviewBlock.offsetTop - 20, behavior: "smooth" });
+        }
+
+        btnCancelarPreview.addEventListener("click", () => {
+            agPreviewBlock.hidden = true;
+            ultimoPreview = null;
+        });
+
+        btnConfirmar.addEventListener("click", async () => {
+            if (!ultimoPreview) return;
+            const datasSelecionadas = Array.from(document.querySelectorAll(".preview-occ:checked"))
+                .map((c) => c.value);
+            if (datasSelecionadas.length === 0) {
+                mostrarErro("Selecione ao menos uma ocorrência.");
+                return;
+            }
+            const payload = { ...ultimoPreview.payload, datas: datasSelecionadas };
+            try {
+                const resp = await fetch(apiUrl + "/agendamentos", {
+                    method: "POST",
+                    body: JSON.stringify(payload),
+                });
+                const data = await resp.json();
+                if (data.status !== "success") {
+                    mostrarErro(data.message || "Erro ao enviar solicitação.");
+                    return;
+                }
+                alert("Solicitação enviada! Aguarde a aprovação da direção.");
+                window.location.href = "/solicitacoes-de-agendamento";
+            } catch (err) {
+                mostrarErro("Erro de comunicação com o servidor.");
+            }
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Agendamento — Lista de solicitações
+    // ═══════════════════════════════════════════════════════════════
+    if (urlParam === "/solicitacoes-de-agendamento") {
+        const siccr = JSON.parse(localStorage.getItem("siccr") || "null");
+        if (!siccr) { dialogLogin.showModal(); return; }
+
+        const ehDirecao = ["super_admin", "diretor", "vice_diretor"].includes(siccr.permissao)
+            || siccr.is_direcao_centro === true
+            || (Array.isArray(siccr.funcionalidades)
+                && (siccr.funcionalidades.includes("aprovar_agendamento")
+                    || siccr.funcionalidades.includes("ver_todos_agendamentos")));
+
+        const lista = document.getElementById("listaAgendamentos");
+        const filtroStatus = document.getElementById("filtroAgendamentoStatus");
+        const dialogDetalhe = document.getElementById("dialogDetalheAgendamento");
+        const dialogDetalheConteudo = document.getElementById("dialogDetalheConteudo");
+        const btnAprovar = document.getElementById("btnAprovarAgendamento");
+        const btnRejeitar = document.getElementById("btnRejeitarAgendamento");
+        const btnCancelar = document.getElementById("btnCancelarAgendamento");
+        const btnFecharDetalhe = document.getElementById("btnFecharDetalhe");
+        const dialogRejeitar = document.getElementById("dialogRejeitar");
+        const motivoRejeicao = document.getElementById("motivoRejeicao");
+        const rejeitarErro = document.getElementById("rejeitarErro");
+        const btnConfirmarRejeicao = document.getElementById("btnConfirmarRejeicao");
+        const btnCancelarRejeicao = document.getElementById("btnCancelarRejeicao");
+
+        const badgeStatus = {
+            pendente:  '<span class="badge badge--pendente">Pendente</span>',
+            aprovada:  '<span class="badge badge--atendido">Aprovada</span>',
+            rejeitada: '<span class="badge badge--cancelado">Rejeitada</span>',
+            cancelada: '<span class="badge badge--cancelado">Cancelada</span>',
+        };
+
+        const labelRecorrencia = {
+            pontual: "Única",
+            semanal: "Semanal",
+            mensal: "Mensal",
+        };
+
+        function descreverPeriodo(a) {
+            if (a.dia_inteiro) return "Dia inteiro";
+            return `${(a.hora_inicio || "").slice(0, 5)}–${(a.hora_fim || "").slice(0, 5)}`;
+        }
+
+        async function carregarLista() {
+            const status = filtroStatus.value;
+            const q = status === "todos" ? "" : `?status=${status}`;
+            try {
+                const resp = await fetch(apiUrl + "/agendamentos" + q);
+                const data = await resp.json();
+                if (data.status !== "success") {
+                    lista.innerHTML = '<p class="pedido-lista-vazia" style="padding:15px">Erro ao carregar.</p>';
+                    return;
+                }
+                const itens = data.data || [];
+                if (itens.length === 0) {
+                    lista.innerHTML = '<p class="pedido-lista-vazia" style="padding:15px">Nenhum agendamento encontrado.</p>';
+                    return;
+                }
+                lista.innerHTML = "";
+                itens.forEach((a) => {
+                    const div = document.createElement("div");
+                    div.classList.add("dados", "flex", "align--items--center");
+                    div.innerHTML = `
+                        <div class="dado flex flex--1">${a.id_agendamento}</div>
+                        <div class="dado flex flex--3">${a.sala_nome || "—"}</div>
+                        <div class="dado flex flex--3">${(a.solicitante_nome || "").split(" ").slice(0,2).join(" ")}</div>
+                        <div class="dado flex flex--3" title="${a.motivo}">${(a.motivo || "").slice(0,40)}${a.motivo && a.motivo.length > 40 ? "…" : ""}</div>
+                        <div class="dado flex flex--2">${descreverPeriodo(a)}</div>
+                        <div class="dado flex flex--2">${labelRecorrencia[a.tipo_recorrencia] || a.tipo_recorrencia}</div>
+                        <div class="dado flex flex--1">${a.total_ocorrencias_ativas}</div>
+                        <div class="dado flex flex--2">${badgeStatus[a.status] || a.status}</div>
+                        <div class="dado flex flex--2 gap--10 font--size--20">
+                            <i class="bi bi-eye ver-agendamento cursor--pointer" title="Ver detalhe"
+                                data-id="${a.id_agendamento}"></i>
+                        </div>
+                    `;
+                    lista.appendChild(div);
+                });
+            } catch (err) {
+                lista.innerHTML = '<p class="pedido-lista-vazia" style="padding:15px">Erro de comunicação.</p>';
+            }
+        }
+
+        filtroStatus.addEventListener("change", carregarLista);
+
+        lista.addEventListener("click", async (e) => {
+            const alvo = e.target.closest(".ver-agendamento");
+            if (!alvo) return;
+            const id = alvo.dataset.id;
+            await abrirDetalhe(id);
+        });
+
+        async function abrirDetalhe(id) {
+            try {
+                const resp = await fetch(apiUrl + "/agendamentos/" + id);
+                const data = await resp.json();
+                if (data.status !== "success") {
+                    alert(data.message || "Erro ao carregar detalhe.");
+                    return;
+                }
+                const a = data.data;
+                dialogDetalhe.dataset.id = a.id_agendamento;
+
+                const ocorrenciasHtml = (a.ocorrencias || []).map((o) => {
+                    const dt = new Date(o.data_ocorrencia + "T00:00:00");
+                    const ds = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"][dt.getDay()];
+                    const cor = o.status_individual === "ativa" ? "#007a2e" : "#999";
+                    const tx = o.status_individual === "ativa" ? "Ativa" : o.status_individual;
+                    return `<li style="color:${cor}">${ds} ${formatarData(o.data_ocorrencia)} — ${tx}</li>`;
+                }).join("");
+
+                dialogDetalheConteudo.innerHTML = `
+                    <div class="flex flex--column gap--5">
+                        <div><strong>Sala:</strong> ${a.sala_nome || "—"}</div>
+                        <div><strong>Solicitante:</strong> ${a.solicitante_nome || "—"}</div>
+                        <div><strong>Motivo:</strong> ${a.motivo}</div>
+                        ${a.observacao ? `<div><strong>Observação:</strong> ${a.observacao}</div>` : ""}
+                        <div><strong>Período:</strong> ${descreverPeriodo(a)}</div>
+                        <div><strong>Recorrência:</strong> ${labelRecorrencia[a.tipo_recorrencia] || a.tipo_recorrencia}</div>
+                        <div><strong>Status:</strong> ${badgeStatus[a.status] || a.status}</div>
+                        ${a.aprovado_por_nome ? `<div><strong>Decidido por:</strong> ${a.aprovado_por_nome} em ${formatarData(a.data_decisao)}</div>` : ""}
+                        ${a.motivo_rejeicao ? `<div style="color:#c92a2a"><strong>Motivo da rejeição:</strong> ${a.motivo_rejeicao}</div>` : ""}
+                        <div style="margin-top:10px"><strong>Ocorrências (${(a.ocorrencias || []).length}):</strong></div>
+                        <ul style="max-height:200px;overflow-y:auto;padding-left:20px">${ocorrenciasHtml}</ul>
+                    </div>
+                `;
+                const podeDecidir = ehDirecao && a.status === "pendente";
+                const podeCancelar = (a.solicitante_user_id === siccr.id || ehDirecao) && a.status === "pendente";
+                btnAprovar.hidden = !podeDecidir;
+                btnRejeitar.hidden = !podeDecidir;
+                btnCancelar.hidden = !podeCancelar;
+                dialogDetalhe.showModal();
+            } catch (err) {
+                alert("Erro de comunicação.");
+            }
+        }
+
+        btnFecharDetalhe.addEventListener("click", () => dialogDetalhe.close());
+
+        btnAprovar.addEventListener("click", async () => {
+            const id = dialogDetalhe.dataset.id;
+            if (!confirm("Confirma a aprovação?")) return;
+            const resp = await fetch(apiUrl + `/agendamentos/${id}/aprovar`, { method: "PATCH" });
+            const data = await resp.json();
+            if (data.status !== "success") { alert(data.message); return; }
+            dialogDetalhe.close();
+            carregarLista();
+        });
+
+        btnRejeitar.addEventListener("click", () => {
+            motivoRejeicao.value = "";
+            rejeitarErro.hidden = true;
+            dialogRejeitar.showModal();
+        });
+        btnCancelarRejeicao.addEventListener("click", () => dialogRejeitar.close());
+
+        btnConfirmarRejeicao.addEventListener("click", async () => {
+            const motivo = motivoRejeicao.value.trim();
+            if (!motivo) {
+                rejeitarErro.textContent = "Informe o motivo.";
+                rejeitarErro.hidden = false;
+                return;
+            }
+            const id = dialogDetalhe.dataset.id;
+            const resp = await fetch(apiUrl + `/agendamentos/${id}/rejeitar`, {
+                method: "PATCH",
+                body: JSON.stringify({ motivo_rejeicao: motivo }),
+            });
+            const data = await resp.json();
+            if (data.status !== "success") {
+                rejeitarErro.textContent = data.message;
+                rejeitarErro.hidden = false;
+                return;
+            }
+            dialogRejeitar.close();
+            dialogDetalhe.close();
+            carregarLista();
+        });
+
+        btnCancelar.addEventListener("click", async () => {
+            const id = dialogDetalhe.dataset.id;
+            if (!confirm("Tem certeza que deseja cancelar esta solicitação?")) return;
+            const resp = await fetch(apiUrl + `/agendamentos/${id}/cancelar`, { method: "PATCH" });
+            const data = await resp.json();
+            if (data.status !== "success") { alert(data.message); return; }
+            dialogDetalhe.close();
+            carregarLista();
+        });
+
+        carregarLista();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Calendário visual de salas (FullCalendar via CDN)
+    // ═══════════════════════════════════════════════════════════════
+    if (urlParam === "/calendario-de-salas") {
+        const siccr = JSON.parse(localStorage.getItem("siccr") || "null");
+        if (!siccr) { dialogLogin.showModal(); return; }
+
+        const ehDirecao = ["super_admin", "diretor", "vice_diretor"].includes(siccr.permissao)
+            || siccr.is_direcao_centro === true;
+
+        const calFiltroSala = document.getElementById("calFiltroSala");
+        const calIncluirPendentes = document.getElementById("calIncluirPendentes");
+        const calIncluirPendentesWrapper = document.getElementById("calIncluirPendentesWrapper");
+        const dialogEvento = document.getElementById("dialogEventoCal");
+        const dialogEventoConteudo = document.getElementById("dialogEventoConteudo");
+        const btnFecharEventoCal = document.getElementById("btnFecharEventoCal");
+
+        if (ehDirecao) calIncluirPendentesWrapper.hidden = false;
+
+        // Espera o FullCalendar carregar do CDN
+        if (typeof FullCalendar === "undefined") {
+            document.getElementById("calendarioSalas").innerHTML =
+                '<p style="color:#c92a2a;padding:15px">Erro ao carregar o calendário (CDN bloqueado?). Recarregue a página.</p>';
+            return;
+        }
+
+        // Carrega salas
+        fetch(apiUrl + "/agendamentos/salas/agendaveis")
+            .then((r) => r.json())
+            .then((resp) => {
+                if (resp.status !== "success") return;
+                (resp.data || []).forEach((s) => {
+                    const opt = document.createElement("option");
+                    opt.value = s.sala_id;
+                    opt.textContent = s.sala_nome + (s.predio_nome ? ` — ${s.predio_nome}` : "");
+                    calFiltroSala.appendChild(opt);
+                });
+            });
+
+        const calendario = new FullCalendar.Calendar(document.getElementById("calendarioSalas"), {
+            locale: "pt-br",
+            initialView: "dayGridMonth",
+            headerToolbar: {
+                left: "prev,next today",
+                center: "title",
+                right: "dayGridMonth,timeGridWeek,timeGridDay",
+            },
+            height: "auto",
+            events: async (info, successCallback, failureCallback) => {
+                const params = new URLSearchParams({
+                    inicio: info.startStr.slice(0, 10),
+                    fim: info.endStr.slice(0, 10),
+                });
+                if (calFiltroSala.value) params.append("sala_id", calFiltroSala.value);
+                if (ehDirecao && calIncluirPendentes.checked) params.append("incluir_pendentes", "1");
+                try {
+                    const resp = await fetch(apiUrl + "/agendamentos/visao/calendario?" + params);
+                    const data = await resp.json();
+                    if (data.status !== "success") return failureCallback(new Error(data.message));
+                    const events = (data.data || []).map((o) => {
+                        const dataStr = typeof o.data_ocorrencia === "string"
+                            ? o.data_ocorrencia.slice(0, 10)
+                            : o.data_ocorrencia;
+                        const isPendente = o.status === "pendente";
+                        const ev = {
+                            id: String(o.id_ocorrencia),
+                            title: `${o.sala_nome} — ${o.motivo}`,
+                            allDay: o.dia_inteiro,
+                            backgroundColor: isPendente ? "#f59f00" : "#007a2e",
+                            borderColor: isPendente ? "#f59f00" : "#007a2e",
+                            extendedProps: o,
+                        };
+                        if (o.dia_inteiro) {
+                            ev.start = dataStr;
+                        } else {
+                            ev.start = `${dataStr}T${o.hora_inicio}`;
+                            ev.end = `${dataStr}T${o.hora_fim}`;
+                        }
+                        return ev;
+                    });
+                    successCallback(events);
+                } catch (err) {
+                    failureCallback(err);
+                }
+            },
+            eventClick: (info) => {
+                const o = info.event.extendedProps;
+                dialogEventoConteudo.innerHTML = `
+                    <div class="flex flex--column gap--5">
+                        <div><strong>Sala:</strong> ${o.sala_nome}</div>
+                        <div><strong>Motivo:</strong> ${o.motivo}</div>
+                        <div><strong>Solicitante:</strong> ${o.solicitante_nome}</div>
+                        <div><strong>Data:</strong> ${formatarData(o.data_ocorrencia)}</div>
+                        <div><strong>Horário:</strong> ${o.dia_inteiro ? "Dia inteiro" : `${(o.hora_inicio || "").slice(0,5)}–${(o.hora_fim || "").slice(0,5)}`}</div>
+                        <div><strong>Status:</strong> ${o.status}</div>
+                    </div>
+                `;
+                dialogEvento.showModal();
+            },
+        });
+        calendario.render();
+
+        calFiltroSala.addEventListener("change", () => calendario.refetchEvents());
+        calIncluirPendentes.addEventListener("change", () => calendario.refetchEvents());
+        btnFecharEventoCal.addEventListener("click", () => dialogEvento.close());
+    }
 
 });

@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SICCR - Sistema Integrado Centro de Ciências Rurais</title>
+    <title>SICCR - Solicitar Agendamento de Sala</title>
     <link rel="shortcut icon" href="./img/favicon.png" type="image/x-icon">
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/dialogs.css">
-    <link rel="stylesheet" href="css/ui-kit.css">
-    <script type="module" src="js/scripts.js"></script>
+    <link rel="stylesheet" href="./adm/css/style.css">
+    <link rel="stylesheet" href="./adm/css/dialogs.css">
+    <link rel="stylesheet" href="./css/ui-kit.css">
+    <script type="module" src="./js/scripts.js"></script>
 </head>
 <body>
     <div class="container">
@@ -28,37 +30,129 @@
                 <h1>Solicitar agendamento de sala</h1>
             </section>
 
-            <section class="divFrmSolicitarAgendamento ">
-                <fieldset class="p--10 flex justify--content--center">
-                    <legend class="border border--1 border--silver border--r--5 p--5">Preencha o formulário abaixo</legend>
+            <section class="divFrmSolicitarAgendamento" style="width:100%;max-width:780px">
+                <fieldset class="p--10">
+                    <legend class="border border--1 border--silver border--r--5 p--5">Dados da solicitação</legend>
 
-                    <form id="frmSolicitarAgendamento" name="frmSolicitarAgendamento" class="width--50 flex flex--column gap--10">
-                        <div>
-                            <label for="solicitante">Solicitante</label>
-                            <input type="text" name="solicitante" id="solicitante" class="width--100 border border--1 border--silver border--r--5 p--5 cursor--block" placeholder="Solicitante" disabled>
+                    <form id="frmSolicitarAgendamento" class="flex flex--column gap--15">
+
+                        <div class="flex flex--column gap--5">
+                            <label class="painelLabel" for="agSolicitante">Solicitante</label>
+                            <input type="text" id="agSolicitante" class="formInput cursor--block" disabled>
                         </div>
-                        <div>
-                            <label for="sala_id"> Selecione a sala</label>
-                            <select name="sala_id" id="sala_id" class="width--100 border border--1 border--silver border--r--5 p--5">
-                                <option value="teste 1">Teste 1</option>
-                                <option value="teste 2">Teste 2</option>
-                                <option value="teste 3">Teste 3</option>
-                                <option value="teste 4">Teste 4</option>
+
+                        <div class="flex flex--column gap--5">
+                            <label class="painelLabel" for="agSala">Sala <span class="obrigatorio">*</span></label>
+                            <select id="agSala" class="formInput">
+                                <option value="">— Selecione uma sala —</option>
                             </select>
+                            <small id="agSalaDetalhe" class="painelLabel" style="color:#666"></small>
+                        </div>
+
+                        <div class="flex flex--column gap--5">
+                            <label class="painelLabel" for="agMotivo">Motivo da reserva <span class="obrigatorio">*</span></label>
+                            <input type="text" id="agMotivo" class="formInput" placeholder="Ex: Aula extra de Estatística">
+                        </div>
+
+                        <div class="flex flex--column gap--5">
+                            <label class="painelLabel">Tipo de horário</label>
+                            <div class="flex gap--15 align--items--center">
+                                <label class="flex align--items--center gap--5">
+                                    <input type="radio" name="agTipoHorario" value="intervalo" checked>
+                                    Intervalo (horário específico)
+                                </label>
+                                <label class="flex align--items--center gap--5">
+                                    <input type="radio" name="agTipoHorario" value="dia_inteiro">
+                                    Dia inteiro
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="agHorariosBlock" class="flex gap--10">
+                            <div class="flex flex--column gap--5 flex--1">
+                                <label class="painelLabel" for="agHoraInicio">Hora início <span class="obrigatorio">*</span></label>
+                                <input type="time" id="agHoraInicio" class="formInput" value="08:00">
+                            </div>
+                            <div class="flex flex--column gap--5 flex--1">
+                                <label class="painelLabel" for="agHoraFim">Hora fim <span class="obrigatorio">*</span></label>
+                                <input type="time" id="agHoraFim" class="formInput" value="10:00">
+                            </div>
+                        </div>
+
+                        <div class="flex flex--column gap--5">
+                            <label class="painelLabel">Recorrência</label>
+                            <div class="flex gap--15 flex--wrap">
+                                <label class="flex align--items--center gap--5">
+                                    <input type="radio" name="agRecorrencia" value="pontual" checked>
+                                    Apenas uma data
+                                </label>
+                                <label class="flex align--items--center gap--5">
+                                    <input type="radio" name="agRecorrencia" value="semanal">
+                                    Semanal
+                                </label>
+                                <label class="flex align--items--center gap--5">
+                                    <input type="radio" name="agRecorrencia" value="mensal">
+                                    Mensal
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="flex gap--10">
+                            <div class="flex flex--column gap--5 flex--1">
+                                <label class="painelLabel" for="agDataInicio">Data de início <span class="obrigatorio">*</span></label>
+                                <input type="date" id="agDataInicio" class="formInput">
+                            </div>
+                            <div class="flex flex--column gap--5 flex--1" id="agDataFimBlock" hidden>
+                                <label class="painelLabel" for="agDataFim">Data final da recorrência <span class="obrigatorio">*</span></label>
+                                <input type="date" id="agDataFim" class="formInput">
+                            </div>
+                        </div>
+
+                        <div id="agSemanaBlock" class="flex flex--column gap--5" hidden>
+                            <label class="painelLabel">Dias da semana</label>
+                            <div class="flex gap--10 flex--wrap" id="agDiasSemana">
+                                <label class="flex align--items--center gap--5"><input type="checkbox" value="0"> Dom</label>
+                                <label class="flex align--items--center gap--5"><input type="checkbox" value="1"> Seg</label>
+                                <label class="flex align--items--center gap--5"><input type="checkbox" value="2"> Ter</label>
+                                <label class="flex align--items--center gap--5"><input type="checkbox" value="3"> Qua</label>
+                                <label class="flex align--items--center gap--5"><input type="checkbox" value="4"> Qui</label>
+                                <label class="flex align--items--center gap--5"><input type="checkbox" value="5"> Sex</label>
+                                <label class="flex align--items--center gap--5"><input type="checkbox" value="6"> Sáb</label>
+                            </div>
+                        </div>
+
+                        <div class="flex flex--column gap--5">
+                            <label class="painelLabel" for="agObservacao">Observações (opcional)</label>
+                            <textarea id="agObservacao" class="formInput" rows="2" placeholder="Informações adicionais para a direção..."></textarea>
+                        </div>
+
+                        <p id="agErro" class="login-erro" hidden></p>
+
+                        <div class="row">
+                            <button type="button" id="btnVerificarDisponibilidade" class="btnPainelFormulario cadastrarUnidade">Verificar disponibilidade</button>
                         </div>
                     </form>
+                </fieldset>
+
+                <!-- Preview de ocorrências -->
+                <fieldset id="agPreviewBlock" class="p--10" hidden style="margin-top:15px">
+                    <legend class="border border--1 border--silver border--r--5 p--5">Ocorrências previstas</legend>
+                    <p id="agPreviewResumo" class="painelLabel" style="margin-bottom:10px"></p>
+                    <div id="agPreviewLista" class="pedido-lista-itens"></div>
+                    <div class="row" style="margin-top:15px">
+                        <button type="button" id="btnConfirmarSolicitacao" class="btnPainelFormulario cadastrarUnidade">Enviar solicitação</button>
+                        <button type="button" id="btnCancelarPreview" class="btnPainelFormulario cancelarUnidade">Refazer</button>
+                    </div>
                 </fieldset>
             </section>
         </main>
         <footer>Rodapé</footer>
     </div>
 
-
     <!-- Formulário de Login DIALOG -->
     <dialog id="dialogLogin">
         <fieldset>
             <legend>Login</legend>
-
             <form id="frmLogin">
                 <div class="row">
                     <input type="text" name="txtLogin" id="txtLogin" class="formInput" placeholder="Digite o seu login">
@@ -66,14 +160,14 @@
                 <div class="row">
                     <input type="password" name="txtSenha" id="txtSenha" class="formInput" placeholder="Digite a sua senha">
                 </div>
+                <p id="loginErro" class="login-erro" hidden></p>
                 <div class="row">
-                    <button id="btnLogin">Entrar</button>
-                    <button id="btnCancelarLogin">Cancelar</button>
+                    <button id="btnLogin" type="button">Entrar</button>
+                    <button id="btnCancelarLogin" type="button">Cancelar</button>
                 </div>
             </form>
         </fieldset>
     </dialog>
-    <!-- Fim formulário de Login DIALOG -->
 
     <script type="module" src="./js/components/index.js"></script>
 </body>

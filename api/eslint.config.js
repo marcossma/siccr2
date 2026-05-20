@@ -44,6 +44,7 @@ module.exports = [
                 ...globals.browser,
                 ...globals.worker,
                 Chart: "readonly",
+                FullCalendar: "readonly",
             },
         },
         rules: {

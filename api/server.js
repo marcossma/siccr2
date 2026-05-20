@@ -64,6 +64,8 @@ app.use(helmet({
         directives: {
             ...helmet.contentSecurityPolicy.getDefaultDirectives(),
             "img-src": ["'self'", "https://www.ufsm.br", "data:"],
+            "script-src": ["'self'", "https://cdn.jsdelivr.net"],
+            "style-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
         }
     }
 }));
@@ -110,6 +112,12 @@ wss.on("connection", (ws) => {
 const pedidosAlmoxarifadoFactory = require("./routes/pedidos-almoxarifado.js");
 const pedidosAlmoxarifado = pedidosAlmoxarifadoFactory(wss);
 
+// ──────────────────────────────────────────────────────
+//  Rotas de agendamentos de salas (recebe wss)
+// ──────────────────────────────────────────────────────
+const agendamentosFactory = require("./routes/agendamentos.js");
+const agendamentos = agendamentosFactory(wss);
+
 // ##############
 //  Rotas de API
 // ##############
@@ -154,6 +162,9 @@ app.use("/api/recursos-recebidos",   autenticar, autorizar("chefe"),        recu
 app.use("/api/pedidos-almoxarifado", autenticar, autorizar("chefe"),        pedidosAlmoxarifado);
 app.use("/api/previsoes-despesas",   autenticar, autorizar("chefe"),        previsoesDespesas);
 app.use("/api/relatorios",           autenticar, autorizar("chefe"),        relatorios);
+
+// Agendamentos de salas: qualquer usuário logado pode solicitar; aprovação restrita por RBAC nas rotas
+app.use("/api/agendamentos",         autenticar, autorizar("servidor"),     agendamentos);
 
 // Funcionalidades: leitura para chefe+, gestão do catálogo apenas via painel super_admin
 app.use("/api/funcionalidades",   autenticar, autorizar("chefe"),        funcionalidades);
