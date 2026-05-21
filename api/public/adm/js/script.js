@@ -732,6 +732,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         <div class="dado flex flex--2">${s.predio || "—"}</div>
                         <div class="dado flex flex--3">${s.subunidade_nome || "—"}</div>
                         <div class="dado flex flex--2">${(s.sala_tipo_nome || "—").toUpperCase()}</div>
+                        <div class="dado flex flex--1">${s.sala_capacidade ?? "—"}</div>
                         <div class="dado flex flex--4">${s.sala_descricao || ""}</div>
                         <div class="dado flex flex--2">${s.is_agendavel ? "Sim" : "Não"}</div>
                         <div class="dado flex flex--2 font--size--20">
@@ -741,6 +742,7 @@ document.addEventListener("DOMContentLoaded", function() {
                                  data-predio_id="${s.predio_id || ""}"
                                  data-subunidade_id="${s.subunidade_id || ""}"
                                  data-sala_descricao="${s.sala_descricao || ""}"
+                                 data-sala_capacidade="${s.sala_capacidade ?? ""}"
                                  data-is_agendavel="${s.is_agendavel ? 1 : 0}"
                                  data-sala_tipo_id="${s.sala_tipo_id || ""}"`,
                                 s.sala_id, "sala"
@@ -828,9 +830,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 btnAtualizar.style.display = "inline-block"; btnAtualizar.disabled = false;
                 frmUnidade.reset();
                 await preencherSelects(d.predio_id, d.subunidade_id, d.sala_tipo_id);
-                document.querySelector("#sala_id").value         = d.sala_id;
-                document.querySelector("#sala_nome").value       = d.sala_nome;
-                document.querySelector("#sala_descricao").value  = d.sala_descricao;
+                document.querySelector("#sala_id").value          = d.sala_id;
+                document.querySelector("#sala_nome").value        = d.sala_nome;
+                document.querySelector("#sala_descricao").value   = d.sala_descricao;
+                document.querySelector("#sala_capacidade").value  = d.sala_capacidade || "";
                 // Marcar radio is_agendavel
                 document.querySelectorAll("input[name='is_agendavel']").forEach(radio => {
                     radio.checked = radio.value === d.is_agendavel;

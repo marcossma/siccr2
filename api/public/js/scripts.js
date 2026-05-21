@@ -89,7 +89,9 @@ document.addEventListener("DOMContentLoaded", function() {
                     const decisao = msg.decisao === "aprovada" ? "aprovada ✓" : "rejeitada ✕";
                     mostrarToastWS(`Sua solicitação foi ${decisao}`);
                 }
-            } catch {}
+            } catch {
+                // payload WS inválido — ignora silenciosamente
+            }
         };
     })();
 
@@ -2262,15 +2264,24 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (resp.status !== "success") return;
                 salasCache = resp.data || [];
                 agSala.innerHTML = '<option value="">— Selecione uma sala —</option>' +
-                    salasCache.map((s) =>
-                        `<option value="${s.sala_id}">${s.sala_nome}${s.predio_nome ? ` — ${s.predio_nome}` : ""}</option>`
-                    ).join("");
+                    salasCache.map((s) => {
+                        const predio = s.predio_nome ? ` — ${s.predio_nome}` : "";
+                        const cap = s.sala_capacidade ? ` (${s.sala_capacidade} lugares)` : "";
+                        return `<option value="${s.sala_id}">${s.sala_nome}${predio}${cap}</option>`;
+                    }).join("");
             })
             .catch(() => mostrarErro("Erro ao carregar salas."));
 
         agSala.addEventListener("change", () => {
             const s = salasCache.find((x) => String(x.sala_id) === agSala.value);
-            agSalaDetalhe.textContent = s && s.sala_descricao ? s.sala_descricao : "";
+            if (s) {
+                const partes = [];
+                if (s.sala_capacidade) partes.push(`Capacidade: ${s.sala_capacidade} lugares`);
+                if (s.sala_descricao) partes.push(s.sala_descricao);
+                agSalaDetalhe.textContent = partes.join(" · ");
+            } else {
+                agSalaDetalhe.textContent = "";
+            }
         });
 
         function montarPayload() {
@@ -2496,11 +2507,14 @@ document.addEventListener("DOMContentLoaded", function() {
                 dialogDetalhe.dataset.id = a.id_agendamento;
 
                 const ocorrenciasHtml = (a.ocorrencias || []).map((o) => {
-                    const dt = new Date(o.data_ocorrencia + "T00:00:00");
+                    const dataStr = typeof o.data_ocorrencia === "string"
+                        ? o.data_ocorrencia.slice(0, 10)
+                        : new Date(o.data_ocorrencia).toISOString().slice(0, 10);
+                    const dt = new Date(dataStr + "T00:00:00");
                     const ds = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"][dt.getDay()];
                     const cor = o.status_individual === "ativa" ? "#007a2e" : "#999";
                     const tx = o.status_individual === "ativa" ? "Ativa" : o.status_individual;
-                    return `<li style="color:${cor}">${ds} ${formatarData(o.data_ocorrencia)} — ${tx}</li>`;
+                    return `<li style="color:${cor}">${ds} ${formatarData(dataStr)} — ${tx}</li>`;
                 }).join("");
 
                 dialogDetalheConteudo.innerHTML = `
@@ -2646,7 +2660,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     const events = (data.data || []).map((o) => {
                         const dataStr = typeof o.data_ocorrencia === "string"
                             ? o.data_ocorrencia.slice(0, 10)
-                            : o.data_ocorrencia;
+                            : new Date(o.data_ocorrencia).toISOString().slice(0, 10);
                         const isPendente = o.status === "pendente";
                         const ev = {
                             id: String(o.id_ocorrencia),

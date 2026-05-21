@@ -24,6 +24,7 @@ services:
     ports:
       - "${PORT:-15000}:15000"
     environment:
+      NODE_ENV: production
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: ${DB_USER}
@@ -32,6 +33,9 @@ services:
       PORT: 15000
       JWT_SECRET: ${JWT_SECRET}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:15000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      WHATSAPP_API_URL: ${WHATSAPP_API_URL:-https://poolzap-api.infai.com.br}
+      WHATSAPP_API_KEY: ${WHATSAPP_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy

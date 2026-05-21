@@ -1,0 +1,33 @@
+# Override carregado AUTOMATICAMENTE pelo `docker compose up` em desenvolvimento.
+# Habilita:
+#   - Bind mount do código-fonte → mudanças em HTML/CSS/JS/rotas refletem
+#     no container sem rebuild
+#   - node --watch → backend reinicia automaticamente quando arquivos JS mudam
+#
+# Para subir em modo "produção" (sem este override):
+#   docker compose -f docker-compose.yml up -d --build
+#
+# Para desabilitar pontualmente um bind mount, comente a linha correspondente.
+
+services:
+  app:
+    # Usa entrypoint de desenvolvimento (com node --watch)
+    entrypoint: ["./entrypoint-dev.sh"]
+    environment:
+      # Override do NODE_ENV para habilitar pino-pretty (logs legíveis no terminal)
+      NODE_ENV: development
+    volumes:
+      # Frontend estático
+      - ./api/public:/app/public
+      # Backend (alterações disparam node --watch)
+      - ./api/server.js:/app/server.js
+      - ./api/routes:/app/routes
+      - ./api/middlewares:/app/middlewares
+      - ./api/lib:/app/lib
+      - ./api/config:/app/config
+      - ./api/migrations:/app/migrations
+      - ./api/scripts:/app/scripts
+      - ./api/models:/app/models
+      - ./api/seeders:/app/seeders
+      # NÃO monta node_modules — usa o que foi instalado durante o build
+      # (mais rápido no Windows e evita conflito host/container de plataforma)

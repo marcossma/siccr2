@@ -18,6 +18,11 @@ class ResponsiveMenu extends HTMLElement {
         // Pode verificar/atender pedidos de almoxarifado (SID)
         const ehSID = nivel >= 3 || funcs.includes("atender_pedido_almoxarifado");
 
+        // Pessoal da direção do centro: aprova/gerencia agendamentos de sala
+        const ehDirecao = nivel >= 3
+            || funcs.includes("aprovar_agendamento")
+            || funcs.includes("ver_todos_agendamentos");
+
         // Monta os itens de menu por nível — só mostra para usuários logados
         const admDropdown = nivel >= 1 ? `
             <li class="nav-dropdown">
@@ -26,7 +31,8 @@ class ResponsiveMenu extends HTMLElement {
                 </button>
                 <ul class="nav-dropdown-menu">
                     <li><a href="/solicitar-agendamento">Solicitar agendamento</a></li>
-                    ${nivel >= 2 ? `<li><a href="/solicitacoes-de-agendamento">Solicitações de agendamento</a></li>` : ""}
+                    <li><a href="/calendario-de-salas">Calendário de salas</a></li>
+                    ${ehDirecao ? `<li><a href="/solicitacoes-de-agendamento">Solicitações de agendamento</a></li>` : ""}
                     ${nivel >= 2 ? `<li><a href="/gerenciamento-de-usuarios">Gerenciamento de usuários</a></li>` : ""}
                     ${nivel >= 4 ? `<hr><li><a href="/adm/painel">Painel Admin</a></li>` : ""}
                 </ul>

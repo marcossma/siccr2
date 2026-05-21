@@ -6,10 +6,13 @@ if (!process.env.DB_HOST) {
 }
 const express = require("express");
 const http = require("http");
+const crypto = require("crypto");
 const cors = require("cors");
 const helmet = require("helmet");
 const WebSocket = require("ws");
 const jwt = require("jsonwebtoken");
+const pinoHttp = require("pino-http");
+const logger = require("./lib/logger.js");
 
 // Importar rotas dos usuários
 const usuariosRoutes = require("./routes/usuarios.js");
@@ -54,6 +57,22 @@ const PORT = process.env.PORT || 15000;
 
 const app = express();
 app.use(express.json());
+
+// Request logger: adiciona req.log com contexto (request_id, método, rota, status, latência)
+app.use(pinoHttp({
+    logger,
+    genReqId: (req) => req.headers["x-request-id"] || crypto.randomUUID(),
+    customLogLevel: (_req, res, err) => {
+        if (err || res.statusCode >= 500) return "error";
+        if (res.statusCode >= 400) return "warn";
+        return "info";
+    },
+    serializers: {
+        req: (req) => ({ id: req.id, method: req.method, url: req.url }),
+        res: (res) => ({ statusCode: res.statusCode }),
+    },
+}));
+
 app.use(cors({
     origin: process.env.CORS_ORIGIN || "http://localhost:15000",
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
@@ -199,6 +218,34 @@ app.get("/*", (req, res) => {
     });
 });
 
+// ────────────────────────────────────────────────────────────
+// Handler global de erro (precisa vir DEPOIS das rotas).
+// Captura qualquer erro não tratado, loga com contexto e
+// devolve resposta consistente.
+// ────────────────────────────────────────────────────────────
+app.use((err, req, res, _next) => {
+    (req.log || logger).error(
+        { err, route: req.originalUrl, method: req.method, userId: req.usuario?.id },
+        "Erro não tratado"
+    );
+    if (res.headersSent) return;
+    res.status(err.status || 500).json({
+        status: "error",
+        message: "Erro interno do servidor.",
+        data: null,
+        requestId: req.id || null,
+    });
+});
+
+// Capturar exceções/rejeições não tratadas no processo (pra evitar morte silenciosa)
+process.on("unhandledRejection", (reason) => {
+    logger.error({ err: reason }, "Unhandled promise rejection");
+});
+process.on("uncaughtException", (err) => {
+    logger.fatal({ err }, "Uncaught exception — encerrando processo");
+    process.exit(1);
+});
+
 server.listen(PORT, () => {
-    console.log(`Servidor rodando na porta http://localhost:${PORT}`);
+    logger.info({ port: PORT }, `Servidor rodando na porta http://localhost:${PORT}`);
 });

@@ -4,6 +4,8 @@ const express = require("express");
 const WebSocket = require("ws");
 const pool = require("../config/database.js");
 const { expandirRecorrencia, detectarConflitos } = require("../lib/recorrencia.js");
+const logger = require("../lib/logger.js");
+const whatsapp = require("../lib/whatsapp.js");
 
 module.exports = function (wss) {
     const router = express.Router();
@@ -259,7 +261,7 @@ module.exports = function (wss) {
             });
         } catch (error) {
             await client.query("ROLLBACK");
-            console.error("Erro ao criar agendamento:", error);
+            logger.error({ err: error }, "Erro ao criar agendamento");
             return res.status(500).json({ status: "error", message: "Erro ao criar agendamento.", data: null });
         } finally {
             client.release();
@@ -311,7 +313,7 @@ module.exports = function (wss) {
             );
             return res.status(200).json({ status: "success", message: "", data: rows });
         } catch (error) {
-            console.error("Erro ao listar agendamentos:", error);
+            logger.error({ err: error }, "Erro ao listar agendamentos");
             return res.status(500).json({ status: "error", message: "Erro ao listar agendamentos.", data: null });
         }
     });
@@ -355,7 +357,7 @@ module.exports = function (wss) {
                 data: { ...agendamento, ocorrencias },
             });
         } catch (error) {
-            console.error("Erro ao buscar agendamento:", error);
+            logger.error({ err: error }, "Erro ao buscar agendamento");
             return res.status(500).json({ status: "error", message: "Erro ao buscar agendamento.", data: null });
         }
     });
@@ -370,13 +372,22 @@ module.exports = function (wss) {
         const { id } = req.params;
         try {
             const { rows, rowCount } = await pool.query(
-                `UPDATE agendamentos
-                 SET status = 'aprovada',
-                     aprovado_por_user_id = $1,
-                     data_decisao = NOW(),
-                     motivo_rejeicao = NULL
-                 WHERE id_agendamento = $2 AND status = 'pendente'
-                 RETURNING *`,
+                `WITH atualizado AS (
+                    UPDATE agendamentos
+                    SET status = 'aprovada',
+                        aprovado_por_user_id = $1,
+                        data_decisao = NOW(),
+                        motivo_rejeicao = NULL
+                    WHERE id_agendamento = $2 AND status = 'pendente'
+                    RETURNING *
+                 )
+                 SELECT a.*, s.sala_nome,
+                        u.nome AS solicitante_nome, u.whatsapp AS solicitante_whatsapp,
+                        ap.nome AS aprovador_nome
+                 FROM atualizado a
+                 JOIN salas s ON s.sala_id = a.sala_id
+                 JOIN users u ON u.user_id = a.solicitante_user_id
+                 LEFT JOIN users ap ON ap.user_id = a.aprovado_por_user_id`,
                 [req.usuario.id, id]
             );
             if (rowCount === 0) {
@@ -386,14 +397,17 @@ module.exports = function (wss) {
                     data: null,
                 });
             }
+            const agendamento = rows[0];
             broadcast(
                 "agendamento_decidido",
-                { agendamento: rows[0], decisao: "aprovada" },
-                (u) => u.id === rows[0].solicitante_user_id
+                { agendamento, decisao: "aprovada" },
+                (u) => u.id === agendamento.solicitante_user_id
             );
-            return res.status(200).json({ status: "success", message: "Agendamento aprovado.", data: rows[0] });
+            // Notificação WhatsApp em fire-and-forget (não atrasa a resposta nem bloqueia em caso de falha)
+            whatsapp.enviarMensagem(agendamento.solicitante_whatsapp, whatsapp.mensagemAprovacao(agendamento));
+            return res.status(200).json({ status: "success", message: "Agendamento aprovado.", data: agendamento });
         } catch (error) {
-            console.error("Erro ao aprovar agendamento:", error);
+            logger.error({ err: error }, "Erro ao aprovar agendamento");
             return res.status(500).json({ status: "error", message: "Erro ao aprovar.", data: null });
         }
     });
@@ -412,13 +426,22 @@ module.exports = function (wss) {
         }
         try {
             const { rows, rowCount } = await pool.query(
-                `UPDATE agendamentos
-                 SET status = 'rejeitada',
-                     aprovado_por_user_id = $1,
-                     data_decisao = NOW(),
-                     motivo_rejeicao = $2
-                 WHERE id_agendamento = $3 AND status = 'pendente'
-                 RETURNING *`,
+                `WITH atualizado AS (
+                    UPDATE agendamentos
+                    SET status = 'rejeitada',
+                        aprovado_por_user_id = $1,
+                        data_decisao = NOW(),
+                        motivo_rejeicao = $2
+                    WHERE id_agendamento = $3 AND status = 'pendente'
+                    RETURNING *
+                 )
+                 SELECT a.*, s.sala_nome,
+                        u.nome AS solicitante_nome, u.whatsapp AS solicitante_whatsapp,
+                        ap.nome AS aprovador_nome
+                 FROM atualizado a
+                 JOIN salas s ON s.sala_id = a.sala_id
+                 JOIN users u ON u.user_id = a.solicitante_user_id
+                 LEFT JOIN users ap ON ap.user_id = a.aprovado_por_user_id`,
                 [req.usuario.id, motivo, id]
             );
             if (rowCount === 0) {
@@ -428,14 +451,17 @@ module.exports = function (wss) {
                     data: null,
                 });
             }
+            const agendamento = rows[0];
             broadcast(
                 "agendamento_decidido",
-                { agendamento: rows[0], decisao: "rejeitada" },
-                (u) => u.id === rows[0].solicitante_user_id
+                { agendamento, decisao: "rejeitada" },
+                (u) => u.id === agendamento.solicitante_user_id
             );
-            return res.status(200).json({ status: "success", message: "Agendamento rejeitado.", data: rows[0] });
+            // Notificação WhatsApp em fire-and-forget
+            whatsapp.enviarMensagem(agendamento.solicitante_whatsapp, whatsapp.mensagemRejeicao(agendamento));
+            return res.status(200).json({ status: "success", message: "Agendamento rejeitado.", data: agendamento });
         } catch (error) {
-            console.error("Erro ao rejeitar agendamento:", error);
+            logger.error({ err: error }, "Erro ao rejeitar agendamento");
             return res.status(500).json({ status: "error", message: "Erro ao rejeitar.", data: null });
         }
     });
@@ -470,7 +496,7 @@ module.exports = function (wss) {
             );
             return res.status(200).json({ status: "success", message: "Solicitação cancelada.", data: upd[0] });
         } catch (error) {
-            console.error("Erro ao cancelar agendamento:", error);
+            logger.error({ err: error }, "Erro ao cancelar agendamento");
             return res.status(500).json({ status: "error", message: "Erro ao cancelar.", data: null });
         }
     });
@@ -502,7 +528,7 @@ module.exports = function (wss) {
             );
             return res.status(200).json({ status: "success", message: "Ocorrência cancelada.", data: upd[0] });
         } catch (error) {
-            console.error("Erro ao cancelar ocorrência:", error);
+            logger.error({ err: error }, "Erro ao cancelar ocorrência");
             return res.status(500).json({ status: "error", message: "Erro ao cancelar ocorrência.", data: null });
         }
     });
@@ -544,7 +570,7 @@ module.exports = function (wss) {
             );
             return res.status(200).json({ status: "success", message: "", data: rows });
         } catch (error) {
-            console.error("Erro ao buscar calendário:", error);
+            logger.error({ err: error }, "Erro ao buscar calendário");
             return res.status(500).json({ status: "error", message: "Erro ao buscar calendário.", data: null });
         }
     });
@@ -555,17 +581,17 @@ module.exports = function (wss) {
     router.get("/salas/agendaveis", async (_req, res) => {
         try {
             const { rows } = await pool.query(
-                `SELECT s.sala_id, s.sala_nome, s.sala_descricao,
-                        p.predio_nome, st.salas_tipo_nome
+                `SELECT s.sala_id, s.sala_nome, s.sala_descricao, s.sala_capacidade,
+                        p.predio AS predio_nome, st.sala_tipo_nome
                  FROM salas s
                  LEFT JOIN predios p ON p.predio_id = s.predio_id
-                 LEFT JOIN salas_tipo st ON st.salas_tipo_id = s.sala_tipo_id
-                 WHERE s.is_agendavel = 1 OR s.is_agendavel = TRUE
+                 LEFT JOIN salas_tipo st ON st.sala_tipo_id = s.sala_tipo_id
+                 WHERE s.is_agendavel = 1
                  ORDER BY s.sala_nome`
             );
             return res.status(200).json({ status: "success", message: "", data: rows });
         } catch (error) {
-            console.error("Erro ao listar salas agendáveis:", error);
+            logger.error({ err: error }, "Erro ao listar salas agendáveis");
             return res.status(500).json({ status: "error", message: "Erro ao listar salas.", data: null });
         }
     });

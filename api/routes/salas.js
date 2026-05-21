@@ -33,7 +33,7 @@ router.get("/total-info", async (req, res) => {
 
         const { rows } = await pool.query(`
             SELECT
-                sa.sala_id, sa.sala_nome, sa.sala_descricao,
+                sa.sala_id, sa.sala_nome, sa.sala_descricao, sa.sala_capacidade,
                 sa.predio_id, sa.subunidade_id, sa.is_agendavel, sa.sala_tipo_id,
                 p.predio, p.descricao AS predio_descricao, p.unidade_id,
                 s.subunidade_nome, s.subunidade_sigla,
@@ -53,9 +53,16 @@ router.get("/total-info", async (req, res) => {
     }
 });
 
+function parseCapacidade(valor) {
+    if (valor === undefined || valor === null || valor === "") return null;
+    const n = parseInt(valor, 10);
+    if (Number.isNaN(n) || n < 0) return null;
+    return n;
+}
+
 // POST /api/salas — cadastra nova sala
 router.post("/", async (req, res) => {
-    const { sala_nome, sala_descricao, predio_id, subunidade_id, is_agendavel, sala_tipo_id } = req.body;
+    const { sala_nome, sala_descricao, sala_capacidade, predio_id, subunidade_id, is_agendavel, sala_tipo_id } = req.body;
 
     if (!sala_nome || !predio_id) {
         return res.status(400).json({
@@ -67,9 +74,9 @@ router.post("/", async (req, res) => {
 
     try {
         const { rows } = await pool.query(
-            `INSERT INTO salas (sala_nome, sala_descricao, predio_id, subunidade_id, is_agendavel, sala_tipo_id)
-             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-            [sala_nome.trim(), sala_descricao || null, predio_id,
+            `INSERT INTO salas (sala_nome, sala_descricao, sala_capacidade, predio_id, subunidade_id, is_agendavel, sala_tipo_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+            [sala_nome.trim(), sala_descricao || null, parseCapacidade(sala_capacidade), predio_id,
              subunidade_id || null, is_agendavel ?? 0, sala_tipo_id || null]
         );
         return res.status(201).json({ status: "success", message: "Sala cadastrada com sucesso.", data: rows[0] });
@@ -82,7 +89,7 @@ router.post("/", async (req, res) => {
 // PUT /api/salas/:id — atualiza sala
 router.put("/:id", async (req, res) => {
     const { id } = req.params;
-    const { sala_nome, sala_descricao, predio_id, subunidade_id, is_agendavel, sala_tipo_id } = req.body;
+    const { sala_nome, sala_descricao, sala_capacidade, predio_id, subunidade_id, is_agendavel, sala_tipo_id } = req.body;
 
     if (!sala_nome || !predio_id) {
         return res.status(400).json({
@@ -94,10 +101,10 @@ router.put("/:id", async (req, res) => {
 
     try {
         const { rows, rowCount } = await pool.query(
-            `UPDATE salas SET sala_nome=$1, sala_descricao=$2, subunidade_id=$3,
-                 predio_id=$4, is_agendavel=$5, sala_tipo_id=$6
-             WHERE sala_id=$7 RETURNING *`,
-            [sala_nome.trim(), sala_descricao || null, subunidade_id || null,
+            `UPDATE salas SET sala_nome=$1, sala_descricao=$2, sala_capacidade=$3, subunidade_id=$4,
+                 predio_id=$5, is_agendavel=$6, sala_tipo_id=$7
+             WHERE sala_id=$8 RETURNING *`,
+            [sala_nome.trim(), sala_descricao || null, parseCapacidade(sala_capacidade), subunidade_id || null,
              predio_id, is_agendavel ?? 0, sala_tipo_id || null, id]
         );
         if (rowCount === 0) {

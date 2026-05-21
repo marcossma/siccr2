@@ -8,7 +8,13 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "db:dump": "node scripts/dump-schema.js",
+    "db:migrate": "sequelize-cli db:migrate",
+    "prepare": "node scripts/install-husky.js"
+  },
+  "lint-staged": {
+    "**/*.js": "eslint --fix"
   },
   "keywords": [],
   "author": "",
@@ -21,6 +27,9 @@
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.13.1",
+    "pino": "^9.14.0",
+    "pino-http": "^10.5.0",
+    "pino-pretty": "^11.3.0",
     "sequelize": "^6.37.5",
     "sequelize-cli": "^6.6.2",
     "ws": "^8.18.0"
@@ -31,6 +40,8 @@
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^9.1.2",
     "globals": "^15.15.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
     "prettier": "^3.8.3"
   }
 }
