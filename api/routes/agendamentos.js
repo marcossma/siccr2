@@ -297,7 +297,8 @@ module.exports = function (wss) {
                 `SELECT a.id_agendamento, a.sala_id, a.solicitante_user_id, a.motivo,
                         a.dia_inteiro, a.hora_inicio, a.hora_fim,
                         a.data_inicio, a.data_fim_recorrencia, a.tipo_recorrencia,
-                        a.status, a.aprovado_por_user_id, a.data_decisao, a.createdat,
+                        a.status, a.motivo_rejeicao,
+                        a.aprovado_por_user_id, a.data_decisao, a.createdat,
                         s.sala_nome, u.nome AS solicitante_nome,
                         ap.nome AS aprovado_por_nome,
                         COUNT(ao.id_ocorrencia) FILTER (WHERE ao.status_individual = 'ativa')::int AS total_ocorrencias_ativas
@@ -572,6 +573,71 @@ module.exports = function (wss) {
         } catch (error) {
             logger.error({ err: error }, "Erro ao buscar calendário");
             return res.status(500).json({ status: "error", message: "Erro ao buscar calendário.", data: null });
+        }
+    });
+
+    // ───────────────────────────────────────────────────────────────
+    // GET /visao/portaria — agenda de salas agendadas para a portaria
+    //   Acessível para: direção/chefe (por nível) e servidores com
+    //   funcionalidade `ver_agenda_portaria` concedida.
+    //   Params: predio_id (opcional), inicio (YYYY-MM-DD), fim (YYYY-MM-DD)
+    // ───────────────────────────────────────────────────────────────
+    router.get("/visao/portaria", async (req, res) => {
+        const usuario = req.usuario;
+        const ehAutorizado =
+            ehDirecao(usuario) ||
+            ["chefe", "subchefe"].includes(usuario.permissao) ||
+            (Array.isArray(usuario.funcionalidades) &&
+                usuario.funcionalidades.includes("ver_agenda_portaria"));
+
+        if (!ehAutorizado) {
+            return res.status(403).json({
+                status: "error",
+                message: "Acesso negado.",
+                data: null,
+            });
+        }
+
+        const { inicio, fim, predio_id } = req.query;
+        if (!inicio || !fim) {
+            return res.status(400).json({
+                status: "error",
+                message: "Parâmetros 'inicio' e 'fim' são obrigatórios.",
+                data: null,
+            });
+        }
+
+        const params = [inicio, fim];
+        let predioClause = "";
+        if (predio_id) {
+            params.push(predio_id);
+            predioClause = ` AND s.predio_id = $${params.length}`;
+        }
+
+        try {
+            const { rows } = await pool.query(
+                `SELECT ao.data_ocorrencia, ao.id_ocorrencia,
+                        a.id_agendamento, a.dia_inteiro, a.hora_inicio, a.hora_fim,
+                        a.motivo, a.observacao,
+                        s.sala_id, s.sala_nome, s.sala_capacidade,
+                        p.predio_id, p.predio AS predio_nome,
+                        u.nome AS solicitante_nome, u.siape AS solicitante_siape
+                 FROM agendamentos_ocorrencias ao
+                 JOIN agendamentos a ON a.id_agendamento = ao.agendamento_id
+                 JOIN salas s ON s.sala_id = a.sala_id
+                 LEFT JOIN predios p ON p.predio_id = s.predio_id
+                 JOIN users u ON u.user_id = a.solicitante_user_id
+                 WHERE a.status = 'aprovada'
+                   AND ao.status_individual = 'ativa'
+                   AND ao.data_ocorrencia BETWEEN $1 AND $2
+                   ${predioClause}
+                 ORDER BY ao.data_ocorrencia, a.hora_inicio NULLS FIRST, s.sala_nome`,
+                params
+            );
+            return res.status(200).json({ status: "success", message: "", data: rows });
+        } catch (error) {
+            logger.error({ err: error }, "Erro ao buscar agenda da portaria");
+            return res.status(500).json({ status: "error", message: "Erro ao buscar agenda.", data: null });
         }
     });
 

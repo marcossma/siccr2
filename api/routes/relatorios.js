@@ -171,4 +171,171 @@ router.get("/recursos", async (req, res) => {
     }
 });
 
+// ─────────────────────────────────────────────────────────────────────────
+// RELATÓRIO DE AGENDAMENTO DE SALAS
+// ─────────────────────────────────────────────────────────────────────────
+// Disponível apenas para direção do centro. Retorna num único payload:
+//   - resumo: contagem por status
+//   - por_sala: ocupação (ocorrências + horas) por sala agendável
+//   - timeline: ocorrências aprovadas por semana
+//   - top_solicitantes: ranking de quem mais solicitou no período
+//   - detalhe: lista cronológica de ocorrências aprovadas (usada na tabela / PDF)
+// ─────────────────────────────────────────────────────────────────────────
+function ehDirecao(usuario) {
+    if (!usuario) return false;
+    if (["super_admin", "diretor", "vice_diretor"].includes(usuario.permissao)) return true;
+    if (usuario.is_direcao_centro) return true;
+    return (
+        Array.isArray(usuario.funcionalidades) &&
+        (usuario.funcionalidades.includes("aprovar_agendamento") ||
+            usuario.funcionalidades.includes("ver_todos_agendamentos"))
+    );
+}
+
+router.get("/salas", async (req, res) => {
+    if (!ehDirecao(req.usuario)) {
+        return res.status(403).json({
+            status: "error",
+            message: "Apenas a direção pode acessar este relatório.",
+            data: null,
+        });
+    }
+
+    const { inicio, fim, sala_id } = req.query;
+    if (!inicio || !fim) {
+        return res.status(400).json({
+            status: "error",
+            message: "Parâmetros 'inicio' e 'fim' são obrigatórios (formato YYYY-MM-DD).",
+            data: null,
+        });
+    }
+
+    const params = [inicio, fim];
+    let salaClause = "";
+    if (sala_id) {
+        params.push(sala_id);
+        salaClause = ` AND a.sala_id = $${params.length}`;
+    }
+
+    try {
+        const [resumo, porSala, timeline, topSolicitantes, detalhe, rejeicoes] = await Promise.all([
+            // Resumo por status — agendamentos criados no período
+            pool.query(
+                `SELECT
+                    COUNT(*) FILTER (WHERE status = 'aprovada')::int  AS aprovados,
+                    COUNT(*) FILTER (WHERE status = 'pendente')::int  AS pendentes,
+                    COUNT(*) FILTER (WHERE status = 'rejeitada')::int AS rejeitados,
+                    COUNT(*) FILTER (WHERE status = 'cancelada')::int AS cancelados,
+                    COUNT(*)::int                                     AS total
+                 FROM agendamentos a
+                 WHERE a.createdat::date BETWEEN $1 AND $2 ${salaClause}`,
+                params
+            ),
+
+            // Ocupação por sala (apenas salas agendáveis)
+            pool.query(
+                `SELECT s.sala_id, s.sala_nome, s.sala_capacidade, p.predio AS predio_nome,
+                        COUNT(ao.id_ocorrencia)::int AS total_ocorrencias,
+                        COALESCE(
+                            SUM(CASE
+                                WHEN a.dia_inteiro THEN 8
+                                ELSE EXTRACT(EPOCH FROM (a.hora_fim - a.hora_inicio)) / 3600
+                            END)::numeric(10,1), 0
+                        ) AS horas_total
+                 FROM salas s
+                 LEFT JOIN predios p ON p.predio_id = s.predio_id
+                 LEFT JOIN agendamentos a ON a.sala_id = s.sala_id AND a.status = 'aprovada'
+                 LEFT JOIN agendamentos_ocorrencias ao ON ao.agendamento_id = a.id_agendamento
+                    AND ao.status_individual = 'ativa'
+                    AND ao.data_ocorrencia BETWEEN $1 AND $2
+                 WHERE s.is_agendavel = 1
+                 ${sala_id ? `AND s.sala_id = $${params.length}` : ""}
+                 GROUP BY s.sala_id, s.sala_nome, s.sala_capacidade, p.predio
+                 ORDER BY total_ocorrencias DESC, s.sala_nome`,
+                params
+            ),
+
+            // Timeline: ocorrências aprovadas por semana (ISO week starting Monday)
+            pool.query(
+                `SELECT TO_CHAR(date_trunc('week', ao.data_ocorrencia), 'YYYY-MM-DD') AS semana,
+                        COUNT(*)::int AS total_ocorrencias
+                 FROM agendamentos_ocorrencias ao
+                 JOIN agendamentos a ON a.id_agendamento = ao.agendamento_id
+                 WHERE a.status = 'aprovada'
+                   AND ao.status_individual = 'ativa'
+                   AND ao.data_ocorrencia BETWEEN $1 AND $2 ${salaClause}
+                 GROUP BY semana
+                 ORDER BY semana`,
+                params
+            ),
+
+            // Top 10 solicitantes no período
+            pool.query(
+                `SELECT u.nome, u.siape, COUNT(*)::int AS total
+                 FROM agendamentos a
+                 JOIN users u ON u.user_id = a.solicitante_user_id
+                 WHERE a.createdat::date BETWEEN $1 AND $2 ${salaClause}
+                 GROUP BY u.user_id, u.nome, u.siape
+                 ORDER BY total DESC, u.nome
+                 LIMIT 10`,
+                params
+            ),
+
+            // Detalhe de cada ocorrência aprovada (cronológico) — usado na tabela e no PDF
+            pool.query(
+                `SELECT ao.data_ocorrencia, a.dia_inteiro, a.hora_inicio, a.hora_fim,
+                        s.sala_nome, p.predio AS predio_nome,
+                        a.motivo, u.nome AS solicitante_nome, u.siape AS solicitante_siape
+                 FROM agendamentos_ocorrencias ao
+                 JOIN agendamentos a ON a.id_agendamento = ao.agendamento_id
+                 JOIN salas s ON s.sala_id = a.sala_id
+                 LEFT JOIN predios p ON p.predio_id = s.predio_id
+                 JOIN users u ON u.user_id = a.solicitante_user_id
+                 WHERE a.status = 'aprovada'
+                   AND ao.status_individual = 'ativa'
+                   AND ao.data_ocorrencia BETWEEN $1 AND $2 ${salaClause}
+                 ORDER BY ao.data_ocorrencia, a.hora_inicio NULLS FIRST, s.sala_nome`,
+                params
+            ),
+
+            // Solicitações rejeitadas no período (com motivo)
+            pool.query(
+                `SELECT a.id_agendamento, a.motivo, a.motivo_rejeicao,
+                        a.data_decisao, a.data_inicio,
+                        s.sala_nome, u.nome AS solicitante_nome, u.siape AS solicitante_siape,
+                        ap.nome AS aprovado_por_nome
+                 FROM agendamentos a
+                 JOIN salas s ON s.sala_id = a.sala_id
+                 JOIN users u ON u.user_id = a.solicitante_user_id
+                 LEFT JOIN users ap ON ap.user_id = a.aprovado_por_user_id
+                 WHERE a.status = 'rejeitada'
+                   AND a.data_decisao::date BETWEEN $1 AND $2 ${salaClause}
+                 ORDER BY a.data_decisao DESC`,
+                params
+            ),
+        ]);
+
+        return res.status(200).json({
+            status: "success",
+            message: "",
+            data: {
+                periodo: { inicio, fim, sala_id: sala_id || null },
+                resumo: resumo.rows[0],
+                por_sala: porSala.rows,
+                timeline: timeline.rows,
+                top_solicitantes: topSolicitantes.rows,
+                detalhe: detalhe.rows,
+                rejeicoes: rejeicoes.rows,
+            },
+        });
+    } catch (error) {
+        console.error("Erro ao gerar relatório de salas:", error);
+        return res.status(500).json({
+            status: "error",
+            message: "Erro ao gerar relatório de salas.",
+            data: null,
+        });
+    }
+});
+
 module.exports = router;

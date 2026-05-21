@@ -15,7 +15,7 @@
 })();
 
 document.addEventListener("DOMContentLoaded", function() {
-    const apiUrl = "http://localhost:15000/api";
+    const apiUrl = `${window.location.origin}/api`;
     const urlParam = window.location.pathname;
 
     function verificaLogin() {
@@ -84,10 +84,13 @@ document.addEventListener("DOMContentLoaded", function() {
                             `por ${(a.solicitante_nome || "").split(" ")[0]}`
                         );
                     }
+                    // Páginas escutam este evento para atualizar suas listas em tempo real
+                    window.dispatchEvent(new CustomEvent("siccr:agendamento_pendente", { detail: msg }));
                 }
                 if (msg.tipo === "agendamento_decidido") {
                     const decisao = msg.decisao === "aprovada" ? "aprovada ✓" : "rejeitada ✕";
                     mostrarToastWS(`Sua solicitação foi ${decisao}`);
+                    window.dispatchEvent(new CustomEvent("siccr:agendamento_decidido", { detail: msg }));
                 }
             } catch {
                 // payload WS inválido — ignora silenciosamente
@@ -225,7 +228,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         try {
-            const response = await fetch("http://localhost:15000/api/auth/login", {
+            const response = await fetch(`${apiUrl}/auth/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ siape: txtLogin, senha: txtSenha })
@@ -2480,6 +2483,18 @@ document.addEventListener("DOMContentLoaded", function() {
                         </div>
                     `;
                     lista.appendChild(div);
+
+                    // Linha de detalhe da rejeição (logo abaixo, apenas se rejeitada)
+                    if (a.status === "rejeitada" && a.motivo_rejeicao) {
+                        const motivoLinha = document.createElement("div");
+                        motivoLinha.style.cssText =
+                            "padding: 6px 14px 10px; background: #fdecec; border-left: 3px solid #c92a2a; " +
+                            "color: #842828; font-size: 12px; margin-bottom: 6px;";
+                        motivoLinha.innerHTML =
+                            `<strong>Motivo da rejeição:</strong> ${a.motivo_rejeicao}` +
+                            (a.aprovado_por_nome ? ` <em>— ${a.aprovado_por_nome}</em>` : "");
+                        lista.appendChild(motivoLinha);
+                    }
                 });
             } catch (err) {
                 lista.innerHTML = '<p class="pedido-lista-vazia" style="padding:15px">Erro de comunicação.</p>';
@@ -2595,6 +2610,10 @@ document.addEventListener("DOMContentLoaded", function() {
             carregarLista();
         });
 
+        // Atualização em tempo real via WebSocket: recarrega a lista quando algo muda
+        window.addEventListener("siccr:agendamento_pendente", carregarLista);
+        window.addEventListener("siccr:agendamento_decidido", carregarLista);
+
         carregarLista();
     }
 
@@ -2645,6 +2664,16 @@ document.addEventListener("DOMContentLoaded", function() {
                 center: "title",
                 right: "dayGridMonth,timeGridWeek,timeGridDay",
             },
+            buttonText: {
+                today: "Hoje",
+                month: "Mês",
+                week: "Semana",
+                day: "Dia",
+                list: "Lista",
+            },
+            allDayText: "Dia inteiro",
+            noEventsText: "Não há eventos para mostrar",
+            moreLinkText: (n) => `mais +${n}`,
             height: "auto",
             events: async (info, successCallback, failureCallback) => {
                 const params = new URLSearchParams({
@@ -2703,6 +2732,413 @@ document.addEventListener("DOMContentLoaded", function() {
         calFiltroSala.addEventListener("change", () => calendario.refetchEvents());
         calIncluirPendentes.addEventListener("change", () => calendario.refetchEvents());
         btnFecharEventoCal.addEventListener("click", () => dialogEvento.close());
+
+        // Tempo real: recarrega eventos quando alguém cria/decide um agendamento
+        const refetchCalendario = () => calendario.refetchEvents();
+        window.addEventListener("siccr:agendamento_pendente", refetchCalendario);
+        window.addEventListener("siccr:agendamento_decidido", refetchCalendario);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Agenda da Portaria (visão semanal)
+    // ═══════════════════════════════════════════════════════════════
+    if (urlParam === "/agenda-portaria") {
+        const siccr = JSON.parse(localStorage.getItem("siccr") || "null");
+        if (!siccr) { dialogLogin.showModal(); return; }
+
+        const conteudo = document.getElementById("agendaConteudo");
+        const rotuloSemana = document.getElementById("rotuloSemana");
+        const filtroPredio = document.getElementById("filtroPredio");
+        const btnAnterior = document.getElementById("btnSemanaAnterior");
+        const btnProxima = document.getElementById("btnProximaSemana");
+        const btnImprimir = document.getElementById("btnImprimirPortaria");
+
+        const NOMES_DIAS = ["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"];
+
+        // Calcula segunda-feira da semana de uma data
+        function segundaDaSemana(data) {
+            const d = new Date(data);
+            const dow = d.getDay();
+            const diff = (dow + 6) % 7; // dom=0 → 6, seg=1 → 0
+            d.setDate(d.getDate() - diff);
+            d.setHours(0, 0, 0, 0);
+            return d;
+        }
+
+        function isoDate(d) {
+            return d.toISOString().slice(0, 10);
+        }
+
+        function ptBr(d) {
+            return d.toLocaleDateString("pt-BR");
+        }
+
+        const semanaInicio = segundaDaSemana(new Date());
+
+        // Carrega prédios para o filtro
+        fetch(apiUrl + "/predios")
+            .then((r) => r.json())
+            .then((resp) => {
+                if (resp.status !== "success") return;
+                (resp.data || []).forEach((p) => {
+                    const opt = document.createElement("option");
+                    opt.value = p.predio_id;
+                    opt.textContent = p.predio || `Prédio ${p.predio_id}`;
+                    filtroPredio.appendChild(opt);
+                });
+            })
+            .catch(() => { /* sem prédios cadastrados — segue */ });
+
+        function descreverHorario(o) {
+            if (o.dia_inteiro) return "Dia inteiro";
+            return `${(o.hora_inicio || "").slice(0,5)} – ${(o.hora_fim || "").slice(0,5)}`;
+        }
+
+        async function carregar() {
+            const inicio = new Date(semanaInicio);
+            const fim = new Date(semanaInicio);
+            fim.setDate(fim.getDate() + 6);
+            rotuloSemana.textContent = `Semana: ${ptBr(inicio)} a ${ptBr(fim)}`;
+
+            const params = new URLSearchParams({ inicio: isoDate(inicio), fim: isoDate(fim) });
+            if (filtroPredio.value) params.append("predio_id", filtroPredio.value);
+
+            try {
+                const resp = await fetch(`${apiUrl}/agendamentos/visao/portaria?${params}`);
+                const data = await resp.json();
+                if (data.status !== "success") {
+                    conteudo.innerHTML = `<p class="pedido-lista-vazia" style="padding:20px">${data.message || "Erro ao carregar."}</p>`;
+                    return;
+                }
+                renderizar(data.data || [], inicio);
+            } catch (err) {
+                console.error("Erro agenda portaria:", err);
+                conteudo.innerHTML = '<p class="pedido-lista-vazia" style="padding:20px">Erro de comunicação.</p>';
+            }
+        }
+
+        function renderizar(ocorrencias, semanaInicioDt) {
+            // Agrupa por data
+            const porDia = new Map();
+            ocorrencias.forEach((o) => {
+                const dataStr = typeof o.data_ocorrencia === "string"
+                    ? o.data_ocorrencia.slice(0, 10)
+                    : new Date(o.data_ocorrencia).toISOString().slice(0, 10);
+                if (!porDia.has(dataStr)) porDia.set(dataStr, []);
+                porDia.get(dataStr).push(o);
+            });
+
+            conteudo.innerHTML = "";
+
+            // Gera todos os 7 dias (mesmo os vazios) na ordem
+            for (let i = 0; i < 7; i++) {
+                const dt = new Date(semanaInicioDt);
+                dt.setDate(dt.getDate() + i);
+                const chave = isoDate(dt);
+                const itens = porDia.get(chave) || [];
+
+                const cab = document.createElement("div");
+                cab.className = "dia-cabecalho";
+                cab.textContent = `${NOMES_DIAS[dt.getDay()]} — ${ptBr(dt)}`;
+                conteudo.appendChild(cab);
+
+                if (itens.length === 0) {
+                    const vazio = document.createElement("div");
+                    vazio.className = "dia-vazio";
+                    vazio.textContent = "Sem agendamentos.";
+                    conteudo.appendChild(vazio);
+                    continue;
+                }
+
+                // Cabeçalho da grade
+                const cabGrid = document.createElement("div");
+                cabGrid.className = "ag-linha ag-linha-cab";
+                cabGrid.innerHTML = `
+                    <div>Horário</div>
+                    <div>Sala / Prédio</div>
+                    <div>Solicitante</div>
+                    <div>Motivo</div>
+                    <div>Observação</div>
+                `;
+                conteudo.appendChild(cabGrid);
+
+                itens.forEach((o) => {
+                    const linha = document.createElement("div");
+                    linha.className = "ag-linha";
+                    const sala = o.sala_nome + (o.predio_nome ? ` <span style="color:#888">(${o.predio_nome})</span>` : "");
+                    const obs = o.observacao ? `<span style="color:#666">${o.observacao}</span>` : "—";
+                    linha.innerHTML = `
+                        <div class="ag-horario">${descreverHorario(o)}</div>
+                        <div>${sala}</div>
+                        <div>${o.solicitante_nome}</div>
+                        <div>${o.motivo}</div>
+                        <div>${obs}</div>
+                    `;
+                    conteudo.appendChild(linha);
+                });
+            }
+        }
+
+        btnAnterior.addEventListener("click", () => {
+            semanaInicio.setDate(semanaInicio.getDate() - 7);
+            carregar();
+        });
+        btnProxima.addEventListener("click", () => {
+            semanaInicio.setDate(semanaInicio.getDate() + 7);
+            carregar();
+        });
+        filtroPredio.addEventListener("change", carregar);
+        btnImprimir.addEventListener("click", () => window.print());
+
+        // Tempo real: recarrega a agenda quando algum agendamento muda
+        window.addEventListener("siccr:agendamento_pendente", carregar);
+        window.addEventListener("siccr:agendamento_decidido", carregar);
+
+        carregar();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Relatório de Salas
+    // ═══════════════════════════════════════════════════════════════
+    if (urlParam === "/relatorios-salas") {
+        const siccr = JSON.parse(localStorage.getItem("siccr") || "null");
+        if (!siccr) { dialogLogin.showModal(); return; }
+
+        const filtroInicio = document.getElementById("filtroInicio");
+        const filtroFim    = document.getElementById("filtroFim");
+        const filtroSala   = document.getElementById("filtroSala");
+        const btnAplicar   = document.getElementById("btnAplicarFiltro");
+        const btnImprimir  = document.getElementById("btnImprimirRelatorio");
+
+        // Default: últimos 90 dias
+        const hoje = new Date();
+        const inicio = new Date(hoje); inicio.setDate(hoje.getDate() - 90);
+        filtroInicio.value = inicio.toISOString().slice(0, 10);
+        filtroFim.value    = hoje.toISOString().slice(0, 10);
+
+        // Popula select de salas agendáveis
+        fetch(apiUrl + "/agendamentos/salas/agendaveis")
+            .then((r) => r.json())
+            .then((resp) => {
+                if (resp.status !== "success") return;
+                (resp.data || []).forEach((s) => {
+                    const opt = document.createElement("option");
+                    opt.value = s.sala_id;
+                    opt.textContent = s.sala_nome + (s.predio_nome ? ` — ${s.predio_nome}` : "");
+                    filtroSala.appendChild(opt);
+                });
+            });
+
+        let chartPorSala = null;
+        let chartTimeline = null;
+
+        function destruirCharts() {
+            if (chartPorSala) { chartPorSala.destroy(); chartPorSala = null; }
+            if (chartTimeline) { chartTimeline.destroy(); chartTimeline = null; }
+        }
+
+        function nomeDiaSemana(dataStr) {
+            const dt = new Date(dataStr + "T00:00:00");
+            return ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"][dt.getDay()];
+        }
+
+        function inicioSemanaIso(dataStr) {
+            // date_trunc('week') do Postgres devolve segunda-feira; reaproveitamos a string
+            return dataStr.slice(0, 10);
+        }
+
+        function descreverHorario(o) {
+            if (o.dia_inteiro) return "Dia inteiro";
+            return `${(o.hora_inicio || "").slice(0,5)}–${(o.hora_fim || "").slice(0,5)}`;
+        }
+
+        async function carregar() {
+            const params = new URLSearchParams({
+                inicio: filtroInicio.value,
+                fim:    filtroFim.value,
+            });
+            if (filtroSala.value) params.append("sala_id", filtroSala.value);
+
+            try {
+                const resp = await fetch(`${apiUrl}/relatorios/salas?${params}`);
+                const data = await resp.json();
+                if (data.status !== "success") {
+                    alert(data.message || "Erro ao carregar relatório.");
+                    return;
+                }
+                renderizar(data.data);
+            } catch (err) {
+                console.error("Erro no relatório de salas:", err);
+                alert("Erro de comunicação com o servidor.");
+            }
+        }
+
+        function renderizar(d) {
+            // Cards de resumo
+            document.getElementById("totalAprovadas").textContent  = d.resumo.aprovados;
+            document.getElementById("totalPendentes").textContent  = d.resumo.pendentes;
+            document.getElementById("totalRejeitadas").textContent = d.resumo.rejeitados;
+            document.getElementById("totalCanceladas").textContent = d.resumo.cancelados;
+
+            destruirCharts();
+
+            // Gráfico: horas por sala (barras horizontais, top 10)
+            const porSalaTop = d.por_sala.filter((s) => Number(s.horas_total) > 0).slice(0, 10);
+            chartPorSala = new Chart(document.getElementById("graficoPorSala"), {
+                type: "bar",
+                data: {
+                    labels: porSalaTop.map((s) => s.sala_nome),
+                    datasets: [{
+                        label: "Horas no período",
+                        data: porSalaTop.map((s) => Number(s.horas_total)),
+                        backgroundColor: "#007a2e",
+                    }],
+                },
+                options: {
+                    indexAxis: "y",
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                },
+            });
+
+            // Gráfico: timeline por semana
+            chartTimeline = new Chart(document.getElementById("graficoTimeline"), {
+                type: "line",
+                data: {
+                    labels: d.timeline.map((t) => formatarData(t.semana)),
+                    datasets: [{
+                        label: "Ocorrências",
+                        data: d.timeline.map((t) => t.total_ocorrencias),
+                        borderColor: "#007a2e",
+                        backgroundColor: "rgba(0, 122, 46, 0.15)",
+                        fill: true,
+                        tension: 0.3,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+                },
+            });
+
+            // Tabela: ocupação por sala
+            const listaPorSala = document.getElementById("listaPorSala");
+            listaPorSala.innerHTML = "";
+            d.por_sala.forEach((s) => {
+                const div = document.createElement("div");
+                div.classList.add("dados", "flex", "align--items--center");
+                div.innerHTML = `
+                    <div class="dado flex flex--4">${s.sala_nome}</div>
+                    <div class="dado flex flex--3">${s.predio_nome || "—"}</div>
+                    <div class="dado flex flex--2">${s.sala_capacidade ?? "—"}</div>
+                    <div class="dado flex flex--2">${s.total_ocorrencias}</div>
+                    <div class="dado flex flex--2">${Number(s.horas_total).toFixed(1)}</div>
+                `;
+                listaPorSala.appendChild(div);
+            });
+
+            // Tabela: top solicitantes
+            const listaTop = document.getElementById("listaTopSolicitantes");
+            listaTop.innerHTML = "";
+            if (d.top_solicitantes.length === 0) {
+                listaTop.innerHTML = '<p class="pedido-lista-vazia" style="padding:12px">Nenhuma solicitação no período.</p>';
+            } else {
+                d.top_solicitantes.forEach((u) => {
+                    const div = document.createElement("div");
+                    div.classList.add("dados", "flex", "align--items--center");
+                    div.innerHTML = `
+                        <div class="dado flex flex--6">${u.nome}</div>
+                        <div class="dado flex flex--3">${u.siape || "—"}</div>
+                        <div class="dado flex flex--2">${u.total}</div>
+                    `;
+                    listaTop.appendChild(div);
+                });
+            }
+
+            // Solicitações rejeitadas no período
+            const listaRejeicoes = document.getElementById("listaRejeicoes");
+            listaRejeicoes.innerHTML = "";
+            if ((d.rejeicoes || []).length === 0) {
+                listaRejeicoes.innerHTML = '<p class="pedido-lista-vazia" style="padding:12px">Nenhuma rejeição no período.</p>';
+            } else {
+                d.rejeicoes.forEach((r) => {
+                    const div = document.createElement("div");
+                    div.classList.add("dados", "flex", "align--items--center");
+                    div.innerHTML = `
+                        <div class="dado flex flex--2">${formatarData(r.data_decisao)}</div>
+                        <div class="dado flex flex--3">${r.sala_nome}</div>
+                        <div class="dado flex flex--3">${r.solicitante_nome}</div>
+                        <div class="dado flex flex--4" title="${r.motivo}">${(r.motivo || "").slice(0, 60)}${r.motivo && r.motivo.length > 60 ? "…" : ""}</div>
+                        <div class="dado flex flex--4" style="color:#842828" title="${r.motivo_rejeicao || ""}">${(r.motivo_rejeicao || "").slice(0, 60)}${r.motivo_rejeicao && r.motivo_rejeicao.length > 60 ? "…" : ""}</div>
+                        <div class="dado flex flex--2">${(r.aprovado_por_nome || "").split(" ").slice(0,2).join(" ")}</div>
+                    `;
+                    listaRejeicoes.appendChild(div);
+                });
+            }
+
+            // Agenda detalhada agrupada por semana
+            const agendaEl = document.getElementById("agendaPorSemana");
+            agendaEl.innerHTML = "";
+            if (d.detalhe.length === 0) {
+                agendaEl.innerHTML = '<p class="pedido-lista-vazia" style="padding:12px">Nenhuma ocorrência aprovada no período.</p>';
+                return;
+            }
+
+            // Agrupa por semana (segunda-feira da semana ISO)
+            const grupos = new Map();
+            d.detalhe.forEach((o) => {
+                const dataStr = typeof o.data_ocorrencia === "string"
+                    ? o.data_ocorrencia.slice(0, 10)
+                    : new Date(o.data_ocorrencia).toISOString().slice(0, 10);
+                const dt = new Date(dataStr + "T00:00:00");
+                // Segunda da semana: (getDay 0=dom, 1=seg, ...) → ajusta pra segunda
+                const dow = dt.getDay();
+                const diasParaSegunda = (dow + 6) % 7;
+                const segunda = new Date(dt); segunda.setDate(dt.getDate() - diasParaSegunda);
+                const chaveSemana = segunda.toISOString().slice(0, 10);
+                if (!grupos.has(chaveSemana)) grupos.set(chaveSemana, []);
+                grupos.get(chaveSemana).push({ ...o, dataStr });
+            });
+
+            const semanasOrdenadas = Array.from(grupos.keys()).sort();
+            semanasOrdenadas.forEach((chaveSemana) => {
+                const segunda = new Date(chaveSemana + "T00:00:00");
+                const domingo = new Date(segunda); domingo.setDate(segunda.getDate() + 6);
+                const cab = document.createElement("div");
+                cab.className = "semana-cabecalho";
+                cab.textContent = `Semana de ${formatarData(chaveSemana)} a ${formatarData(domingo.toISOString().slice(0,10))}`;
+                agendaEl.appendChild(cab);
+
+                // Cabeçalho da grade
+                const cabGrid = document.createElement("div");
+                cabGrid.className = "ocorrencia-linha ocorrencia-linha-cab";
+                cabGrid.innerHTML = `
+                    <div>Data</div><div>Horário</div><div>Sala</div><div>Motivo</div><div>Solicitante</div>
+                `;
+                agendaEl.appendChild(cabGrid);
+
+                grupos.get(chaveSemana).forEach((o) => {
+                    const linha = document.createElement("div");
+                    linha.className = "ocorrencia-linha";
+                    linha.innerHTML = `
+                        <div>${nomeDiaSemana(o.dataStr).slice(0,3)} ${formatarData(o.dataStr)}</div>
+                        <div>${descreverHorario(o)}</div>
+                        <div>${o.sala_nome}${o.predio_nome ? ` (${o.predio_nome})` : ""}</div>
+                        <div>${o.motivo}</div>
+                        <div>${o.solicitante_nome}</div>
+                    `;
+                    agendaEl.appendChild(linha);
+                });
+            });
+        }
+
+        btnAplicar.addEventListener("click", carregar);
+        btnImprimir.addEventListener("click", () => window.print());
+
+        carregar();
     }
 
 });

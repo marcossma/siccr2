@@ -73,3 +73,40 @@
 #dialogNovoPedido .formInput {
     padding: 8px 10px;
 }
+
+/* ── Responsividade dos dialogs ───────────────────────────────── */
+@media (max-width: 600px) {
+    /* !important sobrescreve min-width/max-width inline aplicados via style="" */
+    dialog.dialogPainel,
+    dialog#dialogLogin,
+    dialog#dialogNovoPedido,
+    dialog#dialogVerItens,
+    dialog#dialogDetalheAgendamento,
+    dialog#dialogRejeitar,
+    dialog#dialogEventoCal {
+        min-width: 0 !important;
+        max-width: 95vw !important;
+        max-height: 92vh;
+        width: auto !important;
+        overflow: auto;
+        box-sizing: border-box;
+    }
+
+    dialog fieldset {
+        padding: 14px;
+    }
+
+    dialog fieldset legend {
+        font-size: 16px;
+    }
+
+    /* Conteúdo interno: garante quebra de palavras longas */
+    dialog .pedido-lista-itens,
+    dialog .pedido-item,
+    #dialogDetalheConteudo,
+    #dialogEventoConteudo {
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+}
+

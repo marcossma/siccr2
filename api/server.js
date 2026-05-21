@@ -85,8 +85,12 @@ app.use(helmet({
             "img-src": ["'self'", "https://www.ufsm.br", "data:"],
             "script-src": ["'self'", "https://cdn.jsdelivr.net"],
             "style-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
-        }
-    }
+            // Desabilita upgrade automático para HTTPS — o sistema é servido em HTTP na rede interna
+            "upgrade-insecure-requests": null,
+        },
+    },
+    // Strict-Transport-Security só faz sentido em sites HTTPS; desabilitado pra evitar problemas em LAN
+    strictTransportSecurity: false,
 }));
 
 // ────────────────────────────────────────────────────────────

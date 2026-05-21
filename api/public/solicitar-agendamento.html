@@ -11,6 +11,51 @@
     <link rel="stylesheet" href="./adm/css/dialogs.css">
     <link rel="stylesheet" href="./css/ui-kit.css">
     <script type="module" src="./js/scripts.js"></script>
+    <style>
+        @media (max-width: 600px) {
+            main { padding: 8px 4px !important; }
+            .titulo_secao { text-align: center; padding: 8px 4px; margin: 8px 0; }
+            .titulo_secao h1 { font-size: 18px; }
+
+            .divFrmSolicitarAgendamento { max-width: 100% !important; }
+
+            /* Fix de overflow: fieldset tem min-width: min-content por padrão do navegador
+               — sobrescrever pra que ele respeite a largura do parent */
+            .divFrmSolicitarAgendamento fieldset {
+                padding: 10px;
+                width: 100%;
+                min-width: 0;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+            .divFrmSolicitarAgendamento legend { font-size: 13px; }
+
+            /* Inputs e selects do form ocupam toda a largura disponível */
+            #frmSolicitarAgendamento .formInput {
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
+            /* Linha de hora início / fim já é flex; reduzir gap */
+            #agHorariosBlock { gap: 8px; }
+            #agHorariosBlock > div { min-width: 0; }
+
+            /* Checkboxes de dias da semana: distribuir bem */
+            #agDiasSemana { gap: 6px 12px !important; justify-content: center; }
+
+            /* Botões inferiores ocupam largura toda e centralizam */
+            #frmSolicitarAgendamento .row,
+            #agPreviewBlock .row {
+                flex-direction: column;
+                gap: 8px;
+            }
+            #frmSolicitarAgendamento .row .btnPainelFormulario,
+            #agPreviewBlock .row .btnPainelFormulario {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -30,7 +75,7 @@
                 <h1>Solicitar agendamento de sala</h1>
             </section>
 
-            <section class="divFrmSolicitarAgendamento" style="width:100%;max-width:780px">
+            <section class="divFrmSolicitarAgendamento" style="width:100%;max-width:780px;margin:0 auto">
                 <fieldset class="p--10">
                     <legend class="border border--1 border--silver border--r--5 p--5">Dados da solicitação</legend>
 

@@ -11,6 +11,35 @@
     <link rel="stylesheet" href="./adm/css/dialogs.css">
     <link rel="stylesheet" href="./css/ui-kit.css">
     <script type="module" src="./js/scripts.js"></script>
+    <style>
+        /* Permite que a tabela de solicitações role horizontalmente em telas estreitas */
+        .scroll-x-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .scroll-x-wrapper .informacoes_painel {
+            min-width: 900px;
+        }
+
+        @media (max-width: 600px) {
+            /* Reduz margens laterais para aproveitar a tela */
+            main { padding: 8px 4px !important; }
+            .container { padding-left: 0 !important; padding-right: 0 !important; }
+
+            .titulo_secao { width: 100%; padding: 0 4px; }
+            .titulo_secao h1 { font-size: 18px; margin: 0; }
+            .titulo_secao > div { width: 100%; justify-content: flex-start; gap: 6px !important; flex-wrap: wrap; }
+
+            /* Botões "Ver calendário" e "+ Solicitar" mais compactos */
+            .titulo_secao .btn_adicionar {
+                padding: 6px 12px !important;
+                font-size: 12px !important;
+                min-height: 0 !important;
+            }
+            .titulo_secao select { font-size: 12px; padding: 6px 8px; }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -42,22 +71,24 @@
                 </div>
             </section>
 
-            <section class="divListaTiposRecursos informacoes_painel">
-                <div class="cabecalho flex">
-                    <div class="titulo flex flex--1">Nº</div>
-                    <div class="titulo flex flex--3">Sala</div>
-                    <div class="titulo flex flex--3">Solicitante</div>
-                    <div class="titulo flex flex--3">Motivo</div>
-                    <div class="titulo flex flex--2">Período</div>
-                    <div class="titulo flex flex--2">Recorrência</div>
-                    <div class="titulo flex flex--1">Ocorrências</div>
-                    <div class="titulo flex flex--2">Status</div>
-                    <div class="titulo flex flex--2">Ações</div>
-                </div>
-                <div id="listaAgendamentos">
-                    <!-- carregado via JS -->
-                </div>
-            </section>
+            <div class="scroll-x-wrapper">
+                <section class="divListaTiposRecursos informacoes_painel">
+                    <div class="cabecalho flex">
+                        <div class="titulo flex flex--1">Nº</div>
+                        <div class="titulo flex flex--3">Sala</div>
+                        <div class="titulo flex flex--3">Solicitante</div>
+                        <div class="titulo flex flex--3">Motivo</div>
+                        <div class="titulo flex flex--2">Período</div>
+                        <div class="titulo flex flex--2">Recorrência</div>
+                        <div class="titulo flex flex--1">Ocorrências</div>
+                        <div class="titulo flex flex--2">Status</div>
+                        <div class="titulo flex flex--2">Ações</div>
+                    </div>
+                    <div id="listaAgendamentos">
+                        <!-- carregado via JS -->
+                    </div>
+                </section>
+            </div>
         </main>
         <footer>Rodapé</footer>
     </div>

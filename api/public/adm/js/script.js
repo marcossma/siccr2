@@ -15,7 +15,7 @@
 })();
 
 document.addEventListener("DOMContentLoaded", function() {
-    const apiUrl = "http://localhost:15000/api";
+    const apiUrl = `${window.location.origin}/api`;
     const urlParam = window.location.pathname;
 
     // Exibir usuário logado no cabeçalho
@@ -744,7 +744,8 @@ document.addEventListener("DOMContentLoaded", function() {
                                  data-sala_descricao="${s.sala_descricao || ""}"
                                  data-sala_capacidade="${s.sala_capacidade ?? ""}"
                                  data-is_agendavel="${s.is_agendavel ? 1 : 0}"
-                                 data-sala_tipo_id="${s.sala_tipo_id || ""}"`,
+                                 data-sala_tipo_id="${s.sala_tipo_id || ""}"
+                                 data-presta_servicos_externos="${s.presta_servicos_externos ?? ""}"`,
                                 s.sala_id, "sala"
                             )}
                         </div>`;
@@ -763,10 +764,13 @@ document.addEventListener("DOMContentLoaded", function() {
             } catch (e) { console.error("Erro ao excluir sala:", e); }
         }
 
+        let tiposCache = [];
+
         async function preencherSelects(predioSel = "", subSel = "", tipoSel = "") {
             const [predios, subs, tipos] = await Promise.all([
                 carregarPrediosTotalInfo(), carregarSubunidadesTotalInfo(), carregarSalasTipo()
             ]);
+            tiposCache = tipos || [];
             popularSelect(selectPredios,    predios, p => p.predio_id,    p => p.predio,         "Selecione o prédio...");
             popularSelect(selectSubunidades, subs,   s => s.subunidade_id, s => s.subunidade_nome, "Selecione a subunidade...");
             popularSelect(selectSalasTipo,  tipos,   t => t.sala_tipo_id,  t => t.sala_tipo_nome.toUpperCase(), "Selecione o tipo...");
@@ -774,6 +778,31 @@ document.addEventListener("DOMContentLoaded", function() {
             if (subSel)    selectSubunidades.value = subSel;
             if (tipoSel)   selectSalasTipo.value   = tipoSel;
         }
+
+        // Tipo é laboratório? Detecta por substring no nome (ex: "Laboratório", "Lab. de Solos").
+        // Se no futuro a tabela salas_tipo ganhar uma flag is_laboratorio, basta trocar aqui.
+        function ehLaboratorio(salaTipoId) {
+            if (!salaTipoId) return false;
+            const tipo = tiposCache.find(t => String(t.sala_tipo_id) === String(salaTipoId));
+            return !!(tipo && /lab/i.test(tipo.sala_tipo_nome || ""));
+        }
+
+        function atualizarRowServicosExternos(valorSelecionado) {
+            const rowEl = document.getElementById("rowServicosExternos");
+            if (!rowEl) return;
+            const ehLab = ehLaboratorio(selectSalasTipo.value);
+            // Não usa `hidden` porque a classe .flex sobrescreve com display:flex
+            rowEl.style.display = ehLab ? "" : "none";
+            if (ehLab) {
+                // Marca o radio conforme o valor (default 0 = Não)
+                const valor = valorSelecionado === "1" ? "1" : "0";
+                document.querySelectorAll("input[name='presta_servicos_externos']").forEach(r => {
+                    r.checked = r.value === valor;
+                });
+            }
+        }
+
+        selectSalasTipo.addEventListener("change", () => atualizarRowServicosExternos());
 
         renderizarSalas();
 
@@ -785,6 +814,7 @@ document.addEventListener("DOMContentLoaded", function() {
             btnCadastrar.style.display = "inline-block"; btnCadastrar.disabled = false;
             frmUnidade.reset();
             await preencherSelects();
+            atualizarRowServicosExternos(); // garante row oculto até escolher tipo
             dialogPainel.showModal();
         });
 
@@ -792,10 +822,20 @@ document.addEventListener("DOMContentLoaded", function() {
             e.preventDefault(); frmUnidade.reset(); dialogPainel.close();
         });
 
+        // Garante que presta_servicos_externos só vai no payload quando o tipo for laboratório.
+        // Para outros tipos, força string vazia → backend grava NULL.
+        function normalizarDadosSala(dados) {
+            const rowEl = document.getElementById("rowServicosExternos");
+            if (rowEl && rowEl.style.display === "none") {
+                dados.presta_servicos_externos = "";
+            }
+            return dados;
+        }
+
         btnCadastrar.addEventListener("click", async function(e) {
             e.preventDefault();
             const formData = new FormData(frmUnidade);
-            const dados = Object.fromEntries(formData.entries());
+            const dados = normalizarDadosSala(Object.fromEntries(formData.entries()));
             if (!dados.sala_nome || !dados.predio_id) {
                 alert("Identificação da sala e prédio são obrigatórios."); return;
             }
@@ -811,7 +851,7 @@ document.addEventListener("DOMContentLoaded", function() {
         btnAtualizar.addEventListener("click", async function(e) {
             e.preventDefault();
             const formData = new FormData(frmUnidade);
-            const dados = Object.fromEntries(formData.entries());
+            const dados = normalizarDadosSala(Object.fromEntries(formData.entries()));
             try {
                 const r = await fetch(`${apiUrl}/salas/${dados.sala_id}`, { method: "PUT", body: JSON.stringify(dados) });
                 const resp = await r.json();
@@ -838,6 +878,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 document.querySelectorAll("input[name='is_agendavel']").forEach(radio => {
                     radio.checked = radio.value === d.is_agendavel;
                 });
+                // Mostra/esconde row de serviços externos e marca o valor armazenado
+                atualizarRowServicosExternos(d.presta_servicos_externos);
                 dialogPainel.showModal();
             }
             if (el.classList.contains("excluir")) excluirSala(el.dataset.id);

@@ -116,6 +116,19 @@
                     </div>
                 </div>
 
+                <!-- Aparece apenas quando o tipo é Laboratório (controle via JS) -->
+                <div class="row flex justify--content--center align--items--center gap--10" id="rowServicosExternos" style="display:none">
+                    <label for="" class="formLabel">Presta serviços externos:</label>
+                    <div class="flex align--items--center justify--content--center gap--20">
+                        <span>
+                            <input type="radio" name="presta_servicos_externos" value="0" checked> Não
+                        </span>
+                        <span>
+                            <input type="radio" name="presta_servicos_externos" value="1"> Sim
+                        </span>
+                    </div>
+                </div>
+
                 <div class="row">
                     <button type="button" class="btnPainelFormulario cadastrarUnidade">Cadastrar</button>
                     <button type="button" class="btnPainelFormulario atualizarUnidade">Atualizar</button>

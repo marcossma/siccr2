@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICCR - Relatórios de Salas</title>
+    <link rel="shortcut icon" href="./img/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/dialogs.css">
+    <link rel="stylesheet" href="./adm/css/style.css">
+    <link rel="stylesheet" href="./adm/css/dialogs.css">
+    <link rel="stylesheet" href="./css/ui-kit.css">
+    <script src="./js/vendor/chart.min.js"></script>
+    <script type="module" src="./js/scripts.js"></script>
+    <style>
+        .relatorio-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .relatorio-toolbar input,
+        .relatorio-toolbar select,
+        .relatorio-toolbar button {
+            padding: 7px 14px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-family: verdana, sans-serif;
+            font-size: 12px;
+            cursor: pointer;
+            background: white;
+        }
+        .relatorio-toolbar input[type="date"] { cursor: text; }
+        .btn-aplicar {
+            background: #007a2e !important;
+            color: white !important;
+            border-color: #007a2e !important;
+            transition: background 0.2s;
+        }
+        .btn-aplicar:hover { background: #009536 !important; }
+        .btn-imprimir {
+            background: #555 !important;
+            color: white !important;
+            border-color: #555 !important;
+            transition: background 0.2s;
+        }
+        .btn-imprimir:hover { background: #333 !important; }
+
+        .relatorio-graficos {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 1.5rem 0;
+            width: 100%;
+        }
+        .relatorio-grafico-box {
+            flex: 1;
+            min-width: 280px;
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        .relatorio-grafico-box h3 {
+            font-size: 13px;
+            color: #555;
+            margin: 0 0 12px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .relatorio-grafico-box canvas { max-height: 260px; }
+
+        .semana-cabecalho {
+            background: #f1f7f3;
+            padding: 8px 12px;
+            margin-top: 18px;
+            border-left: 4px solid #007a2e;
+            font-weight: 600;
+            color: #007a2e;
+            border-radius: 4px;
+        }
+        .ocorrencia-linha {
+            display: grid;
+            grid-template-columns: 80px 100px 1fr 2fr 2fr;
+            gap: 10px;
+            padding: 6px 12px;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+        }
+        .ocorrencia-linha-cab {
+            background: #fafafa;
+            font-weight: 600;
+            color: #555;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        @media print {
+            header, footer, .relatorio-toolbar, responsive-menu,
+            #btnEntrar, .btn_adicionar { display: none !important; }
+            body { background: white; }
+            .container { box-shadow: none; }
+            .relatorio-grafico-box canvas { max-height: 200px; }
+            .relatorio-graficos { page-break-after: avoid; }
+            .semana-cabecalho { page-break-after: avoid; }
+            .ocorrencia-linha { page-break-inside: avoid; }
+        }
+
+        @media (max-width: 600px) {
+            main { padding: 10px !important; }
+            .relatorio-toolbar { width: 100%; justify-content: stretch; }
+            .relatorio-toolbar input,
+            .relatorio-toolbar select,
+            .relatorio-toolbar button { flex: 1 1 100%; }
+            .relatorio-grafico-box { padding: 10px; min-width: 0; }
+            .relatorio-grafico-box canvas { max-height: 220px; }
+
+            /* Linhas em coluna única com rótulos */
+            .ocorrencia-linha { grid-template-columns: 1fr; gap: 4px; padding: 10px; }
+            .ocorrencia-linha-cab { display: none; }
+            .ocorrencia-linha > div:nth-child(1)::before { content: "Data: "; font-weight: 600; color: #555; }
+            .ocorrencia-linha > div:nth-child(2)::before { content: "Horário: "; font-weight: 600; color: #555; }
+            .ocorrencia-linha > div:nth-child(3)::before { content: "Sala: "; font-weight: 600; color: #555; }
+            .ocorrencia-linha > div:nth-child(4)::before { content: "Motivo: "; font-weight: 600; color: #555; }
+            .ocorrencia-linha > div:nth-child(5)::before { content: "Solicitante: "; font-weight: 600; color: #555; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/"><img src="./img/logo.png" alt="Logo do CCR" class="logo"></a>
+            <div class="acesso"><a href="#" id="btnEntrar">Entrar</a></div>
+        </header>
+        <div><responsive-menu></responsive-menu></div>
+
+        <main class="flex flex--column flex--center">
+            <section class="titulo_secao flex justify--space--between align--items--center" style="flex-wrap:wrap;gap:10px">
+                <h1>Relatório de Salas</h1>
+                <div class="relatorio-toolbar">
+                    <label for="filtroInicio" style="font-size:12px;color:#555">De:</label>
+                    <input type="date" id="filtroInicio">
+                    <label for="filtroFim" style="font-size:12px;color:#555">até:</label>
+                    <input type="date" id="filtroFim">
+                    <select id="filtroSala" title="Filtrar por sala">
+                        <option value="">Todas as salas</option>
+                    </select>
+                    <button class="btn-aplicar" id="btnAplicarFiltro">Aplicar</button>
+                    <button class="btn-imprimir" id="btnImprimirRelatorio" title="Imprimir / salvar como PDF">
+                        🖨 Imprimir / PDF
+                    </button>
+                </div>
+            </section>
+
+            <section class="informacoes_painel" style="width:100%">
+
+                <!-- Cards de resumo -->
+                <div class="flex gap--15" style="flex-wrap:wrap; margin-bottom:1.5rem;">
+                    <div class="relatorio-card">
+                        <div class="relatorio-card-titulo">Aprovadas</div>
+                        <div class="relatorio-card-valor card-valor" id="totalAprovadas">—</div>
+                    </div>
+                    <div class="relatorio-card">
+                        <div class="relatorio-card-titulo">Pendentes</div>
+                        <div class="relatorio-card-valor card-valor" id="totalPendentes">—</div>
+                    </div>
+                    <div class="relatorio-card">
+                        <div class="relatorio-card-titulo">Rejeitadas</div>
+                        <div class="relatorio-card-valor card-valor" id="totalRejeitadas">—</div>
+                    </div>
+                    <div class="relatorio-card">
+                        <div class="relatorio-card-titulo">Canceladas</div>
+                        <div class="relatorio-card-valor card-valor" id="totalCanceladas">—</div>
+                    </div>
+                </div>
+
+                <!-- Gráficos -->
+                <div class="relatorio-graficos">
+                    <div class="relatorio-grafico-box">
+                        <h3>Ocupação por sala (horas no período)</h3>
+                        <canvas id="graficoPorSala"></canvas>
+                    </div>
+                    <div class="relatorio-grafico-box" style="max-width:380px">
+                        <h3>Ocorrências aprovadas por semana</h3>
+                        <canvas id="graficoTimeline"></canvas>
+                    </div>
+                </div>
+
+                <!-- Tabela: ocupação por sala -->
+                <div style="margin-top:1.5rem">
+                    <h2 style="font-size:15px">Ocupação por sala</h2>
+                    <div class="cabecalho flex">
+                        <div class="titulo flex flex--4">Sala</div>
+                        <div class="titulo flex flex--3">Prédio</div>
+                        <div class="titulo flex flex--2">Capacidade</div>
+                        <div class="titulo flex flex--2">Ocorrências</div>
+                        <div class="titulo flex flex--2">Horas</div>
+                    </div>
+                    <div id="listaPorSala"></div>
+                </div>
+
+                <!-- Top solicitantes -->
+                <div style="margin-top:1.5rem">
+                    <h2 style="font-size:15px">Top solicitantes do período</h2>
+                    <div class="cabecalho flex">
+                        <div class="titulo flex flex--6">Nome</div>
+                        <div class="titulo flex flex--3">SIAPE</div>
+                        <div class="titulo flex flex--2">Solicitações</div>
+                    </div>
+                    <div id="listaTopSolicitantes"></div>
+                </div>
+
+                <!-- Solicitações rejeitadas no período -->
+                <div style="margin-top:1.5rem">
+                    <h2 style="font-size:15px">Solicitações rejeitadas no período</h2>
+                    <div class="cabecalho flex">
+                        <div class="titulo flex flex--2">Data</div>
+                        <div class="titulo flex flex--3">Sala</div>
+                        <div class="titulo flex flex--3">Solicitante</div>
+                        <div class="titulo flex flex--4">Motivo da solicitação</div>
+                        <div class="titulo flex flex--4">Motivo da rejeição</div>
+                        <div class="titulo flex flex--2">Rejeitada por</div>
+                    </div>
+                    <div id="listaRejeicoes"></div>
+                </div>
+
+                <!-- Agenda detalhada agrupada por semana (usada também no PDF) -->
+                <div style="margin-top:1.5rem">
+                    <h2 style="font-size:15px">Agenda detalhada por semana</h2>
+                    <div id="agendaPorSemana"></div>
+                </div>
+
+            </section>
+        </main>
+        <footer>Rodapé</footer>
+    </div>
+
+    <!-- Formulário de Login DIALOG -->
+    <dialog id="dialogLogin">
+        <fieldset>
+            <legend>Login</legend>
+            <form id="frmLogin">
+                <div class="row">
+                    <input type="text" name="txtLogin" id="txtLogin" class="formInput" placeholder="Digite o seu login">
+                </div>
+                <div class="row">
+                    <input type="password" name="txtSenha" id="txtSenha" class="formInput" placeholder="Digite a sua senha">
+                </div>
+                <p id="loginErro" class="login-erro" hidden></p>
+                <div class="row">
+                    <button id="btnLogin" type="button">Entrar</button>
+                    <button id="btnCancelarLogin" type="button">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+
+    <script type="module" src="./js/components/index.js"></script>
+</body>
+</html>

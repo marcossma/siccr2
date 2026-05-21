@@ -14,6 +14,29 @@
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/locales/pt-br.global.min.js"></script>
     <script type="module" src="./js/scripts.js"></script>
+    <style>
+        /* Responsividade do calendário */
+        @media (max-width: 600px) {
+            main { padding: 10px !important; }
+            #calendarioSalas { padding: 8px !important; font-size: 12px; }
+            #calFiltroSala { min-width: 0 !important; max-width: 60vw; }
+
+            /* Header da toolbar do FullCalendar — empilhado em telas pequenas */
+            .fc-header-toolbar.fc-toolbar {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 8px;
+            }
+            .fc-toolbar-chunk { display: flex; justify-content: center; flex-wrap: wrap; }
+            .fc-toolbar-title { font-size: 16px !important; text-align: center; }
+            .fc-button { padding: 4px 8px !important; font-size: 12px !important; }
+
+            /* Tabela do mês: encolher padding e fonte */
+            .fc .fc-daygrid-day-frame { padding: 1px; }
+            .fc .fc-daygrid-day-number { font-size: 11px; padding: 2px 4px; }
+            .fc-event-title, .fc-event-time { font-size: 10px !important; }
+        }
+    </style>
 </head>
 <body>
     <div class="container">

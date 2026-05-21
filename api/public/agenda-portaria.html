@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICCR - Agenda da Portaria</title>
+    <link rel="shortcut icon" href="./img/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/dialogs.css">
+    <link rel="stylesheet" href="./adm/css/style.css">
+    <link rel="stylesheet" href="./adm/css/dialogs.css">
+    <link rel="stylesheet" href="./css/ui-kit.css">
+    <script type="module" src="./js/scripts.js"></script>
+    <style>
+        .portaria-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .portaria-toolbar select,
+        .portaria-toolbar button {
+            padding: 7px 14px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-family: verdana, sans-serif;
+            font-size: 12px;
+            cursor: pointer;
+            background: white;
+        }
+        .btn-portaria-acao {
+            background: #007a2e !important;
+            color: white !important;
+            border-color: #007a2e !important;
+        }
+        .btn-portaria-acao:hover { background: #009536 !important; }
+        .btn-portaria-imprimir {
+            background: #555 !important;
+            color: white !important;
+            border-color: #555 !important;
+        }
+        .btn-portaria-imprimir:hover { background: #333 !important; }
+
+        .portaria-semana-info {
+            font-size: 14px;
+            font-weight: 600;
+            color: #007a2e;
+        }
+
+        .dia-cabecalho {
+            background: #007a2e;
+            color: white;
+            padding: 10px 14px;
+            margin-top: 18px;
+            border-radius: 4px 4px 0 0;
+            font-weight: 600;
+        }
+        .dia-vazio {
+            padding: 10px 14px;
+            background: #fafafa;
+            color: #999;
+            font-style: italic;
+            font-size: 13px;
+            border: 1px solid #eee;
+            border-top: 0;
+            border-radius: 0 0 4px 4px;
+        }
+        .ag-linha {
+            display: grid;
+            grid-template-columns: 120px 1fr 1fr 1.5fr 1fr;
+            gap: 12px;
+            padding: 10px 14px;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+            background: white;
+        }
+        .ag-linha:last-child { border-bottom: 0; }
+        .ag-linha-cab {
+            background: #f1f7f3;
+            font-weight: 600;
+            color: #555;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        .ag-horario { font-weight: 600; color: #007a2e; }
+
+        @media print {
+            header, footer, .portaria-toolbar, responsive-menu,
+            #btnEntrar, .btn_adicionar { display: none !important; }
+            body { background: white; }
+            .container { box-shadow: none; }
+            .dia-cabecalho { page-break-after: avoid; }
+            .ag-linha { page-break-inside: avoid; }
+        }
+
+        @media (max-width: 600px) {
+            main { padding: 10px !important; }
+            .portaria-toolbar { width: 100%; justify-content: center; }
+            .portaria-semana-info { font-size: 12px; flex-basis: 100%; text-align: center; }
+
+            /* Linhas em coluna única no celular, com cabeçalho oculto e rótulos inline */
+            .ag-linha { grid-template-columns: 1fr; gap: 4px; padding: 12px; }
+            .ag-linha-cab { display: none; }
+            .ag-linha > div:nth-child(1)::before { content: "Horário: "; font-weight: 600; color: #555; }
+            .ag-linha > div:nth-child(2)::before { content: "Sala: "; font-weight: 600; color: #555; }
+            .ag-linha > div:nth-child(3)::before { content: "Solicitante: "; font-weight: 600; color: #555; }
+            .ag-linha > div:nth-child(4)::before { content: "Motivo: "; font-weight: 600; color: #555; }
+            .ag-linha > div:nth-child(5)::before { content: "Obs: "; font-weight: 600; color: #555; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/"><img src="./img/logo.png" alt="Logo do CCR" class="logo"></a>
+            <div class="acesso"><a href="#" id="btnEntrar">Entrar</a></div>
+        </header>
+        <div><responsive-menu></responsive-menu></div>
+
+        <main class="flex flex--column flex--center">
+            <section class="titulo_secao flex justify--space--between align--items--center" style="flex-wrap:wrap;gap:10px">
+                <h1>Agenda da Portaria</h1>
+                <div class="portaria-toolbar">
+                    <button class="btn-portaria-acao" id="btnSemanaAnterior" title="Semana anterior">← Anterior</button>
+                    <span id="rotuloSemana" class="portaria-semana-info">—</span>
+                    <button class="btn-portaria-acao" id="btnProximaSemana" title="Próxima semana">Próxima →</button>
+                    <select id="filtroPredio" title="Filtrar por prédio">
+                        <option value="">Todos os prédios</option>
+                    </select>
+                    <button class="btn-portaria-imprimir" id="btnImprimirPortaria" title="Imprimir / salvar como PDF">
+                        🖨 Imprimir / PDF
+                    </button>
+                </div>
+            </section>
+
+            <section class="informacoes_painel" style="width:100%; margin-top:1rem">
+                <div id="agendaConteudo"></div>
+            </section>
+        </main>
+        <footer>Rodapé</footer>
+    </div>
+
+    <!-- Formulário de Login DIALOG -->
+    <dialog id="dialogLogin">
+        <fieldset>
+            <legend>Login</legend>
+            <form id="frmLogin">
+                <div class="row">
+                    <input type="text" name="txtLogin" id="txtLogin" class="formInput" placeholder="Digite o seu login">
+                </div>
+                <div class="row">
+                    <input type="password" name="txtSenha" id="txtSenha" class="formInput" placeholder="Digite a sua senha">
+                </div>
+                <p id="loginErro" class="login-erro" hidden></p>
+                <div class="row">
+                    <button id="btnLogin" type="button">Entrar</button>
+                    <button id="btnCancelarLogin" type="button">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+
+    <script type="module" src="./js/components/index.js"></script>
+</body>
+</html>

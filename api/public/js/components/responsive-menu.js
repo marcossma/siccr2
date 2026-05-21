@@ -23,6 +23,9 @@ class ResponsiveMenu extends HTMLElement {
             || funcs.includes("aprovar_agendamento")
             || funcs.includes("ver_todos_agendamentos");
 
+        // Portaria / quem pode ver a agenda da semana
+        const ehPortaria = nivel >= 2 || funcs.includes("ver_agenda_portaria");
+
         // Monta os itens de menu por nível — só mostra para usuários logados
         const admDropdown = nivel >= 1 ? `
             <li class="nav-dropdown">
@@ -32,7 +35,9 @@ class ResponsiveMenu extends HTMLElement {
                 <ul class="nav-dropdown-menu">
                     <li><a href="/solicitar-agendamento">Solicitar agendamento</a></li>
                     <li><a href="/calendario-de-salas">Calendário de salas</a></li>
+                    ${ehPortaria ? `<li><a href="/agenda-portaria">Agenda da portaria</a></li>` : ""}
                     ${ehDirecao ? `<li><a href="/solicitacoes-de-agendamento">Solicitações de agendamento</a></li>` : ""}
+                    ${ehDirecao ? `<li><a href="/relatorios-salas">Relatórios de salas</a></li>` : ""}
                     ${nivel >= 2 ? `<li><a href="/gerenciamento-de-usuarios">Gerenciamento de usuários</a></li>` : ""}
                     ${nivel >= 4 ? `<hr><li><a href="/adm/painel">Painel Admin</a></li>` : ""}
                 </ul>

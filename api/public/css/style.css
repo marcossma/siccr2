@@ -540,6 +540,22 @@ footer {
     .nav-dropdown--aberto .nav-dropdown-menu {
         display: block;
     }
+
+    /* main desperdiça 20% da largura em telas pequenas com width:80% global */
+    main {
+        width: 100%;
+        padding-left: 6px;
+        padding-right: 6px;
+    }
+
+    header {
+        padding: 5px 10px;
+    }
+
+    .titulo_secao {
+        padding: 8px 4px;
+        margin: 10px 0;
+    }
 }
 /* ─── Badges de status ────────────────────────────────────────────────── */
 .badge {

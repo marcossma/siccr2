@@ -60,3 +60,35 @@
 .atualizarUnidade {
     display: none;
 }
+
+/* ── Responsividade ───────────────────────────────────────────── */
+@media (max-width: 600px) {
+    /* Usar !important para sobrescrever min-width inline (ex: style="min-width:560px") */
+    .dialogPainel {
+        min-width: 0 !important;
+        max-width: 95vw !important;
+        max-height: 92vh;
+        width: auto !important;
+        overflow: auto;
+        margin: 0;
+    }
+
+    .dialogPainel fieldset {
+        padding: 14px;
+    }
+
+    .dialogPainel fieldset legend {
+        font-size: 16px;
+        padding: 8px;
+    }
+
+    .btnPainelFormulario {
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+
+    /* Botões em coluna quando empilham no mobile */
+    .dialogPainel .row {
+        flex-wrap: wrap;
+    }
+}
