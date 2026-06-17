@@ -43,6 +43,9 @@ const relatorios = require("./routes/relatorios.js");
 // Importar rotas para funcionalidades e permissões
 const funcionalidades = require("./routes/funcionalidades.js");
 const permissoesUsuario = require("./routes/permissoes-usuario.js");
+// Importar rotas do módulo acadêmico
+const periodosLetivos = require("./routes/periodos-letivos.js");
+const disciplinas = require("./routes/disciplinas.js");
 // Importar rotas para notícias (proxy WordPress)
 const noticias = require("./routes/noticias.js");
 // Importar rotas para eventos (scraping WordPress)
@@ -188,6 +191,10 @@ app.use("/api/relatorios",           autenticar, autorizar("chefe"),        rela
 
 // Agendamentos de salas: qualquer usuário logado pode solicitar; aprovação restrita por RBAC nas rotas
 app.use("/api/agendamentos",         autenticar, autorizar("servidor"),     agendamentos);
+
+// Módulo acadêmico: gestão restrita a chefe+ (coordenação/direção)
+app.use("/api/periodos-letivos",     autenticar, autorizar("chefe"),        periodosLetivos);
+app.use("/api/disciplinas",          autenticar, autorizar("chefe"),        disciplinas);
 
 // Funcionalidades: leitura para chefe+, gestão do catálogo apenas via painel super_admin
 app.use("/api/funcionalidades",   autenticar, autorizar("chefe"),        funcionalidades);

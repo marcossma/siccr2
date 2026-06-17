@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICCR - Disciplinas</title>
+    <link rel="shortcut icon" href="../img/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/dialogs.css">
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/ui-kit.css">
+    <link rel="stylesheet" href="./css/dialogs.css">
+    <script src="./js/guard.js"></script>
+    <script type="module" src="./js/script.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/">
+                <img src="../img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo">
+            </a>
+            <div class="acesso">
+                <span id="adminNome"></span>
+                <a href="#" id="btnSair">Sair</a>
+            </div>
+        </header>
+        <div>
+            <responsive-menu></responsive-menu>
+        </div>
+        <main class="flex flex--column">
+            <section class="titulo_painel flex justify--space--between align--items--center">
+                <h1 class="flex align--items--center gap--15">
+                    <i class="bi bi-journal-bookmark font--size--40"></i>
+                    Painel Administrativo - Disciplinas
+                </h1>
+                <button class="btn_adicionar disciplina flex align--items--center gap--10 cursor--pointer">Adicionar <i class="bi bi-journal-plus font--size--20"></i></button>
+            </section>
+
+            <div>
+                <menu-navegacao-adm></menu-navegacao-adm>
+            </div>
+
+            <section class="informacoes_painel">
+                <div class="cabecalho flex">
+                    <div class="titulo flex flex--2">Código</div>
+                    <div class="titulo flex flex--4">Nome</div>
+                    <div class="titulo flex flex--2">Carga (h)</div>
+                    <div class="titulo flex flex--3">Departamento</div>
+                    <div class="titulo flex flex--4">Professores</div>
+                    <div class="titulo flex flex--2">Ações</div>
+                </div>
+                <div class="listaUnidades">
+                    <!-- carregado via JS -->
+                </div>
+            </section>
+        </main>
+        <footer>Rodapé</footer>
+    </div>
+
+    <dialog class="dialogPainel unidades" style="min-width:520px">
+        <fieldset>
+            <legend>Cadastro de Disciplina</legend>
+            <form class="frmCadastroPainel frmUnidade flex flex--column gap--15">
+                <div class="row">
+                    <input type="hidden" name="id_disciplina" id="id_disciplina">
+                    <input type="text" name="codigo" id="codigo" class="formInput width--100" placeholder="Ex.: MAT1024 (opcional)">
+                    <label class="painelLabel" for="codigo">Código da disciplina</label>
+                </div>
+                <div class="row">
+                    <input type="text" name="nome" id="nome" class="formInput width--100" placeholder="Ex.: Cálculo A">
+                    <label class="painelLabel" for="nome">Nome da disciplina</label>
+                </div>
+                <div class="row">
+                    <input type="number" name="carga_horaria" id="carga_horaria" class="formInput width--100" placeholder="Ex.: 60" min="0">
+                    <label class="painelLabel" for="carga_horaria">Carga horária (horas, opcional)</label>
+                </div>
+                <div class="row">
+                    <select name="subunidade_id" id="subunidade_id" class="formInput width--100"></select>
+                    <label class="painelLabel" for="subunidade_id">Departamento que oferece (opcional)</label>
+                </div>
+                <div class="row flex flex--column gap--5">
+                    <label class="painelLabel" for="professores">Professores que ministram (segure Ctrl para selecionar vários)</label>
+                    <select name="professores" id="professores" class="formInput width--100" multiple size="6"></select>
+                </div>
+                <div class="row">
+                    <button type="button" class="btnPainelFormulario cadastrarUnidade">Cadastrar</button>
+                    <button type="button" class="btnPainelFormulario atualizarUnidade">Atualizar</button>
+                    <button type="button" class="btnPainelFormulario cancelarUnidade">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+
+    <script type="module" src="../js/components/index.js"></script>
+</body>
+</html>

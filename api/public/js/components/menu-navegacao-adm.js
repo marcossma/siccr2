@@ -9,6 +9,8 @@ class MenuNavegacaoAdm extends HTMLElement {
             { href: "/adm/predios",     icone: "bi-buildings",      label: "Prédios" },
             { href: "/adm/salas",       icone: "bi-door-closed",    label: "Salas" },
             { href: "/adm/salas-tipo",  icone: "bi-bookmarks",      label: "Tipos de sala" },
+            { href: "/adm/periodos-letivos", icone: "bi-calendar-range", label: "Períodos letivos" },
+            { href: "/adm/disciplinas", icone: "bi-journal-bookmark", label: "Disciplinas" },
             { href: "/adm/api-keys",    icone: "bi-key",            label: "API Keys" },
         ];
 

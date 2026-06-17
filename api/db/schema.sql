@@ -1,12 +1,12 @@
 -- Schema dump gerado automaticamente. NÃO editar manualmente.
--- Origem: docker compose db (siccr) — 2026-05-21T17:11:34.272Z
+-- Origem: docker compose db (siccr) — 2026-06-17T14:56:25.263Z
 -- Regenere com: npm run db:dump
 
 --
 -- PostgreSQL database dump
 --
 
-\restrict WbKlq9w4gXTVQiMbV3Y2bPghv5JuNCldMB6u4dg30g7TWB953h4z9WgBCd7IVYQ
+\restrict BykYLbkhGuOUJiPFP1tXgNmqNVzkxgtWmvWTp4UVkJf1nUcBWLI27HZiS4KOnfA
 
 -- Dumped from database version 16.13
 -- Dumped by pg_dump version 16.13
@@ -219,6 +219,40 @@ ALTER SEQUENCE public.despesas_id_despesa_seq OWNED BY public.despesas.id_despes
 
 
 --
+-- Name: disciplinas; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.disciplinas (
+    id_disciplina integer NOT NULL,
+    codigo character varying(30),
+    nome character varying(255) NOT NULL,
+    carga_horaria integer,
+    subunidade_id integer,
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: disciplinas_id_disciplina_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.disciplinas_id_disciplina_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: disciplinas_id_disciplina_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.disciplinas_id_disciplina_seq OWNED BY public.disciplinas.id_disciplina;
+
+
+--
 -- Name: funcionalidades; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -317,6 +351,40 @@ CREATE SEQUENCE public.pedidos_almoxarifado_id_pedido_seq
 --
 
 ALTER SEQUENCE public.pedidos_almoxarifado_id_pedido_seq OWNED BY public.pedidos_almoxarifado.id_pedido;
+
+
+--
+-- Name: periodos_letivos; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.periodos_letivos (
+    id_periodo integer NOT NULL,
+    nome character varying(20) NOT NULL,
+    data_inicio date NOT NULL,
+    data_fim date NOT NULL,
+    ativo boolean DEFAULT false NOT NULL,
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: periodos_letivos_id_periodo_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.periodos_letivos_id_periodo_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: periodos_letivos_id_periodo_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.periodos_letivos_id_periodo_seq OWNED BY public.periodos_letivos.id_periodo;
 
 
 --
@@ -420,6 +488,37 @@ CREATE SEQUENCE public.previsoes_despesas_id_previsao_seq
 --
 
 ALTER SEQUENCE public.previsoes_despesas_id_previsao_seq OWNED BY public.previsoes_despesas.id_previsao;
+
+
+--
+-- Name: professores_disciplinas; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.professores_disciplinas (
+    id integer NOT NULL,
+    user_id integer NOT NULL,
+    disciplina_id integer NOT NULL
+);
+
+
+--
+-- Name: professores_disciplinas_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.professores_disciplinas_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: professores_disciplinas_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.professores_disciplinas_id_seq OWNED BY public.professores_disciplinas.id;
 
 
 --
@@ -733,6 +832,13 @@ ALTER TABLE ONLY public.despesas ALTER COLUMN id_despesa SET DEFAULT nextval('pu
 
 
 --
+-- Name: disciplinas id_disciplina; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.disciplinas ALTER COLUMN id_disciplina SET DEFAULT nextval('public.disciplinas_id_disciplina_seq'::regclass);
+
+
+--
 -- Name: funcionalidades id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -754,6 +860,13 @@ ALTER TABLE ONLY public.pedidos_almoxarifado ALTER COLUMN id_pedido SET DEFAULT 
 
 
 --
+-- Name: periodos_letivos id_periodo; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.periodos_letivos ALTER COLUMN id_periodo SET DEFAULT nextval('public.periodos_letivos_id_periodo_seq'::regclass);
+
+
+--
 -- Name: permissoes_usuario id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -772,6 +885,13 @@ ALTER TABLE ONLY public.predios ALTER COLUMN predio_id SET DEFAULT nextval('publ
 --
 
 ALTER TABLE ONLY public.previsoes_despesas ALTER COLUMN id_previsao SET DEFAULT nextval('public.previsoes_despesas_id_previsao_seq'::regclass);
+
+
+--
+-- Name: professores_disciplinas id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.professores_disciplinas ALTER COLUMN id SET DEFAULT nextval('public.professores_disciplinas_id_seq'::regclass);
 
 
 --
@@ -887,6 +1007,14 @@ ALTER TABLE ONLY public.despesas
 
 
 --
+-- Name: disciplinas disciplinas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.disciplinas
+    ADD CONSTRAINT disciplinas_pkey PRIMARY KEY (id_disciplina);
+
+
+--
 -- Name: funcionalidades funcionalidades_nome_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -919,6 +1047,22 @@ ALTER TABLE ONLY public.pedidos_almoxarifado
 
 
 --
+-- Name: periodos_letivos periodos_letivos_nome_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.periodos_letivos
+    ADD CONSTRAINT periodos_letivos_nome_key UNIQUE (nome);
+
+
+--
+-- Name: periodos_letivos periodos_letivos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.periodos_letivos
+    ADD CONSTRAINT periodos_letivos_pkey PRIMARY KEY (id_periodo);
+
+
+--
 -- Name: permissoes_usuario permissoes_usuario_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -940,6 +1084,22 @@ ALTER TABLE ONLY public.predios
 
 ALTER TABLE ONLY public.previsoes_despesas
     ADD CONSTRAINT previsoes_despesas_pkey PRIMARY KEY (id_previsao);
+
+
+--
+-- Name: professores_disciplinas professores_disciplinas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.professores_disciplinas
+    ADD CONSTRAINT professores_disciplinas_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: professores_disciplinas professores_disciplinas_user_disciplina_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.professores_disciplinas
+    ADD CONSTRAINT professores_disciplinas_user_disciplina_unique UNIQUE (user_id, disciplina_id);
 
 
 --
@@ -1049,6 +1209,13 @@ CREATE INDEX agendamentos_status ON public.agendamentos USING btree (status);
 
 
 --
+-- Name: disciplinas_subunidade_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX disciplinas_subunidade_id ON public.disciplinas USING btree (subunidade_id);
+
+
+--
 -- Name: permissoes_usuario_unique; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1101,6 +1268,14 @@ ALTER TABLE ONLY public.api_keys
 
 ALTER TABLE ONLY public.api_keys
     ADD CONSTRAINT api_keys_subunidade_id_fkey FOREIGN KEY (subunidade_id) REFERENCES public.subunidades(subunidade_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: disciplinas disciplinas_subunidade_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.disciplinas
+    ADD CONSTRAINT disciplinas_subunidade_id_fkey FOREIGN KEY (subunidade_id) REFERENCES public.subunidades(subunidade_id) ON DELETE SET NULL;
 
 
 --
@@ -1168,6 +1343,22 @@ ALTER TABLE ONLY public.previsoes_despesas
 
 
 --
+-- Name: professores_disciplinas professores_disciplinas_disciplina_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.professores_disciplinas
+    ADD CONSTRAINT professores_disciplinas_disciplina_id_fkey FOREIGN KEY (disciplina_id) REFERENCES public.disciplinas(id_disciplina) ON DELETE CASCADE;
+
+
+--
+-- Name: professores_disciplinas professores_disciplinas_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.professores_disciplinas
+    ADD CONSTRAINT professores_disciplinas_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON DELETE CASCADE;
+
+
+--
 -- Name: users users_unidade_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1179,5 +1370,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict WbKlq9w4gXTVQiMbV3Y2bPghv5JuNCldMB6u4dg30g7TWB953h4z9WgBCd7IVYQ
+\unrestrict BykYLbkhGuOUJiPFP1tXgNmqNVzkxgtWmvWTp4UVkJf1nUcBWLI27HZiS4KOnfA
 

@@ -1123,4 +1123,262 @@ document.addEventListener("DOMContentLoaded", function() {
         renderizarApiKeys();
     } // fim /adm/api-keys
 
+    // =========================================================================
+    // PERÍODOS LETIVOS — /adm/periodos-letivos
+    // =========================================================================
+    if (urlParam === "/adm/periodos-letivos") {
+        const btnAdicionar = document.querySelector(".btn_adicionar");
+        const frmUnidade   = document.querySelector(".frmUnidade");
+        const btnCadastrar = document.querySelector(".cadastrarUnidade");
+        const btnAtualizar = document.querySelector(".atualizarUnidade");
+        const btnCancelar  = document.querySelector(".cancelarUnidade");
+        const dialogPainel = document.querySelector(".dialogPainel");
+        const listaUnidades = document.querySelector(".listaUnidades");
+
+        function formatarData(valor) {
+            if (!valor) return "—";
+            const partes = String(valor).substring(0, 10).split("-");
+            return partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : valor;
+        }
+
+        async function renderizar() {
+            try {
+                const r = await fetch(`${apiUrl}/periodos-letivos`);
+                const periodos = (await r.json()).data || [];
+                listaUnidades.innerHTML = "";
+                periodos.forEach(p => {
+                    const div = document.createElement("div");
+                    div.classList.add("dados", "flex", "align--items--center");
+                    div.innerHTML = `
+                        <div class="dado flex flex--3">${p.nome}</div>
+                        <div class="dado flex flex--3">${formatarData(p.data_inicio)}</div>
+                        <div class="dado flex flex--3">${formatarData(p.data_fim)}</div>
+                        <div class="dado flex flex--2">${p.ativo ? '<span class="badge badge--atendido">Ativo</span>' : "—"}</div>
+                        <div class="dado flex flex--2 font--size--20">
+                            ${iconeAcoes(
+                                `data-id_periodo="${p.id_periodo}"
+                                 data-nome="${p.nome}"
+                                 data-data_inicio="${(p.data_inicio || "").substring(0,10)}"
+                                 data-data_fim="${(p.data_fim || "").substring(0,10)}"
+                                 data-ativo="${p.ativo ? 1 : 0}"`,
+                                p.id_periodo, "periodo"
+                            )}
+                        </div>`;
+                    listaUnidades.appendChild(div);
+                });
+            } catch (e) { console.error("Erro ao renderizar períodos:", e); }
+        }
+
+        function coletarDados() {
+            return {
+                nome: document.querySelector("#nome").value.trim(),
+                data_inicio: document.querySelector("#data_inicio").value,
+                data_fim: document.querySelector("#data_fim").value,
+                ativo: document.querySelector("#ativo").checked,
+            };
+        }
+
+        renderizar();
+
+        btnAdicionar.addEventListener("click", (e) => {
+            e.preventDefault();
+            document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastrar período letivo";
+            btnAtualizar.style.display = "none"; btnAtualizar.disabled = true;
+            btnCadastrar.style.display = "inline-block"; btnCadastrar.disabled = false;
+            frmUnidade.reset();
+            dialogPainel.showModal();
+        });
+
+        btnCancelar.addEventListener("click", (e) => { e.preventDefault(); frmUnidade.reset(); dialogPainel.close(); });
+
+        btnCadastrar.addEventListener("click", async (e) => {
+            e.preventDefault();
+            const r = await fetch(`${apiUrl}/periodos-letivos`, { method: "POST", body: JSON.stringify(coletarDados()) });
+            const resp = await r.json();
+            if (!r.ok) { alert(resp.message); return; }
+            frmUnidade.reset(); dialogPainel.close(); renderizar();
+        });
+
+        btnAtualizar.addEventListener("click", async (e) => {
+            e.preventDefault();
+            const id = document.querySelector("#id_periodo").value;
+            const r = await fetch(`${apiUrl}/periodos-letivos/${id}`, { method: "PUT", body: JSON.stringify(coletarDados()) });
+            const resp = await r.json();
+            if (!r.ok) { alert(resp.message); return; }
+            frmUnidade.reset(); dialogPainel.close(); renderizar();
+        });
+
+        listaUnidades.addEventListener("click", async (e) => {
+            const editar = e.target.closest(".editar");
+            if (editar) {
+                const d = editar.dataset;
+                document.querySelector(".dialogPainel fieldset legend").textContent = "Editar período letivo";
+                btnCadastrar.style.display = "none"; btnCadastrar.disabled = true;
+                btnAtualizar.style.display = "inline-block"; btnAtualizar.disabled = false;
+                frmUnidade.reset();
+                document.querySelector("#id_periodo").value = d.id_periodo;
+                document.querySelector("#nome").value = d.nome;
+                document.querySelector("#data_inicio").value = d.data_inicio;
+                document.querySelector("#data_fim").value = d.data_fim;
+                document.querySelector("#ativo").checked = d.ativo === "1";
+                dialogPainel.showModal();
+                return;
+            }
+            const excluir = e.target.closest(".excluir");
+            if (excluir) {
+                if (!confirm("Excluir este período letivo?")) return;
+                const r = await fetch(`${apiUrl}/periodos-letivos/${excluir.dataset.id}`, { method: "DELETE" });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                renderizar();
+            }
+        });
+    } // fim /adm/periodos-letivos
+
+    // =========================================================================
+    // DISCIPLINAS — /adm/disciplinas
+    // =========================================================================
+    if (urlParam === "/adm/disciplinas") {
+        const btnAdicionar = document.querySelector(".btn_adicionar");
+        const frmUnidade   = document.querySelector(".frmUnidade");
+        const btnCadastrar = document.querySelector(".cadastrarUnidade");
+        const btnAtualizar = document.querySelector(".atualizarUnidade");
+        const btnCancelar  = document.querySelector(".cancelarUnidade");
+        const dialogPainel = document.querySelector(".dialogPainel");
+        const listaUnidades = document.querySelector(".listaUnidades");
+        const selectSub      = document.querySelector("#subunidade_id");
+        const selectProf     = document.querySelector("#professores");
+
+        async function carregarProfessoresDisponiveis() {
+            try {
+                const r = await fetch(`${apiUrl}/disciplinas/professores-disponiveis`);
+                return (await r.json()).data || [];
+            } catch (e) { console.error("Erro ao carregar professores:", e); return []; }
+        }
+
+        async function preencherSelects(subSel = "", profsSel = []) {
+            const [subs, profs] = await Promise.all([
+                carregarSubunidadesTotalInfo(), carregarProfessoresDisponiveis()
+            ]);
+            popularSelect(selectSub, subs, s => s.subunidade_id, s => s.subunidade_nome, "Selecione o departamento...");
+            selectProf.innerHTML = "";
+            profs.forEach(p => {
+                const opt = document.createElement("option");
+                opt.value = p.user_id;
+                opt.textContent = p.siape ? `${p.nome} (${p.siape})` : p.nome;
+                if (profsSel.map(String).includes(String(p.user_id))) opt.selected = true;
+                selectProf.appendChild(opt);
+            });
+            if (subSel) selectSub.value = subSel;
+        }
+
+        function coletarProfessores() {
+            return Array.from(selectProf.selectedOptions).map(o => parseInt(o.value, 10));
+        }
+
+        function coletarDados() {
+            return {
+                codigo: document.querySelector("#codigo").value.trim(),
+                nome: document.querySelector("#nome").value.trim(),
+                carga_horaria: document.querySelector("#carga_horaria").value,
+                subunidade_id: selectSub.value || null,
+                professores: coletarProfessores(),
+            };
+        }
+
+        async function renderizar() {
+            try {
+                const r = await fetch(`${apiUrl}/disciplinas`);
+                const disciplinas = (await r.json()).data || [];
+                listaUnidades.innerHTML = "";
+                disciplinas.forEach(d => {
+                    const profsNomes = (d.professores || []).map(p => p.nome.split(" ")[0]).join(", ") || "—";
+                    const profsIds = (d.professores || []).map(p => p.user_id).join(",");
+                    const div = document.createElement("div");
+                    div.classList.add("dados", "flex", "align--items--center");
+                    div.innerHTML = `
+                        <div class="dado flex flex--2">${d.codigo || "—"}</div>
+                        <div class="dado flex flex--4">${d.nome}</div>
+                        <div class="dado flex flex--2">${d.carga_horaria ?? "—"}</div>
+                        <div class="dado flex flex--3">${d.subunidade_sigla || d.subunidade_nome || "—"}</div>
+                        <div class="dado flex flex--4" title="${(d.professores||[]).map(p=>p.nome).join(', ')}">${profsNomes}</div>
+                        <div class="dado flex flex--2 font--size--20">
+                            ${iconeAcoes(
+                                `data-id_disciplina="${d.id_disciplina}"
+                                 data-codigo="${d.codigo || ""}"
+                                 data-nome="${d.nome}"
+                                 data-carga_horaria="${d.carga_horaria ?? ""}"
+                                 data-subunidade_id="${d.subunidade_id || ""}"
+                                 data-professores="${profsIds}"`,
+                                d.id_disciplina, "disciplina"
+                            )}
+                        </div>`;
+                    listaUnidades.appendChild(div);
+                });
+            } catch (e) { console.error("Erro ao renderizar disciplinas:", e); }
+        }
+
+        renderizar();
+
+        btnAdicionar.addEventListener("click", async (e) => {
+            e.preventDefault();
+            document.querySelector(".dialogPainel fieldset legend").textContent = "Cadastrar disciplina";
+            btnAtualizar.style.display = "none"; btnAtualizar.disabled = true;
+            btnCadastrar.style.display = "inline-block"; btnCadastrar.disabled = false;
+            frmUnidade.reset();
+            await preencherSelects();
+            dialogPainel.showModal();
+        });
+
+        btnCancelar.addEventListener("click", (e) => { e.preventDefault(); frmUnidade.reset(); dialogPainel.close(); });
+
+        btnCadastrar.addEventListener("click", async (e) => {
+            e.preventDefault();
+            const dados = coletarDados();
+            if (!dados.nome) { alert("O nome da disciplina é obrigatório."); return; }
+            const r = await fetch(`${apiUrl}/disciplinas`, { method: "POST", body: JSON.stringify(dados) });
+            const resp = await r.json();
+            if (!r.ok) { alert(resp.message); return; }
+            frmUnidade.reset(); dialogPainel.close(); renderizar();
+        });
+
+        btnAtualizar.addEventListener("click", async (e) => {
+            e.preventDefault();
+            const id = document.querySelector("#id_disciplina").value;
+            const dados = coletarDados();
+            if (!dados.nome) { alert("O nome da disciplina é obrigatório."); return; }
+            const r = await fetch(`${apiUrl}/disciplinas/${id}`, { method: "PUT", body: JSON.stringify(dados) });
+            const resp = await r.json();
+            if (!r.ok) { alert(resp.message); return; }
+            frmUnidade.reset(); dialogPainel.close(); renderizar();
+        });
+
+        listaUnidades.addEventListener("click", async (e) => {
+            const editar = e.target.closest(".editar");
+            if (editar) {
+                const d = editar.dataset;
+                document.querySelector(".dialogPainel fieldset legend").textContent = "Editar disciplina";
+                btnCadastrar.style.display = "none"; btnCadastrar.disabled = true;
+                btnAtualizar.style.display = "inline-block"; btnAtualizar.disabled = false;
+                frmUnidade.reset();
+                const profsSel = d.professores ? d.professores.split(",").filter(Boolean) : [];
+                await preencherSelects(d.subunidade_id, profsSel);
+                document.querySelector("#id_disciplina").value = d.id_disciplina;
+                document.querySelector("#codigo").value = d.codigo;
+                document.querySelector("#nome").value = d.nome;
+                document.querySelector("#carga_horaria").value = d.carga_horaria;
+                dialogPainel.showModal();
+                return;
+            }
+            const excluir = e.target.closest(".excluir");
+            if (excluir) {
+                if (!confirm("Excluir esta disciplina?")) return;
+                const r = await fetch(`${apiUrl}/disciplinas/${excluir.dataset.id}`, { method: "DELETE" });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                renderizar();
+            }
+        });
+    } // fim /adm/disciplinas
+
 }); // fim DOMContentLoaded
