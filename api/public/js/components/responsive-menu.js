@@ -38,6 +38,7 @@ class ResponsiveMenu extends HTMLElement {
                     ${ehPortaria ? `<li><a href="/agenda-portaria">Agenda da portaria</a></li>` : ""}
                     ${ehDirecao ? `<li><a href="/solicitacoes-de-agendamento">Solicitações de agendamento</a></li>` : ""}
                     ${ehDirecao ? `<li><a href="/relatorios-salas">Relatórios de salas</a></li>` : ""}
+                    ${ehPortaria ? `<li><a href="/painel-tv" target="_blank">Painel TV (hall)</a></li>` : ""}
                     ${nivel >= 2 ? `<li><a href="/gerenciamento-de-usuarios">Gerenciamento de usuários</a></li>` : ""}
                     ${nivel >= 4 ? `<hr><li><a href="/adm/painel">Painel Admin</a></li>` : ""}
                 </ul>

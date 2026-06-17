@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICCR - Painel de Salas</title>
+    <link rel="shortcut icon" href="./img/favicon.png" type="image/x-icon">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: verdana, sans-serif; }
+        body {
+            background: #0b3d1a;
+            color: #fff;
+            min-height: 100vh;
+            padding: 2vh 2vw;
+        }
+        .tv-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #00b34a;
+            padding-bottom: 1.2vh;
+            margin-bottom: 2vh;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .tv-titulo { font-size: 3.2vh; font-weight: bold; color: #fff; }
+        .tv-titulo small { display: block; font-size: 1.8vh; color: #8fdcab; font-weight: normal; }
+        .tv-relogio { text-align: right; }
+        .tv-hora { font-size: 4vh; font-weight: bold; }
+        .tv-data { font-size: 1.8vh; color: #8fdcab; text-transform: capitalize; }
+
+        .tv-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5vh 1.5vw;
+        }
+        .sala-card {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            padding: 1.5vh 1.2vw;
+        }
+        .sala-nome {
+            font-size: 2.4vh;
+            font-weight: bold;
+            color: #00d957;
+            border-bottom: 1px solid rgba(255,255,255,0.12);
+            padding-bottom: 0.8vh;
+            margin-bottom: 1vh;
+        }
+        .slot {
+            display: flex;
+            gap: 0.8vw;
+            padding: 0.7vh 0;
+            align-items: baseline;
+        }
+        .slot + .slot { border-top: 1px dashed rgba(255,255,255,0.1); }
+        .slot-hora { font-size: 1.9vh; font-weight: bold; color: #ffd23f; min-width: 11ch; }
+        .slot-info { flex: 1; }
+        .slot-titulo { font-size: 2vh; }
+        .slot-sub { font-size: 1.6vh; color: #b8d8c4; }
+        .slot--agora {
+            background: rgba(0, 217, 87, 0.18);
+            border-radius: 6px;
+            padding: 0.7vh 0.6vw;
+            margin: 0.3vh 0;
+        }
+        .slot--agora .slot-hora::after { content: " ● AGORA"; color: #00d957; font-size: 1.3vh; }
+
+        .tv-vazio, .tv-erro { font-size: 2.4vh; text-align: center; margin-top: 10vh; color: #8fdcab; }
+
+        /* Seletor de prédio (quando ?predio ausente) */
+        .tv-picker { text-align: center; margin-top: 8vh; }
+        .tv-picker h1 { font-size: 3.5vh; margin-bottom: 3vh; }
+        .tv-picker a {
+            display: inline-block;
+            margin: 1vh;
+            padding: 2vh 3vw;
+            background: #00b34a;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 2.4vh;
+            font-weight: bold;
+        }
+        .tv-rodape { margin-top: 2vh; font-size: 1.4vh; color: #6aa882; text-align: right; }
+    </style>
+</head>
+<body>
+    <div id="tvApp">
+        <p class="tv-vazio">Carregando…</p>
+    </div>
+    <script src="./js/painel-tv.js"></script>
+</body>
+</html>

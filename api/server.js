@@ -47,6 +47,8 @@ const permissoesUsuario = require("./routes/permissoes-usuario.js");
 const periodosLetivos = require("./routes/periodos-letivos.js");
 const disciplinas = require("./routes/disciplinas.js");
 const turmas = require("./routes/turmas.js");
+// Importar rota pública do painel de TV (hall dos prédios)
+const painelTv = require("./routes/painel-tv.js");
 // Importar rotas para notícias (proxy WordPress)
 const noticias = require("./routes/noticias.js");
 // Importar rotas para eventos (scraping WordPress)
@@ -167,6 +169,10 @@ app.use("/api/noticias", noticias);
 // Rota para eventos do CCR (pública - sem middleware)
 // ####################################################
 app.use("/api/eventos", eventos);
+
+// Painel de TV nos halls (pública - read-only, sem dados internos sensíveis)
+// ##########################################################################
+app.use("/api/painel-tv", painelTv);
 
 // Rotas protegidas com autenticação + autorização RBAC
 // ######################################################
