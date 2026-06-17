@@ -1,31 +1,61 @@
 # SICCR2 — Guia para o Claude Code
 
 Sistema Integrado do Centro de Ciências Rurais (CCR) da UFSM.
-Plataforma web para gestão interna: estrutura física, usuários, módulo financeiro, agendamento de salas, notícias e eventos.
+Plataforma web para gestão interna: estrutura física, usuários, módulo financeiro, agendamento de salas (com recorrência, aprovação e notificação WhatsApp), almoxarifado (com RPA), notícias e eventos.
 
 ---
 
 ## Como rodar
 
+### Via Docker (recomendado em dev)
+
+```bash
+# .env na raiz do projeto
+docker compose up -d --build
+# docker-compose.override.yml é carregado automaticamente em dev:
+#   - bind mount de api/ → mudanças refletem sem rebuild
+#   - node --watch → backend reinicia ao salvar
+#   - entrypoint roda migrations automaticamente no boot
+docker compose logs -f app
+```
+
+Para subir em modo "produção" (sem override/bind mount):
+```bash
+docker compose -f docker-compose.yml up -d --build
+```
+
+### Local (sem Docker)
+
 ```bash
 cd api
 npm install
-# configurar api/.env (ou .env na raiz)
 npx sequelize-cli db:migrate
-node server.js          # porta padrão 15000
+npm run dev             # node --watch server.js (porta 15000)
 ```
 
-### Variáveis de ambiente (.env)
+### Scripts npm úteis (em api/)
+
+```bash
+npm run lint            # eslint .  (roda também no pre-commit via husky)
+npm run lint:fix        # eslint . --fix
+npm run db:migrate      # sequelize-cli db:migrate
+npm run db:dump         # regenera api/db/schema.sql do banco em Docker
+```
+
+### Variáveis de ambiente (.env na raiz)
 
 ```
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgres
-DB_PASS=senha
-DB_NAME=siccr2
+DB_PASSWORD=senha       # ATENÇÃO: DB_PASSWORD, não DB_PASS
+DB_NAME=siccr
 JWT_SECRET=segredo
 PORT=15000
 CORS_ORIGIN=http://localhost:15000
+LOG_LEVEL=info          # pino (debug em dev, info em prod)
+WHATSAPP_API_KEY=...     # PoolZap; se vazio, notificação WhatsApp fica desabilitada
+# WHATSAPP_API_URL tem default https://poolzap-api.infai.com.br
 ```
 
 ---
@@ -38,8 +68,12 @@ CORS_ORIGIN=http://localhost:15000
 | Banco | PostgreSQL (`pg` pool) |
 | Auth | JWT (Bearer) + bcrypt |
 | Migrations | Sequelize CLI |
-| Frontend | HTML + CSS + JS vanilla |
-| WebSocket | `ws` library |
+| Frontend | HTML + CSS + JS vanilla (Chart.js e FullCalendar via CDN/vendor) |
+| WebSocket | `ws` library — notificações em tempo real |
+| Logs | `pino` + `pino-http` (JSON em prod, pretty em dev; redação de campos sensíveis) |
+| WhatsApp | PoolZap (`lib/whatsapp.js`) — fire-and-forget |
+| Infra | Docker + docker-compose (db postgres:16 + app) |
+| Qualidade | ESLint 9 + Prettier + husky (pre-commit) |
 
 ---
 
@@ -48,25 +82,37 @@ CORS_ORIGIN=http://localhost:15000
 ```
 siccr2/
 ├── api/
-│   ├── server.js                 ← ponto de entrada (porta 15000)
+│   ├── server.js                 ← ponto de entrada (porta 15000) + WebSocket + error handler global
 │   ├── config/database.js        ← pool pg
 │   ├── middlewares/
 │   │   ├── auth.js               ← verifica JWT → seta req.usuario
-│   │   └── autorizar.js          ← RBAC: autorizar(), getNivelAcesso(), getEscopoFiltro()
+│   │   ├── autorizar.js          ← RBAC: autorizar(), getNivelAcesso(), getEscopoFiltro()
+│   │   └── authApiKey.js         ← valida X-Api-Key (rotas RPA)
+│   ├── lib/
+│   │   ├── logger.js             ← pino configurado (redação de senha/token)
+│   │   ├── recorrencia.js        ← expandirRecorrencia() + detectarConflitos() p/ agendamentos
+│   │   └── whatsapp.js           ← PoolZap: enviarMensagem() + templates
+│   ├── scripts/
+│   │   ├── dump-schema.js        ← npm run db:dump → api/db/schema.sql
+│   │   └── install-husky.js      ← setup hooks (no-op em prod/sem .git)
+│   ├── db/schema.sql             ← dump versionado do schema (FONTE DE VERDADE p/ nomes de coluna)
 │   ├── routes/                   ← todas as rotas REST
 │   ├── migrations/               ← Sequelize migrations
 │   └── public/                   ← frontend estático servido pelo Express
-│       ├── js/scripts.js         ← lógica SPA de todas as páginas públicas/financeiras
+│       ├── js/scripts.js         ← lógica SPA de todas as páginas públicas/financeiras (~3100 linhas)
 │       ├── js/components/        ← Web Components (Light DOM, sem Shadow DOM)
-│       │   ├── responsive-menu.js
-│       │   ├── menu-navegacao-adm.js
-│       │   └── index.js
-│       ├── css/style.css         ← estilos globais + variáveis CSS
+│       ├── js/vendor/            ← chart.min.js (Chart.js local)
+│       ├── css/style.css         ← estilos globais + responsividade (@media)
 │       ├── adm/                  ← painel admin (HTML + css/style.css + js/script.js)
-│       └── *.html                ← páginas financeiras públicas
-├── docker-compose.yml
+│       └── *.html                ← páginas públicas/financeiras/agendamento
+├── docker-compose.yml            ← db + app
+├── docker-compose.override.yml   ← DEV: bind mount + node --watch (carregado automaticamente)
 └── CLAUDE.md                     ← este arquivo
 ```
+
+> **Importante:** ao escrever queries, confira nomes de coluna em `api/db/schema.sql`
+> (dump real do banco), **não** neste arquivo. Já houve divergências históricas
+> (ex: `sala_tipo_id` e `predios.predio` — sem sufixo `_nome`).
 
 ---
 
@@ -107,15 +153,21 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 
 ### Estrutura física
 - **unidades** — `unidade_id`, `unidade_nome`
-- **predios** — `predio_id`, `predio_nome`, `unidade_id`
-- **subunidades** — `subunidade_id`, `subunidade_nome`, `is_direcao_centro`
-- **salas** — `sala_id`, `sala_nome`, `is_agendavel`, `predio_id`, `salas_tipo_id`
-- **salas_tipo** — `salas_tipo_id`, `salas_tipo_nome`
+- **predios** — `predio_id`, `predio` (nome, sem sufixo), `descricao`, `unidade_id`
+- **subunidades** — `subunidade_id`, `subunidade_nome`, `subunidade_sigla`, `is_direcao_centro`
+- **salas** — `sala_id`, `sala_nome`, `predio_id`, `subunidade_id`, `sala_tipo_id`(FK), `sala_descricao`, `is_agendavel`(int 0/1), `sala_capacidade`(int, nullable), `presta_servicos_externos`(int, nullable — só p/ laboratórios)
+- **salas_tipo** — `sala_tipo_id`, `sala_tipo_nome`
 
 ### Usuários
 - **users** — `user_id`, `nome`, `siape`, `email`, `senha`(bcrypt), `whatsapp`, `data_nascimento`, `permissao`, `subunidade_id`, `unidade_id`
-- **funcionalidades** — `id`, `nome` (ex: `"criar_despesa"`)
+- **funcionalidades** — `id`, `nome`, `descricao`, `modulo` (ex: `"criar_despesa"`, `"aprovar_agendamento"`, `"ver_agenda_portaria"`, `"atender_pedido_almoxarifado"`)
 - **permissoes_usuario** — `id`, `user_id`, `funcionalidade_id`
+- **api_keys** — chaves p/ rotas RPA (validadas via `X-Api-Key`)
+
+### Agendamento de salas
+- **agendamentos** — `id_agendamento`, `sala_id`(FK), `solicitante_user_id`(FK), `motivo`, `observacao`, `dia_inteiro`(bool), `hora_inicio`, `hora_fim`, `data_inicio`, `data_fim_recorrencia`, `tipo_recorrencia`(`pontual`/`semanal`/`mensal`), `dias_semana`, `intervalo_semanas`, `status`(`pendente`/`aprovada`/`rejeitada`/`cancelada`), `aprovado_por_user_id`, `data_decisao`, `motivo_rejeicao`, `createdat`
+- **agendamentos_ocorrencias** — `id_ocorrencia`, `agendamento_id`(FK), `data_ocorrencia`, `status_individual`(`ativa`/`cancelada`/...), `motivo_individual`
+  - A série (regra de recorrência) vive em `agendamentos`; cada data concreta vira uma linha em `agendamentos_ocorrencias`. Conflito é checado por `(sala_id, data_ocorrencia)`.
 
 ### Financeiro
 - **tipos_recursos** — `id_tipo_recurso`, `tipo_recurso`, `descricao_recurso`
@@ -123,7 +175,8 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
   - **Nível centro** — sem `subunidade_id`, visível apenas para diretor/super_admin
 - **tipos_despesas** — `id_tipo_despesa`, `tipo_despesa`, `descricao_despesa`
 - **despesas** — `id_despesa`, `id_tipo_despesa`(FK), `id_subunidade`(FK), `valor_despesa`, `data_despesa`, `numero_documento_despesa`, `observacao_despesa`
-- **pedidos_almoxarifado** — `id_pedido`, `subunidade_id`(FK), `descricao_itens`, `quantidade`, `data_pedido`, `status`(pendente/atendido/cancelado), `observacao`, `createdat`
+- **pedidos_almoxarifado** — `id_pedido`, `subunidade_id`(FK), `status`(pendente/atendido/cancelado), `observacao`, `data_pedido`, `data_conclusao`, `createdat`
+- **itens_pedido_almoxarifado** — `id_item`, `pedido_id`(FK), `produto`, `quantidade`, ... (itens normalizados; substituiu colunas legadas em pedidos_almoxarifado)
 - **previsoes_despesas** — `id_previsao`, `subunidade_id`(FK), `id_tipo_despesa`(FK), `valor_previsto`, `ano_referencia`, `observacao`, `createdat`
 
 ---
@@ -153,8 +206,32 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 | `/api/pedidos-almoxarifado` | chefe | routes/pedidos-almoxarifado.js |
 | `/api/previsoes-despesas` | chefe | routes/previsoes-despesas.js |
 | `/api/relatorios` | chefe | routes/relatorios.js |
-| `/api/funcionalidades` | super_admin | routes/funcionalidades.js |
+| `/api/agendamentos` | servidor* | routes/agendamentos.js |
+| `/api/funcionalidades` | chefe | routes/funcionalidades.js |
 | `/api/permissoes-usuario` | chefe | routes/permissoes-usuario.js |
+| `/api/api-keys` | autenticado | routes/api-keys.js |
+| `/api/rpa` | **X-Api-Key** (sem JWT) | routes/rpa.js (factory, recebe wss) |
+
+\* `/api/agendamentos` exige apenas login (`autorizar("servidor")`); o controle fino é nas sub-rotas (ver abaixo).
+
+### Sub-rotas de `/api/agendamentos`
+| Rota | Quem | O que faz |
+|------|------|-----------|
+| `POST /preview` | logado | Expande recorrência e devolve ocorrências com flag de conflito (sem gravar) |
+| `POST /` | logado | Cria solicitação (status `pendente`) + ocorrências; broadcast WS `agendamento_pendente` |
+| `GET /` | logado | Lista (próprias; direção vê todas). Filtros `?status=&sala_id=` |
+| `GET /:id` | dono/direção | Detalhe + ocorrências |
+| `PATCH /:id/aprovar` | direção | Aprova; WhatsApp + broadcast `agendamento_decidido` |
+| `PATCH /:id/rejeitar` | direção | Rejeita c/ `motivo_rejeicao`; WhatsApp + broadcast |
+| `PATCH /:id/cancelar` | dono/direção | Cancela série |
+| `PATCH /:id/ocorrencias/:occId/cancelar` | dono/direção | Cancela uma ocorrência |
+| `GET /visao/calendario` | logado | Ocorrências p/ FullCalendar (`?sala_id=&inicio=&fim=&incluir_pendentes=`) |
+| `GET /visao/portaria` | chefe+ ou `ver_agenda_portaria` | Agenda semanal p/ portaria |
+| `GET /salas/agendaveis` | logado | Salas com `is_agendavel=1` |
+
+`GET /api/relatorios/salas` (direção) — resumo, ocupação por sala, timeline semanal, top solicitantes, rejeições e detalhe. Usado em `/relatorios-salas`.
+
+"Direção" = `super_admin`/`diretor`/`vice_diretor`, ou `is_direcao_centro=true`, ou funcionalidade `aprovar_agendamento`/`ver_todos_agendamentos`.
 
 ---
 
@@ -162,9 +239,15 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 
 ### Autenticação client-side
 - **localStorage:**
-  - `siccr` — objeto JSON completo do usuário (`nome`, `permissao`, `subunidade_id`, `is_direcao_centro`, ...)
+  - `siccr` — objeto JSON completo do usuário (`nome`, `permissao`, `subunidade_id`, `is_direcao_centro`, `funcionalidades`, ...)
   - `siccr_token` — JWT string
 - `scripts.js` tem IIFE no topo que intercepta todo `fetch()` e injeta `Authorization: Bearer` automaticamente
+- **`apiUrl` é relativo** (`${window.location.origin}/api`) — funciona em localhost e na LAN (ex: `http://192.168.x.x:15000`). Nunca hardcodar `localhost`.
+
+### Tempo real (WebSocket)
+- `scripts.js` abre 1 WS no boot, autentica via `{tipo:"auth", token}`.
+- Mensagens recebidas viram **CustomEvent** no `window`: `siccr:agendamento_pendente`, `siccr:agendamento_decidido` (e toasts de pedido almox).
+- Páginas escutam esses eventos p/ atualizar listas/calendário em tempo real (`/solicitacoes-de-agendamento`, `/calendario-de-salas`, `/agenda-portaria`).
 
 ### Web Components (Light DOM)
 - `<responsive-menu>` — menu do header com hamburger e dropdowns
@@ -211,8 +294,34 @@ Cor primária: `#009536` (verde CCR). Fonte padrão: `verdana, sans-serif`.
 
 ---
 
+## Páginas de agendamento (frontend)
+
+| Página | Quem vê (menu) | Função |
+|--------|----------------|--------|
+| `/solicitar-agendamento` | todos logados | Form de solicitação com preview de conflitos e recorrência |
+| `/calendario-de-salas` | todos logados | FullCalendar (mês/semana/dia), locale pt-br |
+| `/agenda-portaria` | chefe+ ou `ver_agenda_portaria` | Agenda semanal p/ portaria, navegável + imprimível |
+| `/solicitacoes-de-agendamento` | direção | Aprovar/rejeitar; rejeição mostra motivo inline |
+| `/relatorios-salas` | direção | Gráficos (Chart.js) + tabelas + PDF via `window.print()` |
+
+Impressão/PDF: páginas usam `@media print` p/ esconder menu/toolbar.
+
+## WhatsApp (PoolZap)
+
+- `lib/whatsapp.js` — `enviarMensagem(numero, msg)` é **fire-and-forget**: nunca lança, só loga via pino. Falha de WhatsApp não bloqueia aprovação/rejeição.
+- Normaliza número p/ formato DDI+DDD (ex: `5555999998888`), redige número no log.
+- Disparado em `PATCH /aprovar` e `/rejeitar`. Sem `WHATSAPP_API_KEY` no `.env`, fica desabilitado silenciosamente.
+
+## Observabilidade & qualidade
+
+- **Logs:** `pino` via `lib/logger.js` + `pino-http` em `server.js` (cada request ganha `req.id`). Error handler global no fim do `server.js` captura erros não tratados.
+- **ESLint 9** (`eslint.config.js`, flat config) + Prettier; **husky** roda lint no pre-commit.
+- **Schema versionado:** após criar migration, rode `npm run db:dump` e commite `api/db/schema.sql`.
+
+---
+
 ## Pendências
 
-- Rodar migrations em produção: `npx sequelize-cli db:migrate`
-- Página de agendamento de salas não implementada
-- Relatórios não têm filtro por ano no frontend (endpoint `?ano=` existe no backend)
+- Relatórios financeiros não têm filtro por ano no frontend (endpoint `?ano=` existe no backend)
+- 5 vulnerabilidades npm restantes só corrigíveis com `--force` (breaking: bcrypt@6, downgrade sequelize@3) — tooling de build/migration, fora do request path; deixadas conscientemente
+- **Próximo módulo planejado:** acadêmico (disciplinas, professores↔disciplinas, alocação de salas por semestre, display em TV nos halls)
