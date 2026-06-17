@@ -559,13 +559,18 @@ module.exports = function (wss) {
         try {
             const { rows } = await pool.query(
                 `SELECT ao.id_ocorrencia, ao.data_ocorrencia,
-                        a.id_agendamento, a.sala_id, a.motivo,
+                        a.id_agendamento, a.sala_id, a.motivo, a.origem,
                         a.dia_inteiro, a.hora_inicio, a.hora_fim, a.status,
-                        s.sala_nome, u.nome AS solicitante_nome
+                        s.sala_nome, u.nome AS solicitante_nome,
+                        d.nome AS disciplina_nome, t.nome_turma, prof.nome AS professor_nome
                  FROM agendamentos_ocorrencias ao
                  JOIN agendamentos a ON a.id_agendamento = ao.agendamento_id
                  JOIN salas s ON s.sala_id = a.sala_id
                  JOIN users u ON u.user_id = a.solicitante_user_id
+                 LEFT JOIN turmas_horarios th ON th.id_horario = a.turma_horario_id
+                 LEFT JOIN turmas t ON t.id_turma = th.turma_id
+                 LEFT JOIN disciplinas d ON d.id_disciplina = t.disciplina_id
+                 LEFT JOIN users prof ON prof.user_id = t.professor_user_id
                  WHERE ${filtros.join(" AND ")}
                  ORDER BY ao.data_ocorrencia, a.hora_inicio NULLS FIRST`,
                 params
@@ -619,15 +624,20 @@ module.exports = function (wss) {
             const { rows } = await pool.query(
                 `SELECT ao.data_ocorrencia, ao.id_ocorrencia,
                         a.id_agendamento, a.dia_inteiro, a.hora_inicio, a.hora_fim,
-                        a.motivo, a.observacao,
+                        a.motivo, a.observacao, a.origem,
                         s.sala_id, s.sala_nome, s.sala_capacidade,
                         p.predio_id, p.predio AS predio_nome,
-                        u.nome AS solicitante_nome, u.siape AS solicitante_siape
+                        u.nome AS solicitante_nome, u.siape AS solicitante_siape,
+                        d.nome AS disciplina_nome, t.nome_turma, prof.nome AS professor_nome
                  FROM agendamentos_ocorrencias ao
                  JOIN agendamentos a ON a.id_agendamento = ao.agendamento_id
                  JOIN salas s ON s.sala_id = a.sala_id
                  LEFT JOIN predios p ON p.predio_id = s.predio_id
                  JOIN users u ON u.user_id = a.solicitante_user_id
+                 LEFT JOIN turmas_horarios th ON th.id_horario = a.turma_horario_id
+                 LEFT JOIN turmas t ON t.id_turma = th.turma_id
+                 LEFT JOIN disciplinas d ON d.id_disciplina = t.disciplina_id
+                 LEFT JOIN users prof ON prof.user_id = t.professor_user_id
                  WHERE a.status = 'aprovada'
                    AND ao.status_individual = 'ativa'
                    AND ao.data_ocorrencia BETWEEN $1 AND $2

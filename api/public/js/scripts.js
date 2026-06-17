@@ -2691,12 +2691,18 @@ document.addEventListener("DOMContentLoaded", function() {
                             ? o.data_ocorrencia.slice(0, 10)
                             : new Date(o.data_ocorrencia).toISOString().slice(0, 10);
                         const isPendente = o.status === "pendente";
+                        const isAula = o.origem === "aula";
+                        // Aula = azul; reserva pendente = laranja; reserva aprovada = verde
+                        const cor = isPendente ? "#f59f00" : (isAula ? "#1971c2" : "#007a2e");
+                        const tituloEvento = isAula
+                            ? `${o.sala_nome} — ${o.disciplina_nome || o.motivo}`
+                            : `${o.sala_nome} — ${o.motivo}`;
                         const ev = {
                             id: String(o.id_ocorrencia),
-                            title: `${o.sala_nome} — ${o.motivo}`,
+                            title: tituloEvento,
                             allDay: o.dia_inteiro,
-                            backgroundColor: isPendente ? "#f59f00" : "#007a2e",
-                            borderColor: isPendente ? "#f59f00" : "#007a2e",
+                            backgroundColor: cor,
+                            borderColor: cor,
                             extendedProps: o,
                         };
                         if (o.dia_inteiro) {
@@ -2714,13 +2720,22 @@ document.addEventListener("DOMContentLoaded", function() {
             },
             eventClick: (info) => {
                 const o = info.event.extendedProps;
+                const isAula = o.origem === "aula";
+                const horario = o.dia_inteiro ? "Dia inteiro" : `${(o.hora_inicio || "").slice(0,5)}–${(o.hora_fim || "").slice(0,5)}`;
+                const cabecalho = isAula
+                    ? `<div><span class="badge badge--atendido">Aula</span></div>
+                       <div><strong>Disciplina:</strong> ${o.disciplina_nome || "—"}</div>
+                       <div><strong>Turma:</strong> ${o.nome_turma || "—"}</div>
+                       <div><strong>Professor:</strong> ${o.professor_nome || "—"}</div>`
+                    : `<div><span class="badge badge--pendente">Reserva</span></div>
+                       <div><strong>Motivo:</strong> ${o.motivo}</div>
+                       <div><strong>Solicitante:</strong> ${o.solicitante_nome}</div>`;
                 dialogEventoConteudo.innerHTML = `
                     <div class="flex flex--column gap--5">
                         <div><strong>Sala:</strong> ${o.sala_nome}</div>
-                        <div><strong>Motivo:</strong> ${o.motivo}</div>
-                        <div><strong>Solicitante:</strong> ${o.solicitante_nome}</div>
+                        ${cabecalho}
                         <div><strong>Data:</strong> ${formatarData(o.data_ocorrencia)}</div>
-                        <div><strong>Horário:</strong> ${o.dia_inteiro ? "Dia inteiro" : `${(o.hora_inicio || "").slice(0,5)}–${(o.hora_fim || "").slice(0,5)}`}</div>
+                        <div><strong>Horário:</strong> ${horario}</div>
                         <div><strong>Status:</strong> ${o.status}</div>
                     </div>
                 `;
@@ -2866,12 +2881,18 @@ document.addEventListener("DOMContentLoaded", function() {
                     const linha = document.createElement("div");
                     linha.className = "ag-linha";
                     const sala = o.sala_nome + (o.predio_nome ? ` <span style="color:#888">(${o.predio_nome})</span>` : "");
-                    const obs = o.observacao ? `<span style="color:#666">${o.observacao}</span>` : "—";
+                    const isAula = o.origem === "aula";
+                    // Aula: mostra disciplina + professor; reserva: motivo + solicitante + obs
+                    const pessoa = isAula ? (o.professor_nome || "—") : o.solicitante_nome;
+                    const descricao = isAula
+                        ? `<span class="badge badge--atendido">Aula</span> ${o.disciplina_nome || ""}${o.nome_turma ? " · " + o.nome_turma : ""}`
+                        : o.motivo;
+                    const obs = isAula ? "—" : (o.observacao ? `<span style="color:#666">${o.observacao}</span>` : "—");
                     linha.innerHTML = `
                         <div class="ag-horario">${descreverHorario(o)}</div>
                         <div>${sala}</div>
-                        <div>${o.solicitante_nome}</div>
-                        <div>${o.motivo}</div>
+                        <div>${pessoa}</div>
+                        <div>${descricao}</div>
                         <div>${obs}</div>
                     `;
                     conteudo.appendChild(linha);
@@ -3035,6 +3056,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     <div class="dado flex flex--3">${s.predio_nome || "—"}</div>
                     <div class="dado flex flex--2">${s.sala_capacidade ?? "—"}</div>
                     <div class="dado flex flex--2">${s.total_ocorrencias}</div>
+                    <div class="dado flex flex--2" style="color:#1971c2">${s.ocorrencias_aula ?? 0}</div>
+                    <div class="dado flex flex--2" style="color:#007a2e">${s.ocorrencias_reserva ?? 0}</div>
                     <div class="dado flex flex--2">${Number(s.horas_total).toFixed(1)}</div>
                 `;
                 listaPorSala.appendChild(div);

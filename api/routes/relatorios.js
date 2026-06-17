@@ -228,14 +228,18 @@ router.get("/salas", async (req, res) => {
                     COUNT(*) FILTER (WHERE status = 'cancelada')::int AS cancelados,
                     COUNT(*)::int                                     AS total
                  FROM agendamentos a
-                 WHERE a.createdat::date BETWEEN $1 AND $2 ${salaClause}`,
+                 WHERE a.origem = 'solicitacao'
+                   AND a.createdat::date BETWEEN $1 AND $2 ${salaClause}`,
                 params
             ),
 
-            // Ocupação por sala (apenas salas agendáveis)
+            // Ocupação por sala (apenas salas agendáveis) — inclui aulas + reservas,
+            // com split por origem para distinguir uso acadêmico de reservas avulsas
             pool.query(
                 `SELECT s.sala_id, s.sala_nome, s.sala_capacidade, p.predio AS predio_nome,
                         COUNT(ao.id_ocorrencia)::int AS total_ocorrencias,
+                        COUNT(ao.id_ocorrencia) FILTER (WHERE a.origem = 'aula')::int AS ocorrencias_aula,
+                        COUNT(ao.id_ocorrencia) FILTER (WHERE a.origem = 'solicitacao')::int AS ocorrencias_reserva,
                         COALESCE(
                             SUM(CASE
                                 WHEN a.dia_inteiro THEN 8
@@ -274,7 +278,8 @@ router.get("/salas", async (req, res) => {
                 `SELECT u.nome, u.siape, COUNT(*)::int AS total
                  FROM agendamentos a
                  JOIN users u ON u.user_id = a.solicitante_user_id
-                 WHERE a.createdat::date BETWEEN $1 AND $2 ${salaClause}
+                 WHERE a.origem = 'solicitacao'
+                   AND a.createdat::date BETWEEN $1 AND $2 ${salaClause}
                  GROUP BY u.user_id, u.nome, u.siape
                  ORDER BY total DESC, u.nome
                  LIMIT 10`,
@@ -292,6 +297,7 @@ router.get("/salas", async (req, res) => {
                  LEFT JOIN predios p ON p.predio_id = s.predio_id
                  JOIN users u ON u.user_id = a.solicitante_user_id
                  WHERE a.status = 'aprovada'
+                   AND a.origem = 'solicitacao'
                    AND ao.status_individual = 'ativa'
                    AND ao.data_ocorrencia BETWEEN $1 AND $2 ${salaClause}
                  ORDER BY ao.data_ocorrencia, a.hora_inicio NULLS FIRST, s.sala_nome`,
