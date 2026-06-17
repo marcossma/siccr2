@@ -1,12 +1,12 @@
 -- Schema dump gerado automaticamente. NÃO editar manualmente.
--- Origem: docker compose db (siccr) — 2026-06-17T14:56:25.263Z
+-- Origem: docker compose db (siccr) — 2026-06-17T15:11:08.799Z
 -- Regenere com: npm run db:dump
 
 --
 -- PostgreSQL database dump
 --
 
-\restrict BykYLbkhGuOUJiPFP1tXgNmqNVzkxgtWmvWTp4UVkJf1nUcBWLI27HZiS4KOnfA
+\restrict efhPuf9AS2X6txXcK1fOM1CIfk1vYoDEKykjB9Jmz2sfVEhHPltRRghb2K3ehN5
 
 -- Dumped from database version 16.13
 -- Dumped by pg_dump version 16.13
@@ -91,7 +91,9 @@ CREATE TABLE public.agendamentos (
     aprovado_por_user_id integer,
     data_decisao timestamp with time zone,
     motivo_rejeicao text,
-    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    origem character varying(20) DEFAULT 'solicitacao'::character varying NOT NULL,
+    turma_horario_id integer
 );
 
 
@@ -724,6 +726,75 @@ ALTER SEQUENCE public.tipos_recursos_id_tipo_recurso_seq OWNED BY public.tipos_r
 
 
 --
+-- Name: turmas; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.turmas (
+    id_turma integer NOT NULL,
+    disciplina_id integer NOT NULL,
+    periodo_letivo_id integer NOT NULL,
+    nome_turma character varying(30) NOT NULL,
+    professor_user_id integer,
+    vagas integer,
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: turmas_horarios; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.turmas_horarios (
+    id_horario integer NOT NULL,
+    turma_id integer NOT NULL,
+    dia_semana integer NOT NULL,
+    hora_inicio time without time zone NOT NULL,
+    hora_fim time without time zone NOT NULL,
+    sala_id integer NOT NULL
+);
+
+
+--
+-- Name: turmas_horarios_id_horario_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.turmas_horarios_id_horario_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: turmas_horarios_id_horario_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.turmas_horarios_id_horario_seq OWNED BY public.turmas_horarios.id_horario;
+
+
+--
+-- Name: turmas_id_turma_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.turmas_id_turma_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: turmas_id_turma_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.turmas_id_turma_seq OWNED BY public.turmas.id_turma;
+
+
+--
 -- Name: unidades; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -934,6 +1005,20 @@ ALTER TABLE ONLY public.tipos_despesas ALTER COLUMN id_tipo_despesa SET DEFAULT 
 --
 
 ALTER TABLE ONLY public.tipos_recursos ALTER COLUMN id_tipo_recurso SET DEFAULT nextval('public.tipos_recursos_id_tipo_recurso_seq'::regclass);
+
+
+--
+-- Name: turmas id_turma; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.turmas ALTER COLUMN id_turma SET DEFAULT nextval('public.turmas_id_turma_seq'::regclass);
+
+
+--
+-- Name: turmas_horarios id_horario; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.turmas_horarios ALTER COLUMN id_horario SET DEFAULT nextval('public.turmas_horarios_id_horario_seq'::regclass);
 
 
 --
@@ -1151,6 +1236,22 @@ ALTER TABLE ONLY public.tipos_recursos
 
 
 --
+-- Name: turmas_horarios turmas_horarios_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.turmas_horarios
+    ADD CONSTRAINT turmas_horarios_pkey PRIMARY KEY (id_horario);
+
+
+--
+-- Name: turmas turmas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.turmas
+    ADD CONSTRAINT turmas_pkey PRIMARY KEY (id_turma);
+
+
+--
 -- Name: unidades unidades_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1188,6 +1289,13 @@ CREATE INDEX agendamentos_ocorrencias_status_individual ON public.agendamentos_o
 
 
 --
+-- Name: agendamentos_origem; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX agendamentos_origem ON public.agendamentos USING btree (origem);
+
+
+--
 -- Name: agendamentos_sala_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1209,6 +1317,13 @@ CREATE INDEX agendamentos_status ON public.agendamentos USING btree (status);
 
 
 --
+-- Name: agendamentos_turma_horario_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX agendamentos_turma_horario_id ON public.agendamentos USING btree (turma_horario_id);
+
+
+--
 -- Name: disciplinas_subunidade_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1220,6 +1335,34 @@ CREATE INDEX disciplinas_subunidade_id ON public.disciplinas USING btree (subuni
 --
 
 CREATE UNIQUE INDEX permissoes_usuario_unique ON public.permissoes_usuario USING btree (user_id, funcionalidade_id);
+
+
+--
+-- Name: turmas_disciplina_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX turmas_disciplina_id ON public.turmas USING btree (disciplina_id);
+
+
+--
+-- Name: turmas_horarios_sala_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX turmas_horarios_sala_id ON public.turmas_horarios USING btree (sala_id);
+
+
+--
+-- Name: turmas_horarios_turma_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX turmas_horarios_turma_id ON public.turmas_horarios USING btree (turma_id);
+
+
+--
+-- Name: turmas_periodo_letivo_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX turmas_periodo_letivo_id ON public.turmas USING btree (periodo_letivo_id);
 
 
 --
@@ -1252,6 +1395,14 @@ ALTER TABLE ONLY public.agendamentos
 
 ALTER TABLE ONLY public.agendamentos
     ADD CONSTRAINT agendamentos_solicitante_user_id_fkey FOREIGN KEY (solicitante_user_id) REFERENCES public.users(user_id) ON DELETE RESTRICT;
+
+
+--
+-- Name: agendamentos agendamentos_turma_horario_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agendamentos
+    ADD CONSTRAINT agendamentos_turma_horario_id_fkey FOREIGN KEY (turma_horario_id) REFERENCES public.turmas_horarios(id_horario) ON DELETE CASCADE;
 
 
 --
@@ -1359,6 +1510,46 @@ ALTER TABLE ONLY public.professores_disciplinas
 
 
 --
+-- Name: turmas turmas_disciplina_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.turmas
+    ADD CONSTRAINT turmas_disciplina_id_fkey FOREIGN KEY (disciplina_id) REFERENCES public.disciplinas(id_disciplina) ON DELETE RESTRICT;
+
+
+--
+-- Name: turmas_horarios turmas_horarios_sala_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.turmas_horarios
+    ADD CONSTRAINT turmas_horarios_sala_id_fkey FOREIGN KEY (sala_id) REFERENCES public.salas(sala_id) ON DELETE RESTRICT;
+
+
+--
+-- Name: turmas_horarios turmas_horarios_turma_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.turmas_horarios
+    ADD CONSTRAINT turmas_horarios_turma_id_fkey FOREIGN KEY (turma_id) REFERENCES public.turmas(id_turma) ON DELETE CASCADE;
+
+
+--
+-- Name: turmas turmas_periodo_letivo_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.turmas
+    ADD CONSTRAINT turmas_periodo_letivo_id_fkey FOREIGN KEY (periodo_letivo_id) REFERENCES public.periodos_letivos(id_periodo) ON DELETE RESTRICT;
+
+
+--
+-- Name: turmas turmas_professor_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.turmas
+    ADD CONSTRAINT turmas_professor_user_id_fkey FOREIGN KEY (professor_user_id) REFERENCES public.users(user_id) ON DELETE SET NULL;
+
+
+--
 -- Name: users users_unidade_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1370,5 +1561,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict BykYLbkhGuOUJiPFP1tXgNmqNVzkxgtWmvWTp4UVkJf1nUcBWLI27HZiS4KOnfA
+\unrestrict efhPuf9AS2X6txXcK1fOM1CIfk1vYoDEKykjB9Jmz2sfVEhHPltRRghb2K3ehN5
 

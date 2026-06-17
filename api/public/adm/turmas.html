@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICCR - Turmas e Alocação</title>
+    <link rel="shortcut icon" href="../img/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/dialogs.css">
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/ui-kit.css">
+    <link rel="stylesheet" href="./css/dialogs.css">
+    <script src="./js/guard.js"></script>
+    <script type="module" src="./js/script.js"></script>
+    <style>
+        .horario-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+        }
+        .horario-item .dia { font-weight: 600; color: #007a2e; min-width: 90px; }
+        .horario-conflito {
+            background: #fdecec;
+            border-left: 3px solid #c92a2a;
+            color: #842828;
+            padding: 8px 10px;
+            font-size: 12px;
+            margin-top: 8px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/">
+                <img src="../img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo">
+            </a>
+            <div class="acesso">
+                <span id="adminNome"></span>
+                <a href="#" id="btnSair">Sair</a>
+            </div>
+        </header>
+        <div>
+            <responsive-menu></responsive-menu>
+        </div>
+        <main class="flex flex--column">
+            <section class="titulo_painel flex justify--space--between align--items--center" style="flex-wrap:wrap;gap:10px">
+                <h1 class="flex align--items--center gap--15">
+                    <i class="bi bi-people-fill font--size--40"></i>
+                    Painel Administrativo - Turmas
+                </h1>
+                <div class="flex gap--10 align--items--center">
+                    <label class="painelLabel" for="filtroPeriodo" style="white-space:nowrap">Período:</label>
+                    <select id="filtroPeriodo" class="formInput" style="padding:6px 10px"></select>
+                    <button class="btn_adicionar turma flex align--items--center gap--10 cursor--pointer">Adicionar <i class="bi bi-plus-circle font--size--20"></i></button>
+                </div>
+            </section>
+
+            <div>
+                <menu-navegacao-adm></menu-navegacao-adm>
+            </div>
+
+            <section class="informacoes_painel">
+                <div class="cabecalho flex">
+                    <div class="titulo flex flex--4">Disciplina</div>
+                    <div class="titulo flex flex--2">Turma</div>
+                    <div class="titulo flex flex--3">Professor</div>
+                    <div class="titulo flex flex--2">Período</div>
+                    <div class="titulo flex flex--2">Horários</div>
+                    <div class="titulo flex flex--2">Ações</div>
+                </div>
+                <div class="listaUnidades">
+                    <!-- carregado via JS -->
+                </div>
+            </section>
+        </main>
+        <footer>Rodapé</footer>
+    </div>
+
+    <!-- Dialog: criar/editar turma -->
+    <dialog class="dialogPainel unidades" id="dialogTurma" style="min-width:500px">
+        <fieldset>
+            <legend>Cadastro de Turma</legend>
+            <form class="frmCadastroPainel frmUnidade flex flex--column gap--15">
+                <input type="hidden" name="id_turma" id="id_turma">
+                <div class="row">
+                    <select name="disciplina_id" id="disciplina_id" class="formInput width--100"></select>
+                    <label class="painelLabel" for="disciplina_id">Disciplina</label>
+                </div>
+                <div class="row">
+                    <select name="periodo_letivo_id" id="periodo_letivo_id" class="formInput width--100"></select>
+                    <label class="painelLabel" for="periodo_letivo_id">Período letivo</label>
+                </div>
+                <div class="row">
+                    <input type="text" name="nome_turma" id="nome_turma" class="formInput width--100" placeholder="Ex.: T01">
+                    <label class="painelLabel" for="nome_turma">Nome da turma</label>
+                </div>
+                <div class="row">
+                    <select name="professor_user_id" id="professor_user_id" class="formInput width--100"></select>
+                    <label class="painelLabel" for="professor_user_id">Professor (entre os vinculados à disciplina)</label>
+                </div>
+                <div class="row">
+                    <input type="number" name="vagas" id="vagas" class="formInput width--100" placeholder="Ex.: 40" min="0">
+                    <label class="painelLabel" for="vagas">Vagas (opcional)</label>
+                </div>
+                <div class="row">
+                    <button type="button" class="btnPainelFormulario cadastrarUnidade">Cadastrar</button>
+                    <button type="button" class="btnPainelFormulario atualizarUnidade">Atualizar</button>
+                    <button type="button" class="btnPainelFormulario cancelarUnidade">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+
+    <!-- Dialog: gerenciar horários da turma -->
+    <dialog class="dialogPainel" id="dialogHorarios" style="min-width:560px" data-turma-id="">
+        <fieldset>
+            <legend id="dialogHorariosLegend">Horários da turma</legend>
+
+            <div id="listaHorarios" style="margin-bottom:15px"></div>
+
+            <div class="pedido-secao-titulo" style="font-weight:600;margin-bottom:8px">Adicionar horário</div>
+            <div class="flex gap--10 align--items--end flex--wrap">
+                <div class="flex flex--column gap--5">
+                    <label class="painelLabel" for="h_dia">Dia</label>
+                    <select id="h_dia" class="formInput">
+                        <option value="1">Segunda</option>
+                        <option value="2">Terça</option>
+                        <option value="3">Quarta</option>
+                        <option value="4">Quinta</option>
+                        <option value="5">Sexta</option>
+                        <option value="6">Sábado</option>
+                        <option value="0">Domingo</option>
+                    </select>
+                </div>
+                <div class="flex flex--column gap--5">
+                    <label class="painelLabel" for="h_inicio">Início</label>
+                    <input type="time" id="h_inicio" class="formInput" value="08:00">
+                </div>
+                <div class="flex flex--column gap--5">
+                    <label class="painelLabel" for="h_fim">Fim</label>
+                    <input type="time" id="h_fim" class="formInput" value="10:00">
+                </div>
+                <div class="flex flex--column gap--5 flex--1">
+                    <label class="painelLabel" for="h_sala">Sala</label>
+                    <select id="h_sala" class="formInput"></select>
+                </div>
+                <button type="button" id="btnAddHorario" class="btnPainelFormulario" style="height:38px">+ Alocar</button>
+            </div>
+            <div id="horarioFeedback"></div>
+
+            <div class="row" style="margin-top:15px">
+                <button type="button" id="btnFecharHorarios" class="btnPainelFormulario cancelarUnidade">Fechar</button>
+            </div>
+        </fieldset>
+    </dialog>
+
+    <script type="module" src="../js/components/index.js"></script>
+</body>
+</html>

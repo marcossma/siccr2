@@ -1381,4 +1381,247 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     } // fim /adm/disciplinas
 
+    // =========================================================================
+    // TURMAS E ALOCAÇÃO — /adm/turmas
+    // =========================================================================
+    if (urlParam === "/adm/turmas") {
+        const filtroPeriodo = document.querySelector("#filtroPeriodo");
+        const btnAdicionar  = document.querySelector(".btn_adicionar");
+        const listaUnidades = document.querySelector(".listaUnidades");
+
+        const dialogTurma   = document.querySelector("#dialogTurma");
+        const frmTurma      = dialogTurma.querySelector(".frmUnidade");
+        const btnCadastrar  = dialogTurma.querySelector(".cadastrarUnidade");
+        const btnAtualizar  = dialogTurma.querySelector(".atualizarUnidade");
+        const btnCancelar   = dialogTurma.querySelector(".cancelarUnidade");
+        const selDisciplina = document.querySelector("#disciplina_id");
+        const selPeriodo    = document.querySelector("#periodo_letivo_id");
+        const selProfessor  = document.querySelector("#professor_user_id");
+
+        const dialogHorarios = document.querySelector("#dialogHorarios");
+        const listaHorarios  = document.querySelector("#listaHorarios");
+        const selSala        = document.querySelector("#h_sala");
+        const btnAddHorario  = document.querySelector("#btnAddHorario");
+        const btnFecharHorarios = document.querySelector("#btnFecharHorarios");
+        const horarioFeedback   = document.querySelector("#horarioFeedback");
+
+        const NOMES_DIAS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+        let disciplinasCache = [];
+        let periodosCache = [];
+        let salasCache = [];
+
+        async function carregarBases() {
+            const [rd, rp, rs] = await Promise.all([
+                fetch(`${apiUrl}/disciplinas`).then(r => r.json()),
+                fetch(`${apiUrl}/periodos-letivos`).then(r => r.json()),
+                fetch(`${apiUrl}/agendamentos/salas/agendaveis`).then(r => r.json()),
+            ]);
+            disciplinasCache = rd.data || [];
+            periodosCache = rp.data || [];
+            salasCache = rs.data || [];
+
+            // Filtro de período no topo (+ opção "todos")
+            filtroPeriodo.innerHTML = '<option value="">Todos os períodos</option>' +
+                periodosCache.map(p => `<option value="${p.id_periodo}" ${p.ativo ? "selected" : ""}>${p.nome}${p.ativo ? " (ativo)" : ""}</option>`).join("");
+
+            // Selects do dialog de turma
+            selDisciplina.innerHTML = '<option value="">Selecione a disciplina...</option>' +
+                disciplinasCache.map(d => `<option value="${d.id_disciplina}">${d.codigo ? d.codigo + " - " : ""}${d.nome}</option>`).join("");
+            selPeriodo.innerHTML = '<option value="">Selecione o período...</option>' +
+                periodosCache.map(p => `<option value="${p.id_periodo}">${p.nome}</option>`).join("");
+
+            // Select de sala no dialog de horários
+            selSala.innerHTML = '<option value="">Selecione a sala...</option>' +
+                salasCache.map(s => `<option value="${s.sala_id}">${s.sala_nome}${s.predio_nome ? " — " + s.predio_nome : ""}</option>`).join("");
+        }
+
+        // Popula professores conforme a disciplina escolhida (apenas os vinculados)
+        function atualizarProfessores(disciplinaId, professorSel = "") {
+            const disc = disciplinasCache.find(d => String(d.id_disciplina) === String(disciplinaId));
+            const profs = (disc && disc.professores) || [];
+            selProfessor.innerHTML = '<option value="">— Sem professor definido —</option>' +
+                profs.map(p => `<option value="${p.user_id}">${p.nome}</option>`).join("");
+            if (professorSel) selProfessor.value = professorSel;
+        }
+
+        selDisciplina.addEventListener("change", () => atualizarProfessores(selDisciplina.value));
+
+        async function renderizar() {
+            const periodoId = filtroPeriodo.value;
+            const q = periodoId ? `?periodo_letivo_id=${periodoId}` : "";
+            try {
+                const turmas = (await (await fetch(`${apiUrl}/turmas${q}`)).json()).data || [];
+                listaUnidades.innerHTML = "";
+                if (turmas.length === 0) {
+                    listaUnidades.innerHTML = '<p class="pedido-lista-vazia" style="padding:15px">Nenhuma turma neste período.</p>';
+                    return;
+                }
+                turmas.forEach(t => {
+                    const div = document.createElement("div");
+                    div.classList.add("dados", "flex", "align--items--center");
+                    div.innerHTML = `
+                        <div class="dado flex flex--4">${t.disciplina_codigo ? t.disciplina_codigo + " - " : ""}${t.disciplina_nome}</div>
+                        <div class="dado flex flex--2">${t.nome_turma}</div>
+                        <div class="dado flex flex--3">${t.professor_nome ? t.professor_nome.split(" ").slice(0,2).join(" ") : "—"}</div>
+                        <div class="dado flex flex--2">${t.periodo_nome}</div>
+                        <div class="dado flex flex--2">
+                            <span class="badge ${t.total_horarios > 0 ? "badge--atendido" : "badge--pendente"}">${t.total_horarios}</span>
+                        </div>
+                        <div class="dado flex flex--2 gap--10 font--size--20">
+                            <i class="bi bi-calendar-week gerenciar-horarios cursor--pointer" title="Horários e salas" data-id="${t.id_turma}" data-nome="${t.disciplina_nome} — ${t.nome_turma}"></i>
+                            <i class="bi bi-pencil-square editar-turma cursor--pointer" title="Editar"
+                               data-id_turma="${t.id_turma}" data-disciplina_id="${t.disciplina_id}"
+                               data-periodo_letivo_id="${t.periodo_letivo_id}" data-nome_turma="${t.nome_turma}"
+                               data-professor_user_id="${t.professor_user_id || ""}" data-vagas="${t.vagas ?? ""}"></i>
+                            <i class="bi bi-trash excluir-turma cursor--pointer" title="Excluir" data-id="${t.id_turma}"></i>
+                        </div>`;
+                    listaUnidades.appendChild(div);
+                });
+            } catch (e) { console.error("Erro ao renderizar turmas:", e); }
+        }
+
+        filtroPeriodo.addEventListener("change", renderizar);
+
+        // ── Criar/editar turma ──────────────────────────────────────────
+        btnAdicionar.addEventListener("click", (e) => {
+            e.preventDefault();
+            dialogTurma.querySelector("legend").textContent = "Cadastrar turma";
+            btnAtualizar.style.display = "none"; btnAtualizar.disabled = true;
+            btnCadastrar.style.display = "inline-block"; btnCadastrar.disabled = false;
+            frmTurma.reset();
+            atualizarProfessores("");
+            if (filtroPeriodo.value) selPeriodo.value = filtroPeriodo.value;
+            dialogTurma.showModal();
+        });
+
+        btnCancelar.addEventListener("click", (e) => { e.preventDefault(); frmTurma.reset(); dialogTurma.close(); });
+
+        function coletarTurma() {
+            return {
+                disciplina_id: selDisciplina.value || null,
+                periodo_letivo_id: selPeriodo.value || null,
+                nome_turma: document.querySelector("#nome_turma").value.trim(),
+                professor_user_id: selProfessor.value || null,
+                vagas: document.querySelector("#vagas").value || null,
+            };
+        }
+
+        btnCadastrar.addEventListener("click", async (e) => {
+            e.preventDefault();
+            const r = await fetch(`${apiUrl}/turmas`, { method: "POST", body: JSON.stringify(coletarTurma()) });
+            const resp = await r.json();
+            if (!r.ok) { alert(resp.message); return; }
+            frmTurma.reset(); dialogTurma.close(); renderizar();
+        });
+
+        btnAtualizar.addEventListener("click", async (e) => {
+            e.preventDefault();
+            const id = document.querySelector("#id_turma").value;
+            const r = await fetch(`${apiUrl}/turmas/${id}`, { method: "PUT", body: JSON.stringify(coletarTurma()) });
+            const resp = await r.json();
+            if (!r.ok) { alert(resp.message); return; }
+            frmTurma.reset(); dialogTurma.close(); renderizar();
+        });
+
+        // ── Gerenciar horários ──────────────────────────────────────────
+        async function abrirHorarios(turmaId, titulo) {
+            dialogHorarios.dataset.turmaId = turmaId;
+            document.querySelector("#dialogHorariosLegend").textContent = `Horários — ${titulo}`;
+            horarioFeedback.innerHTML = "";
+            await renderizarHorarios(turmaId);
+            dialogHorarios.showModal();
+        }
+
+        async function renderizarHorarios(turmaId) {
+            try {
+                const turma = (await (await fetch(`${apiUrl}/turmas/${turmaId}`)).json()).data;
+                const horarios = turma.horarios || [];
+                if (horarios.length === 0) {
+                    listaHorarios.innerHTML = '<p class="pedido-lista-vazia" style="padding:10px">Nenhum horário alocado ainda.</p>';
+                    return;
+                }
+                listaHorarios.innerHTML = horarios.map(h => `
+                    <div class="horario-item">
+                        <span class="dia">${NOMES_DIAS[h.dia_semana]}</span>
+                        <span>${(h.hora_inicio || "").slice(0,5)}–${(h.hora_fim || "").slice(0,5)}</span>
+                        <span class="flex--1">${h.sala_nome}${h.predio_nome ? " (" + h.predio_nome + ")" : ""}</span>
+                        <i class="bi bi-trash cursor--pointer remover-horario" title="Remover" data-id="${h.id_horario}" style="color:#c92a2a"></i>
+                    </div>
+                `).join("");
+            } catch (e) { console.error("Erro ao listar horários:", e); }
+        }
+
+        btnAddHorario.addEventListener("click", async () => {
+            const turmaId = dialogHorarios.dataset.turmaId;
+            horarioFeedback.innerHTML = "";
+            const body = {
+                dia_semana: document.querySelector("#h_dia").value,
+                hora_inicio: document.querySelector("#h_inicio").value,
+                hora_fim: document.querySelector("#h_fim").value,
+                sala_id: selSala.value || null,
+            };
+            if (!body.sala_id) { horarioFeedback.innerHTML = '<div class="horario-conflito">Selecione uma sala.</div>'; return; }
+
+            const r = await fetch(`${apiUrl}/turmas/${turmaId}/horarios`, { method: "POST", body: JSON.stringify(body) });
+            const resp = await r.json();
+            if (r.status === 409 && resp.data) {
+                const datas = (resp.data.conflitos || []).map(c => `${c.data} (${c.ocupada_por})`).join("<br>");
+                horarioFeedback.innerHTML = `<div class="horario-conflito"><strong>${resp.message}</strong><br>${datas}${resp.data.total_conflitos > 10 ? "<br>..." : ""}</div>`;
+                return;
+            }
+            if (!r.ok) { horarioFeedback.innerHTML = `<div class="horario-conflito">${resp.message}</div>`; return; }
+            await renderizarHorarios(turmaId);
+            renderizar(); // atualiza contagem de horários na lista
+        });
+
+        listaHorarios.addEventListener("click", async (e) => {
+            const rem = e.target.closest(".remover-horario");
+            if (!rem) return;
+            if (!confirm("Remover este horário? As aulas geradas serão desalocadas.")) return;
+            const turmaId = dialogHorarios.dataset.turmaId;
+            const r = await fetch(`${apiUrl}/turmas/${turmaId}/horarios/${rem.dataset.id}`, { method: "DELETE" });
+            const resp = await r.json();
+            if (!r.ok) { alert(resp.message); return; }
+            await renderizarHorarios(turmaId);
+            renderizar();
+        });
+
+        btnFecharHorarios.addEventListener("click", () => dialogHorarios.close());
+
+        // ── Delegação na lista de turmas ────────────────────────────────
+        listaUnidades.addEventListener("click", async (e) => {
+            const ger = e.target.closest(".gerenciar-horarios");
+            if (ger) { abrirHorarios(ger.dataset.id, ger.dataset.nome); return; }
+
+            const edit = e.target.closest(".editar-turma");
+            if (edit) {
+                const d = edit.dataset;
+                dialogTurma.querySelector("legend").textContent = "Editar turma";
+                btnCadastrar.style.display = "none"; btnCadastrar.disabled = true;
+                btnAtualizar.style.display = "inline-block"; btnAtualizar.disabled = false;
+                frmTurma.reset();
+                document.querySelector("#id_turma").value = d.id_turma;
+                selDisciplina.value = d.disciplina_id;
+                selPeriodo.value = d.periodo_letivo_id;
+                document.querySelector("#nome_turma").value = d.nome_turma;
+                atualizarProfessores(d.disciplina_id, d.professor_user_id);
+                document.querySelector("#vagas").value = d.vagas;
+                dialogTurma.showModal();
+                return;
+            }
+
+            const exc = e.target.closest(".excluir-turma");
+            if (exc) {
+                if (!confirm("Excluir esta turma? Todos os horários e aulas alocadas serão removidos.")) return;
+                const r = await fetch(`${apiUrl}/turmas/${exc.dataset.id}`, { method: "DELETE" });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                renderizar();
+            }
+        });
+
+        carregarBases().then(renderizar);
+    } // fim /adm/turmas
+
 }); // fim DOMContentLoaded

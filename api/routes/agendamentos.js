@@ -275,7 +275,8 @@ module.exports = function (wss) {
     router.get("/", async (req, res) => {
         const { status, sala_id } = req.query;
         const params = [];
-        const where = [];
+        // Apenas solicitações entram nesta lista; aulas (origem='aula') são geridas no módulo acadêmico
+        const where = ["a.origem = 'solicitacao'"];
 
         if (!ehDirecao(req.usuario)) {
             params.push(req.usuario.id);

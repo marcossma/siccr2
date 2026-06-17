@@ -46,6 +46,7 @@ const permissoesUsuario = require("./routes/permissoes-usuario.js");
 // Importar rotas do módulo acadêmico
 const periodosLetivos = require("./routes/periodos-letivos.js");
 const disciplinas = require("./routes/disciplinas.js");
+const turmas = require("./routes/turmas.js");
 // Importar rotas para notícias (proxy WordPress)
 const noticias = require("./routes/noticias.js");
 // Importar rotas para eventos (scraping WordPress)
@@ -195,6 +196,7 @@ app.use("/api/agendamentos",         autenticar, autorizar("servidor"),     agen
 // Módulo acadêmico: gestão restrita a chefe+ (coordenação/direção)
 app.use("/api/periodos-letivos",     autenticar, autorizar("chefe"),        periodosLetivos);
 app.use("/api/disciplinas",          autenticar, autorizar("chefe"),        disciplinas);
+app.use("/api/turmas",               autenticar, autorizar("chefe"),        turmas);
 
 // Funcionalidades: leitura para chefe+, gestão do catálogo apenas via painel super_admin
 app.use("/api/funcionalidades",   autenticar, autorizar("chefe"),        funcionalidades);
