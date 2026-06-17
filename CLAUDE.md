@@ -168,6 +168,15 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 - **agendamentos** — `id_agendamento`, `sala_id`(FK), `solicitante_user_id`(FK), `motivo`, `observacao`, `dia_inteiro`(bool), `hora_inicio`, `hora_fim`, `data_inicio`, `data_fim_recorrencia`, `tipo_recorrencia`(`pontual`/`semanal`/`mensal`), `dias_semana`, `intervalo_semanas`, `status`(`pendente`/`aprovada`/`rejeitada`/`cancelada`), `aprovado_por_user_id`, `data_decisao`, `motivo_rejeicao`, `createdat`
 - **agendamentos_ocorrencias** — `id_ocorrencia`, `agendamento_id`(FK), `data_ocorrencia`, `status_individual`(`ativa`/`cancelada`/...), `motivo_individual`
   - A série (regra de recorrência) vive em `agendamentos`; cada data concreta vira uma linha em `agendamentos_ocorrencias`. Conflito é checado por `(sala_id, data_ocorrencia)`.
+  - `agendamentos.origem` — `'solicitacao'` (reserva avulsa, workflow de aprovação) ou `'aula'` (gerada pelo módulo acadêmico). `agendamentos.turma_horario_id` (FK) rastreia a aula de volta ao horário da turma.
+
+### Acadêmico
+- **periodos_letivos** — `id_periodo`, `nome` (ex: `'2026.1'`), `data_inicio`, `data_fim`, `ativo` (só um ativo por vez)
+- **disciplinas** — `id_disciplina`, `codigo`, `nome`, `carga_horaria`, `subunidade_id`(FK, depto que oferece)
+- **professores_disciplinas** — `id`, `user_id`(FK), `disciplina_id`(FK) — N:N. "Professor" = qualquer `user` vinculado; sem tipo de permissão novo.
+- **turmas** — `id_turma`, `disciplina_id`(FK), `periodo_letivo_id`(FK), `nome_turma`, `professor_user_id`(FK), `vagas`
+- **turmas_horarios** — `id_horario`, `turma_id`(FK), `dia_semana`(0=dom..6=sáb), `hora_inicio`, `hora_fim`, `sala_id`(FK)
+  - **Alocação:** ao adicionar um `turma_horario` com sala, o backend materializa a aula — cria um `agendamento` (`origem='aula'`, `status='aprovada'`) expandido em ocorrências semanais por todo o período letivo (reusa `lib/recorrencia.js`), checando conflito de sala. Apagar o horário/turma cascateia para a aula e ocorrências (FK CASCADE).
 
 ### Financeiro
 - **tipos_recursos** — `id_tipo_recurso`, `tipo_recurso`, `descricao_recurso`
@@ -189,6 +198,8 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 | `POST /api/auth/login` | Login → retorna JWT |
 | `GET /api/noticias` | Proxy WordPress |
 | `GET /api/eventos` | Scraping eventos WordPress |
+| `GET /api/painel-tv/predios` | Prédios com salas agendáveis (kiosk TV) |
+| `GET /api/painel-tv/:predio_id` | Agenda de hoje do prédio (TV no hall; sem dados internos de reservas) |
 
 ### Protegidas (Bearer token obrigatório)
 | Rota | Nível mínimo | Arquivo |
@@ -207,6 +218,9 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 | `/api/previsoes-despesas` | chefe | routes/previsoes-despesas.js |
 | `/api/relatorios` | chefe | routes/relatorios.js |
 | `/api/agendamentos` | servidor* | routes/agendamentos.js |
+| `/api/periodos-letivos` | chefe | routes/periodos-letivos.js |
+| `/api/disciplinas` | chefe | routes/disciplinas.js |
+| `/api/turmas` | chefe | routes/turmas.js |
 | `/api/funcionalidades` | chefe | routes/funcionalidades.js |
 | `/api/permissoes-usuario` | chefe | routes/permissoes-usuario.js |
 | `/api/api-keys` | autenticado | routes/api-keys.js |
@@ -229,9 +243,14 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 | `GET /visao/portaria` | chefe+ ou `ver_agenda_portaria` | Agenda semanal p/ portaria |
 | `GET /salas/agendaveis` | logado | Salas com `is_agendavel=1` |
 
-`GET /api/relatorios/salas` (direção) — resumo, ocupação por sala, timeline semanal, top solicitantes, rejeições e detalhe. Usado em `/relatorios-salas`.
+`GET /api/relatorios/salas` (direção) — resumo, ocupação por sala (split aula/reserva), timeline, top solicitantes, rejeições e detalhe. Métricas de workflow filtram `origem='solicitacao'`; ocupação inclui aulas. Usado em `/relatorios-salas`.
+
+`/api/turmas` sub-rotas: `GET/POST/PUT/DELETE /` (CRUD turma), `GET /:id` (detalhe + horários), `POST /:id/horarios` (aloca + materializa aula; 409 com datas em conflito), `DELETE /:id/horarios/:horarioId`.
 
 "Direção" = `super_admin`/`diretor`/`vice_diretor`, ou `is_direcao_centro=true`, ou funcionalidade `aprovar_agendamento`/`ver_todos_agendamentos`.
+
+### Páginas do painel admin (`/adm/*`)
+unidades, subunidades, usuários, prédios, salas, salas-tipo, **periodos-letivos**, **disciplinas**, **turmas**, api-keys. Menu em `js/components/menu-navegacao-adm.js`.
 
 ---
 
@@ -303,6 +322,9 @@ Cor primária: `#009536` (verde CCR). Fonte padrão: `verdana, sans-serif`.
 | `/agenda-portaria` | chefe+ ou `ver_agenda_portaria` | Agenda semanal p/ portaria, navegável + imprimível |
 | `/solicitacoes-de-agendamento` | direção | Aprovar/rejeitar; rejeição mostra motivo inline |
 | `/relatorios-salas` | direção | Gráficos (Chart.js) + tabelas + PDF via `window.print()` |
+| `/painel-tv` | link p/ portaria/direção | Kiosk público p/ TV no hall (`?predio=ID`); standalone (sem scripts.js), auto-refresh 60s. JS em `js/painel-tv.js` |
+
+No calendário e na portaria, aulas (origem='aula') aparecem distintas de reservas: calendário pinta aula em azul e mostra disciplina/turma/professor; portaria idem.
 
 Impressão/PDF: páginas usam `@media print` p/ esconder menu/toolbar.
 
@@ -324,4 +346,5 @@ Impressão/PDF: páginas usam `@media print` p/ esconder menu/toolbar.
 
 - Relatórios financeiros não têm filtro por ano no frontend (endpoint `?ano=` existe no backend)
 - 5 vulnerabilidades npm restantes só corrigíveis com `--force` (breaking: bcrypt@6, downgrade sequelize@3) — tooling de build/migration, fora do request path; deixadas conscientemente
-- **Próximo módulo planejado:** acadêmico (disciplinas, professores↔disciplinas, alocação de salas por semestre, display em TV nos halls)
+- Alocação de aula (turma_horario) não tem edição in-place: edita-se removendo e re-adicionando o horário
+- Aulas alocadas não disparam tempo real (WS) no calendário/portaria/TV — refletem no próximo carregamento (TV faz polling 60s). Real-time só vale p/ solicitações.
