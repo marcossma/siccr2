@@ -1758,4 +1758,106 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     } // fim /adm/importar-servidores
 
+    // =========================================================================
+    // IMPORTAR SUBUNIDADES — /adm/importar-subunidades
+    // =========================================================================
+    if (urlParam === "/adm/importar-subunidades") {
+        const inputArquivo = document.querySelector("#impArquivo");
+        const dropTexto    = document.querySelector("#impDropTexto");
+        const resultado    = document.querySelector("#impResultado");
+        const corpo        = document.querySelector("#impCorpo");
+        const btnConfirmar = document.querySelector("#impConfirmar");
+        const btnCancelar  = document.querySelector("#impCancelar");
+
+        let linhasArquivo = [];
+
+        function formatarValor(v) {
+            if (v instanceof Date && !isNaN(v)) {
+                const dd = String(v.getDate()).padStart(2, "0");
+                const mm = String(v.getMonth() + 1).padStart(2, "0");
+                return `${dd}/${mm}/${v.getFullYear()}`;
+            }
+            return v === null || v === undefined ? "" : String(v).trim();
+        }
+
+        function resetar(texto) {
+            resultado.hidden = true;
+            linhasArquivo = [];
+            inputArquivo.value = "";
+            dropTexto.textContent = texto || "Clique para escolher o arquivo (.xlsx ou .csv)";
+        }
+
+        inputArquivo.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            dropTexto.textContent = file.name;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    const wb = XLSX.read(new Uint8Array(ev.target.result), { type: "array", cellDates: true });
+                    const sheet = wb.Sheets[wb.SheetNames[0]];
+                    const bruto = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: true });
+                    linhasArquivo = bruto.map((linha) => {
+                        const nova = {};
+                        Object.keys(linha).forEach((k) => { nova[k.trim()] = formatarValor(linha[k]); });
+                        return nova;
+                    });
+                    if (linhasArquivo.length === 0) { alert("A planilha está vazia."); return; }
+                    enviarPreview();
+                } catch (err) {
+                    console.error("Erro ao ler planilha:", err);
+                    alert("Não foi possível ler o arquivo. Verifique se é um .xlsx ou .csv válido.");
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        async function enviarPreview() {
+            try {
+                const r = await fetch(`${apiUrl}/importacao/subunidades/preview`, {
+                    method: "POST", body: JSON.stringify({ linhas: linhasArquivo }),
+                });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message || "Erro no preview."); return; }
+                const { linhas, resumo } = resp.data;
+                document.querySelector("#impTotal").textContent = resumo.total;
+                document.querySelector("#impNovos").textContent = resumo.novos;
+                document.querySelector("#impAtualizar").textContent = resumo.atualizar;
+                document.querySelector("#impIgnoradas").textContent = resumo.ignoradas || 0;
+                corpo.innerHTML = linhas.map((l) => `
+                    <tr class="imp-linha--${l.status}">
+                        <td class="imp-status imp-status--${l.status}">${l.status === "novo" ? "Novo" : "Já existe"}</td>
+                        <td>${l.codigo || "—"}</td>
+                        <td>${l.nome}</td>
+                    </tr>`).join("");
+                resultado.hidden = false;
+                btnConfirmar.disabled = resumo.novos === 0 && resumo.atualizar === 0;
+            } catch (err) {
+                console.error("Erro no preview:", err);
+                alert("Erro de comunicação ao processar o arquivo.");
+            }
+        }
+
+        btnConfirmar.addEventListener("click", async () => {
+            if (linhasArquivo.length === 0) return;
+            if (!confirm("Confirmar a importação das subunidades?")) return;
+            btnConfirmar.disabled = true;
+            try {
+                const r = await fetch(`${apiUrl}/importacao/subunidades`, {
+                    method: "POST", body: JSON.stringify({ linhas: linhasArquivo }),
+                });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message || "Erro ao importar."); btnConfirmar.disabled = false; return; }
+                alert(resp.message);
+                resetar();
+            } catch (err) {
+                console.error("Erro ao importar:", err);
+                alert("Erro de comunicação ao gravar a importação.");
+                btnConfirmar.disabled = false;
+            }
+        });
+
+        btnCancelar.addEventListener("click", () => resetar());
+    } // fim /adm/importar-subunidades
+
 }); // fim DOMContentLoaded

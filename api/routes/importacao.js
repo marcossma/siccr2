@@ -36,6 +36,14 @@ function campo(linha, nome) {
     return chave ? linha[chave] : undefined;
 }
 
+// "03.36.00.00.0.0" → "03.36" (remove segmentos finais só de zeros,
+// pra bater com o formato curto já usado em subunidades.subunidade_codigo)
+function normalizarCodigo(cod) {
+    const partes = String(cod || "").trim().split(".");
+    while (partes.length > 1 && /^0+$/.test(partes[partes.length - 1])) partes.pop();
+    return partes.join(".");
+}
+
 // Processa as linhas cruas → linhas mapeadas + resumo, usando os dados de apoio
 function processar(linhas, subunidadesPorNome, siapesExistentes) {
     const resultado = [];
@@ -196,6 +204,127 @@ router.post("/servidores", async (req, res) => {
         });
     } catch (error) {
         logger.error({ err: error }, "Erro ao importar servidores");
+        return res.status(500).json({ status: "error", message: "Erro ao gravar importação.", data: null });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// SUBUNIDADES — extraídas de DESCR_LOT_OFICIAL / COD_LOT_OFICIAL
+// (mesmo arquivo de servidores). Só CCR (código 03.xx); ignora o
+// próprio centro (03.00) e lotações de outros centros.
+// ═══════════════════════════════════════════════════════════════
+
+// Carrega subunidades existentes (por nome e por código) + unidade padrão (CCR)
+async function carregarApoioSubunidades(client = pool) {
+    const subs = await client.query("SELECT subunidade_id, subunidade_nome, subunidade_codigo FROM subunidades");
+    const porNome = new Map();
+    const porCodigo = new Map();
+    for (const s of subs.rows) {
+        porNome.set(normalizar(s.subunidade_nome), s);
+        const cod = normalizarCodigo(s.subunidade_codigo);
+        if (cod) porCodigo.set(cod, s);
+    }
+
+    const uni = await client.query("SELECT unidade_id FROM unidades ORDER BY unidade_id LIMIT 1");
+    const unidadePadrao = uni.rows[0] ? uni.rows[0].unidade_id : null;
+
+    return { porNome, porCodigo, unidadePadrao };
+}
+
+// Extrai subunidades distintas (CCR) das linhas + classifica novo/atualizar.
+// Dedup contra existentes por código OU nome normalizado.
+function processarSubunidades(linhas, porNome, porCodigo) {
+    const distintas = new Map(); // chave: código (fallback nome)
+    let ignoradas = 0;
+
+    for (const linha of linhas) {
+        const nome = String(campo(linha, "DESCR_LOT_OFICIAL") || "").trim();
+        const codigo = normalizarCodigo(campo(linha, "COD_LOT_OFICIAL"));
+        if (!nome) { continue; }
+        // Só CCR: código começa com "03."; ignora o próprio centro (03 / 03.00)
+        if (!codigo.startsWith("03.") || codigo === "03.00") { ignoradas++; continue; }
+        if (normalizar(nome) === "CENTRO DE CIENCIAS RURAIS") { ignoradas++; continue; }
+
+        const chave = codigo || normalizar(nome);
+        if (!distintas.has(chave)) distintas.set(chave, { nome, codigo });
+    }
+
+    let novos = 0, atualizar = 0;
+    const resultado = [...distintas.values()].map((s) => {
+        const existente = porCodigo.get(s.codigo) || porNome.get(normalizar(s.nome));
+        const status = existente ? "atualizar" : "novo";
+        if (existente) atualizar++; else novos++;
+        return {
+            nome: s.nome, codigo: s.codigo, status,
+            subunidade_id_existente: existente ? existente.subunidade_id : null,
+        };
+    });
+    resultado.sort((a, b) => a.nome.localeCompare(b.nome));
+
+    return { linhas: resultado, resumo: { total: resultado.length, novos, atualizar, erros: 0, ignoradas } };
+}
+
+// POST /subunidades/preview
+router.post("/subunidades/preview", async (req, res) => {
+    const linhas = validarEntrada(req, res);
+    if (!linhas) return;
+    try {
+        const { porNome, porCodigo } = await carregarApoioSubunidades();
+        return res.status(200).json({ status: "success", message: "", data: processarSubunidades(linhas, porNome, porCodigo) });
+    } catch (error) {
+        logger.error({ err: error }, "Erro no preview de subunidades");
+        return res.status(500).json({ status: "error", message: "Erro ao processar arquivo.", data: null });
+    }
+});
+
+// POST /subunidades — insere novas / atualiza código das existentes
+router.post("/subunidades", async (req, res) => {
+    const linhas = validarEntrada(req, res);
+    if (!linhas) return;
+    try {
+        const { porNome, porCodigo, unidadePadrao } = await carregarApoioSubunidades();
+        if (!unidadePadrao) {
+            return res.status(400).json({ status: "error", message: "Nenhuma unidade cadastrada para vincular as subunidades.", data: null });
+        }
+        const { linhas: processadas } = processarSubunidades(linhas, porNome, porCodigo);
+
+        const client = await pool.connect();
+        let inseridos = 0, atualizados = 0;
+        try {
+            await client.query("BEGIN");
+            for (const s of processadas) {
+                if (s.status === "novo") {
+                    await client.query(
+                        `INSERT INTO subunidades (subunidade_nome, subunidade_codigo, unidade_id, is_direcao_centro)
+                         VALUES ($1, $2, $3, FALSE)`,
+                        [s.nome, s.codigo, unidadePadrao]
+                    );
+                    inseridos++;
+                } else {
+                    // Preenche o código quando ainda estiver vazio; não sobrescreve nome/sigla/etc.
+                    await client.query(
+                        `UPDATE subunidades SET subunidade_codigo = COALESCE(NULLIF(subunidade_codigo, ''), $1)
+                         WHERE subunidade_id = $2`,
+                        [s.codigo, s.subunidade_id_existente]
+                    );
+                    atualizados++;
+                }
+            }
+            await client.query("COMMIT");
+        } catch (error) {
+            await client.query("ROLLBACK");
+            throw error;
+        } finally {
+            client.release();
+        }
+
+        return res.status(200).json({
+            status: "success",
+            message: `Importação concluída: ${inseridos} nova(s), ${atualizados} atualizada(s).`,
+            data: { inseridos, atualizados },
+        });
+    } catch (error) {
+        logger.error({ err: error }, "Erro ao importar subunidades");
         return res.status(500).json({ status: "error", message: "Erro ao gravar importação.", data: null });
     }
 });
