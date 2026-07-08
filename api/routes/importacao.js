@@ -310,9 +310,11 @@ router.post("/subunidades", async (req, res) => {
                     );
                     inseridos++;
                 } else {
-                    // Padroniza o código no formato completo; não mexe em nome/sigla/etc.
+                    // Modo aditivo: só preenche o código quando está vazio;
+                    // se já existe um código, mantém intacto. Não mexe em nome/sigla/etc.
                     await client.query(
-                        `UPDATE subunidades SET subunidade_codigo = $1 WHERE subunidade_id = $2`,
+                        `UPDATE subunidades SET subunidade_codigo = COALESCE(NULLIF(subunidade_codigo, ''), $1)
+                         WHERE subunidade_id = $2`,
                         [s.codigo, s.subunidade_id_existente]
                     );
                     atualizados++;
