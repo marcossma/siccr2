@@ -180,10 +180,16 @@ router.post("/servidores", async (req, res) => {
                     );
                     inseridos++;
                 } else {
+                    // Modo aditivo: só preenche campos vazios; nunca sobrescreve
+                    // valor já existente. Credenciais (senha/email/whatsapp/permissao)
+                    // não entram no SET → sempre preservadas.
                     await client.query(
-                        `UPDATE users
-                         SET nome = $1, data_nascimento = $2, subunidade_id = COALESCE($3, subunidade_id),
-                             cargo = $4, tipo_servidor = $5
+                        `UPDATE users SET
+                            nome            = COALESCE(NULLIF(nome, ''), $1),
+                            data_nascimento = COALESCE(data_nascimento, $2),
+                            subunidade_id   = COALESCE(subunidade_id, $3),
+                            cargo           = COALESCE(NULLIF(cargo, ''), $4),
+                            tipo_servidor   = COALESCE(NULLIF(tipo_servidor, ''), $5)
                          WHERE siape = $6`,
                         [l.nome, l.nascimento, l.subunidade_id, l.cargo, l.tipo_servidor, l.siape]
                     );
