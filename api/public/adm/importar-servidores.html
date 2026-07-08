@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICCR - Importar Servidores</title>
+    <link rel="shortcut icon" href="../img/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/dialogs.css">
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/ui-kit.css">
+    <link rel="stylesheet" href="./css/dialogs.css">
+    <script src="./js/guard.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script type="module" src="./js/script.js"></script>
+    <style>
+        .imp-dropzone {
+            border: 2px dashed #009536;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            background: #f5fbf7;
+            cursor: pointer;
+        }
+        .imp-dropzone input { display: none; }
+        .imp-cards { display: flex; gap: 12px; flex-wrap: wrap; margin: 16px 0; }
+        .imp-card {
+            flex: 1; min-width: 120px; background: #fff; border-radius: 8px;
+            padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.1); text-align: center;
+        }
+        .imp-card .num { font-size: 26px; font-weight: bold; }
+        .imp-card.novos .num { color: #007a2e; }
+        .imp-card.atualizar .num { color: #1971c2; }
+        .imp-card.erros .num { color: #c92a2a; }
+        .imp-tabela-wrap { max-height: 420px; overflow: auto; border: 1px solid #eee; border-radius: 6px; }
+        .imp-tabela { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .imp-tabela th, .imp-tabela td { padding: 6px 8px; border-bottom: 1px solid #eee; text-align: left; white-space: nowrap; }
+        .imp-tabela th { position: sticky; top: 0; background: #009536; color: #fff; z-index: 1; }
+        .imp-linha--erro { background: #fdecec; }
+        .imp-linha--atualizar { background: #eef6fd; }
+        .imp-status { font-weight: 600; }
+        .imp-status--novo { color: #007a2e; }
+        .imp-status--atualizar { color: #1971c2; }
+        .imp-status--erro { color: #c92a2a; }
+        .imp-alerta { background: #fff8e1; border-left: 4px solid #f59f00; padding: 10px 12px; border-radius: 4px; margin: 12px 0; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/">
+                <img src="../img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo">
+            </a>
+            <div class="acesso">
+                <span id="adminNome"></span>
+                <a href="#" id="btnSair">Sair</a>
+            </div>
+        </header>
+        <div>
+            <responsive-menu></responsive-menu>
+        </div>
+        <main class="flex flex--column">
+            <section class="titulo_painel flex justify--space--between align--items--center">
+                <h1 class="flex align--items--center gap--15">
+                    <i class="bi bi-file-earmark-arrow-up font--size--40"></i>
+                    Painel Administrativo - Importar Servidores
+                </h1>
+            </section>
+
+            <div>
+                <menu-navegacao-adm></menu-navegacao-adm>
+            </div>
+
+            <section class="informacoes_painel" style="padding:16px">
+                <p style="margin-bottom:12px;font-size:13px;color:#555">
+                    Selecione um arquivo <strong>.xlsx</strong> ou <strong>.csv</strong> com os servidores.
+                    Colunas esperadas: <code>MATR_EXTERNA</code>, <code>NOME_FUNCIONARIO</code>,
+                    <code>DT_NASCIMENTO</code>, <code>DESCR_LOT_OFICIAL</code>, <code>CARGO</code>, <code>TIPO_SERVIDOR</code>.
+                    A senha inicial de novos servidores será o próprio SIAPE.
+                </p>
+
+                <label class="imp-dropzone" id="impDrop">
+                    <i class="bi bi-cloud-arrow-up font--size--40" style="color:#009536"></i>
+                    <div id="impDropTexto">Clique para escolher o arquivo (.xlsx ou .csv)</div>
+                    <input type="file" id="impArquivo" accept=".xlsx,.xls,.csv">
+                </label>
+
+                <div id="impResultado" hidden>
+                    <div class="imp-cards">
+                        <div class="imp-card"><div class="num" id="impTotal">0</div><div>Total</div></div>
+                        <div class="imp-card novos"><div class="num" id="impNovos">0</div><div>Novos</div></div>
+                        <div class="imp-card atualizar"><div class="num" id="impAtualizar">0</div><div>Atualizar</div></div>
+                        <div class="imp-card erros"><div class="num" id="impErros">0</div><div>Com erro</div></div>
+                    </div>
+
+                    <div id="impAlertaDeptos" class="imp-alerta" hidden></div>
+
+                    <div class="imp-tabela-wrap">
+                        <table class="imp-tabela">
+                            <thead>
+                                <tr>
+                                    <th>Status</th><th>SIAPE</th><th>Nome</th><th>Nascimento</th>
+                                    <th>Departamento</th><th>Subunidade</th><th>Cargo</th><th>Tipo</th><th>Obs.</th>
+                                </tr>
+                            </thead>
+                            <tbody id="impCorpo"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="row" style="margin-top:16px">
+                        <button type="button" id="impConfirmar" class="btnPainelFormulario cadastrarUnidade">Confirmar importação</button>
+                        <button type="button" id="impCancelar" class="btnPainelFormulario cancelarUnidade">Cancelar</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+        <footer>Rodapé</footer>
+    </div>
+
+    <script type="module" src="../js/components/index.js"></script>
+</body>
+</html>

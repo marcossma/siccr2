@@ -1624,4 +1624,138 @@ document.addEventListener("DOMContentLoaded", function() {
         carregarBases().then(renderizar);
     } // fim /adm/turmas
 
+    // =========================================================================
+    // IMPORTAR SERVIDORES — /adm/importar-servidores
+    // =========================================================================
+    if (urlParam === "/adm/importar-servidores") {
+        const inputArquivo = document.querySelector("#impArquivo");
+        const dropTexto    = document.querySelector("#impDropTexto");
+        const resultado    = document.querySelector("#impResultado");
+        const corpo        = document.querySelector("#impCorpo");
+        const alertaDeptos = document.querySelector("#impAlertaDeptos");
+        const btnConfirmar = document.querySelector("#impConfirmar");
+        const btnCancelar  = document.querySelector("#impCancelar");
+
+        let linhasArquivo = [];
+
+        function formatarValor(v) {
+            if (v instanceof Date && !isNaN(v)) {
+                const dd = String(v.getDate()).padStart(2, "0");
+                const mm = String(v.getMonth() + 1).padStart(2, "0");
+                return `${dd}/${mm}/${v.getFullYear()}`;
+            }
+            return v === null || v === undefined ? "" : String(v).trim();
+        }
+
+        function lerPlanilha(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const wb = XLSX.read(new Uint8Array(e.target.result), { type: "array", cellDates: true });
+                    const sheet = wb.Sheets[wb.SheetNames[0]];
+                    const bruto = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: true });
+                    // Normaliza valores (datas → dd/mm/yyyy, resto → string)
+                    linhasArquivo = bruto.map((linha) => {
+                        const nova = {};
+                        Object.keys(linha).forEach((k) => { nova[k.trim()] = formatarValor(linha[k]); });
+                        return nova;
+                    });
+                    if (linhasArquivo.length === 0) { alert("A planilha está vazia."); return; }
+                    enviarPreview();
+                } catch (err) {
+                    console.error("Erro ao ler planilha:", err);
+                    alert("Não foi possível ler o arquivo. Verifique se é um .xlsx ou .csv válido.");
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function enviarPreview() {
+            try {
+                const r = await fetch(`${apiUrl}/importacao/servidores/preview`, {
+                    method: "POST", body: JSON.stringify({ linhas: linhasArquivo }),
+                });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message || "Erro no preview."); return; }
+                renderizarPreview(resp.data);
+            } catch (err) {
+                console.error("Erro no preview:", err);
+                alert("Erro de comunicação ao processar o arquivo.");
+            }
+        }
+
+        function renderizarPreview(data) {
+            const { linhas, resumo } = data;
+            document.querySelector("#impTotal").textContent = resumo.total;
+            document.querySelector("#impNovos").textContent = resumo.novos;
+            document.querySelector("#impAtualizar").textContent = resumo.atualizar;
+            document.querySelector("#impErros").textContent = resumo.erros;
+
+            if (resumo.departamentos_nao_encontrados.length > 0) {
+                alertaDeptos.hidden = false;
+                alertaDeptos.innerHTML =
+                    `<strong>${resumo.departamentos_nao_encontrados.length} departamento(s) não encontrado(s)</strong> ` +
+                    `nas subunidades cadastradas (serão importados sem departamento):<br>` +
+                    resumo.departamentos_nao_encontrados.map(d => `• ${d}`).join("<br>");
+            } else {
+                alertaDeptos.hidden = true;
+            }
+
+            corpo.innerHTML = linhas.map((l) => `
+                <tr class="imp-linha--${l.status}">
+                    <td class="imp-status imp-status--${l.status}">${
+                        l.status === "novo" ? "Novo" : l.status === "atualizar" ? "Atualizar" : "Erro"}</td>
+                    <td>${l.siape || "—"}</td>
+                    <td>${l.nome || "—"}</td>
+                    <td>${l.nascimento || "—"}</td>
+                    <td>${l.departamento || "—"}</td>
+                    <td>${l.subunidade_nome || (l.departamento ? "<em style='color:#c92a2a'>não mapeado</em>" : "—")}</td>
+                    <td>${l.cargo || "—"}</td>
+                    <td>${l.tipo_servidor || "—"}</td>
+                    <td>${l.erro || ""}</td>
+                </tr>
+            `).join("");
+
+            resultado.hidden = false;
+            btnConfirmar.disabled = (resumo.novos + resumo.atualizar) === 0;
+        }
+
+        inputArquivo.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            dropTexto.textContent = file.name;
+            lerPlanilha(file);
+        });
+
+        btnConfirmar.addEventListener("click", async () => {
+            if (linhasArquivo.length === 0) return;
+            if (!confirm("Confirmar a importação dos servidores?")) return;
+            btnConfirmar.disabled = true;
+            try {
+                const r = await fetch(`${apiUrl}/importacao/servidores`, {
+                    method: "POST", body: JSON.stringify({ linhas: linhasArquivo }),
+                });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message || "Erro ao importar."); btnConfirmar.disabled = false; return; }
+                alert(resp.message);
+                // Reset
+                resultado.hidden = true;
+                linhasArquivo = [];
+                inputArquivo.value = "";
+                dropTexto.textContent = "Clique para escolher o arquivo (.xlsx ou .csv)";
+            } catch (err) {
+                console.error("Erro ao importar:", err);
+                alert("Erro de comunicação ao gravar a importação.");
+                btnConfirmar.disabled = false;
+            }
+        });
+
+        btnCancelar.addEventListener("click", () => {
+            resultado.hidden = true;
+            linhasArquivo = [];
+            inputArquivo.value = "";
+            dropTexto.textContent = "Clique para escolher o arquivo (.xlsx ou .csv)";
+        });
+    } // fim /adm/importar-servidores
+
 }); // fim DOMContentLoaded

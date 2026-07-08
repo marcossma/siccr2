@@ -1,12 +1,12 @@
 -- Schema dump gerado automaticamente. NÃO editar manualmente.
--- Origem: docker compose db (siccr) — 2026-06-17T15:11:08.799Z
+-- Origem: docker compose db (siccr) — 2026-07-08T12:13:21.938Z
 -- Regenere com: npm run db:dump
 
 --
 -- PostgreSQL database dump
 --
 
-\restrict efhPuf9AS2X6txXcK1fOM1CIfk1vYoDEKykjB9Jmz2sfVEhHPltRRghb2K3ehN5
+\restrict P6Zen6hrAuHOkD1JExhswGCRaM6rdeqbVphediX7SRvnCk0Ae5M1L7yujSRW8BN
 
 -- Dumped from database version 16.13
 -- Dumped by pg_dump version 16.13
@@ -843,7 +843,9 @@ CREATE TABLE public.users (
     createdat timestamp with time zone,
     updatedat timestamp with time zone,
     updatedforuser integer,
-    unidade_id integer
+    unidade_id integer,
+    cargo character varying(120),
+    tipo_servidor character varying(1)
 );
 
 
@@ -1561,5 +1563,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict efhPuf9AS2X6txXcK1fOM1CIfk1vYoDEKykjB9Jmz2sfVEhHPltRRghb2K3ehN5
+\unrestrict P6Zen6hrAuHOkD1JExhswGCRaM6rdeqbVphediX7SRvnCk0Ae5M1L7yujSRW8BN
 

@@ -12,6 +12,7 @@ class MenuNavegacaoAdm extends HTMLElement {
             { href: "/adm/periodos-letivos", icone: "bi-calendar-range", label: "Períodos letivos" },
             { href: "/adm/disciplinas", icone: "bi-journal-bookmark", label: "Disciplinas" },
             { href: "/adm/turmas",      icone: "bi-people-fill",    label: "Turmas" },
+            { href: "/adm/importar-servidores", icone: "bi-file-earmark-arrow-up", label: "Importar servidores" },
             { href: "/adm/api-keys",    icone: "bi-key",            label: "API Keys" },
         ];
 
