@@ -1,6 +1,7 @@
 const express = require("express");
 const pool = require("../config/database.js");
 const { getNivelAcesso } = require("../middlewares/autorizar.js");
+const { padronizarCodigo } = require("../lib/codigo.js");
 
 const router = express.Router();
 
@@ -89,8 +90,8 @@ router.post("/", async (req, res) => {
         });
     }
 
-    // Normaliza separador decimal do código
-    subunidade_codigo = subunidade_codigo.replace(",", ".");
+    // Padroniza o código no formato XX.XX.XX.XX.X.X (auto-preenche zeros)
+    subunidade_codigo = padronizarCodigo(subunidade_codigo);
 
     try {
         const { rows } = await pool.query(
@@ -124,7 +125,7 @@ router.put("/:id", async (req, res) => {
         });
     }
 
-    subunidade_codigo = subunidade_codigo.replace(",", ".");
+    subunidade_codigo = padronizarCodigo(subunidade_codigo);
 
     try {
         const { rows, rowCount } = await pool.query(

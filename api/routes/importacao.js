@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const pool = require("../config/database.js");
 const logger = require("../lib/logger.js");
+const { padronizarCodigo } = require("../lib/codigo.js");
 
 const router = express.Router();
 
@@ -239,23 +240,25 @@ function processarSubunidades(linhas, porNome, porCodigo) {
 
     for (const linha of linhas) {
         const nome = String(campo(linha, "DESCR_LOT_OFICIAL") || "").trim();
-        const codigo = normalizarCodigo(campo(linha, "COD_LOT_OFICIAL"));
+        // codigoCurto (sem zeros à direita) é usado só para dedup/comparação
+        const codigoCurto = normalizarCodigo(campo(linha, "COD_LOT_OFICIAL"));
         if (!nome) { continue; }
         // Só CCR: código começa com "03."; ignora o próprio centro (03 / 03.00)
-        if (!codigo.startsWith("03.") || codigo === "03.00") { ignoradas++; continue; }
+        if (!codigoCurto.startsWith("03.") || codigoCurto === "03.00") { ignoradas++; continue; }
         if (normalizar(nome) === "CENTRO DE CIENCIAS RURAIS") { ignoradas++; continue; }
 
-        const chave = codigo || normalizar(nome);
-        if (!distintas.has(chave)) distintas.set(chave, { nome, codigo });
+        const chave = codigoCurto || normalizar(nome);
+        if (!distintas.has(chave)) distintas.set(chave, { nome, codigoCurto });
     }
 
     let novos = 0, atualizar = 0;
     const resultado = [...distintas.values()].map((s) => {
-        const existente = porCodigo.get(s.codigo) || porNome.get(normalizar(s.nome));
+        const existente = porCodigo.get(s.codigoCurto) || porNome.get(normalizar(s.nome));
         const status = existente ? "atualizar" : "novo";
         if (existente) atualizar++; else novos++;
         return {
-            nome: s.nome, codigo: s.codigo, status,
+            // Armazena/exibe no formato completo XX.XX.XX.XX.X.X
+            nome: s.nome, codigo: padronizarCodigo(s.codigoCurto), status,
             subunidade_id_existente: existente ? existente.subunidade_id : null,
         };
     });
@@ -301,10 +304,9 @@ router.post("/subunidades", async (req, res) => {
                     );
                     inseridos++;
                 } else {
-                    // Preenche o código quando ainda estiver vazio; não sobrescreve nome/sigla/etc.
+                    // Padroniza o código no formato completo; não mexe em nome/sigla/etc.
                     await client.query(
-                        `UPDATE subunidades SET subunidade_codigo = COALESCE(NULLIF(subunidade_codigo, ''), $1)
-                         WHERE subunidade_id = $2`,
+                        `UPDATE subunidades SET subunidade_codigo = $1 WHERE subunidade_id = $2`,
                         [s.codigo, s.subunidade_id_existente]
                     );
                     atualizados++;
