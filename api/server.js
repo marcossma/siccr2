@@ -64,7 +64,9 @@ const { autorizar } = require("./middlewares/autorizar.js");
 const PORT = process.env.PORT || 15000;
 
 const app = express();
-app.use(express.json());
+// Limite ampliado (padrão do Express é 100kb) para acomodar importação de
+// planilhas grandes enviadas como JSON pelo painel admin.
+app.use(express.json({ limit: "10mb" }));
 
 // Request logger: adiciona req.log com contexto (request_id, método, rota, status, latência)
 app.use(pinoHttp({
