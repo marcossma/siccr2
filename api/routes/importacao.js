@@ -6,7 +6,7 @@ const { padronizarCodigo } = require("../lib/codigo.js");
 
 const router = express.Router();
 
-const MAX_LINHAS = 5000;
+const MAX_LINHAS = 20000; // a grade de disciplinas tem milhares de linhas
 
 // Normaliza texto p/ comparação: maiúsculas, sem acento, espaços colapsados
 function normalizar(s) {
@@ -336,6 +336,373 @@ router.post("/subunidades", async (req, res) => {
     } catch (error) {
         logger.error({ err: error }, "Erro ao importar subunidades");
         return res.status(500).json({ status: "error", message: "Erro ao gravar importação.", data: null });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// DISCIPLINAS / GRADE HORÁRIA (planilha do SIA)
+// Cada linha = (turma × slot de horário × professor). Agrupamos por
+// ID_TURMA para reconstruir turmas, horários (co-docência) e professores.
+// Importa só linhas com dia+horário (ignora orientação/TCC/estágio/EAD).
+// ═══════════════════════════════════════════════════════════════
+
+function parseHora(v) {
+    const s = String(v || "").trim();
+    const m = s.match(/^(\d{1,2}):(\d{2})/);
+    if (!m) return null;
+    return `${m[1].padStart(2, "0")}:${m[2]}:00`;
+}
+
+// CSV usa 1=domingo..7=sábado; nosso banco usa 0=dom..6=sáb
+function parseDiaSemana(v) {
+    const n = parseInt(String(v || "").trim(), 10);
+    if (Number.isNaN(n) || n < 1 || n > 7) return null;
+    return n - 1;
+}
+
+function parseEncargo(v) {
+    const s = String(v === null || v === undefined ? "" : v).replace(",", ".").trim();
+    if (s === "") return null;
+    const n = parseFloat(s);
+    return Number.isNaN(n) ? null : n;
+}
+
+function normalizarTipoAula(v) {
+    const t = normalizar(v);
+    if (t.startsWith("TEORICA")) return t.includes("EXT") ? "teorica_ext" : "teorica";
+    if (t.startsWith("PRATICA")) return t.includes("EXT") ? "pratica_ext" : "pratica";
+    return null;
+}
+
+// Nome do período letivo a partir de ANO + PERIODO ("1. Semestre" → "2026.1")
+function nomePeriodo(ano, periodo) {
+    const a = String(ano || "").trim();
+    const m = String(periodo || "").match(/(\d)/);
+    if (!a || !m) return null;
+    return `${a}.${m[1]}`;
+}
+
+// Analisa as linhas cruas e reconstrói as entidades da grade
+function analisarDisciplinas(linhas) {
+    const periodos = new Map();      // nome -> { nome, data_inicio, data_fim }
+    const cursos = new Map();        // cod_curso -> { cod_curso, nome }
+    const disciplinas = new Map();   // codigo(norm) -> { codigo, nome, carga_horaria }
+    const professores = new Map();   // siape -> { siape, nome }
+    const turmas = new Map();        // id_turma_externo -> {...}
+    let comHorario = 0, semHorario = 0;
+
+    for (const linha of linhas) {
+        const dia = parseDiaSemana(campo(linha, "DIA_SEMANA_ITEM"));
+        const horaIni = parseHora(campo(linha, "HR_INICIO"));
+        // Só aulas com dia + horário (descarta orientação/TCC/dissertação/estágio/EAD)
+        if (dia === null || !horaIni) { semHorario++; continue; }
+        comHorario++;
+
+        const idTurma = parseInt(String(campo(linha, "ID_TURMA") || "").trim(), 10);
+        if (Number.isNaN(idTurma)) continue;
+
+        const codCurso = String(campo(linha, "COD_CURSO") || "").trim();
+        const nomeCurso = String(campo(linha, "UNIDADE_CURSO") || "").trim();
+        const codDisc = String(campo(linha, "COD_DISCIPLINA") || "").trim();
+        const nomeDisc = String(campo(linha, "NOME_DISCIPLINA") || "").trim();
+        const ch = parseCargaHorariaLocal(campo(linha, "CH_DISCIPLINA"));
+        const periodoNome = nomePeriodo(campo(linha, "ANO"), campo(linha, "PERIODO"));
+        const dtIni = parseDataBr(campo(linha, "DT_INICIO_PERIODO"));
+        const dtFim = parseDataBr(campo(linha, "DT_FIM_PERIODO"));
+        const siape = String(campo(linha, "MATR_EXTERNA") || "").trim();
+        const nomeDoc = String(campo(linha, "NOME_DOCENTE") || "").trim();
+
+        // Período (datas = min início / max fim entre as linhas)
+        if (periodoNome) {
+            const p = periodos.get(periodoNome) || { nome: periodoNome, data_inicio: dtIni, data_fim: dtFim };
+            if (dtIni && (!p.data_inicio || dtIni < p.data_inicio)) p.data_inicio = dtIni;
+            if (dtFim && (!p.data_fim || dtFim > p.data_fim)) p.data_fim = dtFim;
+            periodos.set(periodoNome, p);
+        }
+        if (codCurso && !cursos.has(codCurso)) cursos.set(codCurso, { cod_curso: codCurso, nome: nomeCurso });
+        const dkey = normalizar(codDisc);
+        if (dkey && !disciplinas.has(dkey)) disciplinas.set(dkey, { codigo: codDisc, nome: nomeDisc, carga_horaria: ch });
+        if (siape && /^\d+$/.test(siape) && !professores.has(siape)) professores.set(siape, { siape, nome: nomeDoc });
+
+        // Turma
+        let t = turmas.get(idTurma);
+        if (!t) {
+            t = {
+                id_turma_externo: idTurma,
+                cod_curso: codCurso, codigoDisc: dkey, periodoNome,
+                nome_turma: String(campo(linha, "COD_TURMA") || "").trim().slice(0, 30),
+                vagas: parseCargaHorariaLocal(campo(linha, "VAGAS_OFERECIDAS")),
+                professores: new Map(), // siape -> encargo
+                horarios: new Map(),
+            };
+            turmas.set(idTurma, t);
+        }
+
+        // Professor da turma (co-docência) + encargo (guarda o maior)
+        if (siape && /^\d+$/.test(siape)) {
+            const enc = parseEncargo(campo(linha, "ENCARGO_DOCENT"));
+            const atual = t.professores.get(siape);
+            if (atual === undefined || (enc !== null && (atual === null || enc > atual))) {
+                t.professores.set(siape, enc);
+            }
+        }
+
+        // Horário (dedup por dia+hora+tipo+datas cruas da linha)
+        const horaFim = parseHora(campo(linha, "HR_FIM"));
+        const tipo = normalizarTipoAula(campo(linha, "TIPO_AULA"));
+        const hkey = [dia, horaIni, horaFim, tipo || "", dtIni || "", dtFim || ""].join("|");
+        if (!t.horarios.has(hkey)) {
+            t.horarios.set(hkey, { dia_semana: dia, hora_inicio: horaIni, hora_fim: horaFim, tipo_aula: tipo, data_inicio: dtIni, data_fim: dtFim });
+        }
+    }
+
+    // Normaliza blocos: horário que cobre o período inteiro → datas nulas
+    // (só os modulares guardam sub-range). Feito após o loop, com o período completo.
+    for (const t of turmas.values()) {
+        const p = periodos.get(t.periodoNome);
+        if (!p) continue;
+        for (const h of t.horarios.values()) {
+            if (h.data_inicio === p.data_inicio && h.data_fim === p.data_fim) {
+                h.data_inicio = null;
+                h.data_fim = null;
+            }
+        }
+    }
+
+    return { periodos, cursos, disciplinas, professores, turmas, comHorario, semHorario };
+}
+
+function parseCargaHorariaLocal(v) {
+    if (v === undefined || v === null || String(v).trim() === "") return null;
+    const n = parseInt(String(v).trim(), 10);
+    return Number.isNaN(n) || n < 0 ? null : n;
+}
+
+async function carregarApoioDisciplinas(client = pool) {
+    const [per, cur, dis, usr, tur] = await Promise.all([
+        client.query("SELECT id_periodo, nome FROM periodos_letivos"),
+        client.query("SELECT id_curso, cod_curso FROM cursos"),
+        client.query("SELECT id_disciplina, codigo FROM disciplinas"),
+        client.query("SELECT user_id, siape FROM users WHERE siape IS NOT NULL"),
+        client.query("SELECT id_turma, id_turma_externo FROM turmas WHERE id_turma_externo IS NOT NULL"),
+    ]);
+    return {
+        periodosPorNome: new Map(per.rows.map((r) => [r.nome, r.id_periodo])),
+        cursosPorCod: new Map(cur.rows.map((r) => [String(r.cod_curso), r.id_curso])),
+        disciplinasPorCodigo: new Map(dis.rows.filter((r) => r.codigo).map((r) => [normalizar(r.codigo), r.id_disciplina])),
+        usersPorSiape: new Map(usr.rows.map((r) => [String(r.siape).trim(), r.user_id])),
+        turmasPorExterno: new Map(tur.rows.map((r) => [r.id_turma_externo, r.id_turma])),
+    };
+}
+
+// POST /disciplinas/preview — dry-run com agregados
+router.post("/disciplinas/preview", async (req, res) => {
+    const linhas = validarEntrada(req, res);
+    if (!linhas) return;
+    try {
+        const a = analisarDisciplinas(linhas);
+        const apoio = await carregarApoioDisciplinas();
+
+        const professoresACriar = [...a.professores.values()]
+            .filter((p) => !apoio.usersPorSiape.has(p.siape));
+        const cursosNovos = [...a.cursos.keys()].filter((c) => !apoio.cursosPorCod.has(String(c))).length;
+        const discNovas = [...a.disciplinas.keys()].filter((c) => !apoio.disciplinasPorCodigo.has(c)).length;
+        const turmasNovas = [...a.turmas.keys()].filter((id) => !apoio.turmasPorExterno.has(id)).length;
+        let totalHorarios = 0;
+        for (const t of a.turmas.values()) totalHorarios += t.horarios.size;
+
+        // Amostra p/ conferência
+        const amostra = [...a.turmas.values()].slice(0, 15).map((t) => ({
+            id_turma_externo: t.id_turma_externo,
+            curso: a.cursos.get(t.cod_curso)?.nome || t.cod_curso,
+            disciplina: a.disciplinas.get(t.codigoDisc)?.nome || t.codigoDisc,
+            turma: t.nome_turma,
+            horarios: t.horarios.size,
+            professores: t.professores.size,
+        }));
+
+        return res.status(200).json({
+            status: "success", message: "",
+            data: {
+                resumo: {
+                    linhas_total: linhas.length,
+                    linhas_aula: a.comHorario,
+                    linhas_ignoradas: a.semHorario,
+                    periodos: a.periodos.size,
+                    cursos: a.cursos.size, cursos_novos: cursosNovos,
+                    disciplinas: a.disciplinas.size, disciplinas_novas: discNovas,
+                    turmas: a.turmas.size, turmas_novas: turmasNovas,
+                    horarios: totalHorarios,
+                    professores: a.professores.size,
+                    professores_a_criar: professoresACriar.length,
+                },
+                periodos: [...a.periodos.values()],
+                professores_a_criar: professoresACriar.slice(0, 100),
+                amostra,
+            },
+        });
+    } catch (error) {
+        logger.error({ err: error }, "Erro no preview de disciplinas");
+        return res.status(500).json({ status: "error", message: "Erro ao processar arquivo.", data: null });
+    }
+});
+
+// POST /disciplinas — grava a grade (idempotente por id_turma_externo)
+router.post("/disciplinas", async (req, res) => {
+    const linhas = validarEntrada(req, res);
+    if (!linhas) return;
+    try {
+        const a = analisarDisciplinas(linhas);
+        const apoio = await carregarApoioDisciplinas();
+
+        // Hash das senhas dos professores novos (senha inicial = SIAPE), em paralelo
+        const novos = [...a.professores.values()].filter((p) => !apoio.usersPorSiape.has(p.siape));
+        const hashPorSiape = new Map();
+        await Promise.all(novos.map(async (p) => {
+            hashPorSiape.set(p.siape, await bcrypt.hash(p.siape, 10));
+        }));
+
+        const client = await pool.connect();
+        const contadores = { periodos: 0, cursos: 0, disciplinas: 0, professores_criados: 0, turmas: 0, horarios: 0, vinculos: 0 };
+        try {
+            await client.query("BEGIN");
+
+            // 1) Períodos (upsert por nome)
+            const periodoId = new Map();
+            for (const p of a.periodos.values()) {
+                const r = await client.query(
+                    `INSERT INTO periodos_letivos (nome, data_inicio, data_fim, ativo)
+                     VALUES ($1, $2, $3, FALSE)
+                     ON CONFLICT (nome) DO UPDATE SET
+                       data_inicio = COALESCE(periodos_letivos.data_inicio, EXCLUDED.data_inicio),
+                       data_fim    = COALESCE(periodos_letivos.data_fim, EXCLUDED.data_fim)
+                     RETURNING id_periodo`,
+                    [p.nome, p.data_inicio, p.data_fim]
+                );
+                periodoId.set(p.nome, r.rows[0].id_periodo);
+                contadores.periodos++;
+            }
+
+            // 2) Cursos (upsert por cod_curso)
+            const cursoId = new Map();
+            for (const c of a.cursos.values()) {
+                const r = await client.query(
+                    `INSERT INTO cursos (cod_curso, nome) VALUES ($1, $2)
+                     ON CONFLICT (cod_curso) DO UPDATE SET nome = EXCLUDED.nome
+                     RETURNING id_curso`,
+                    [c.cod_curso, c.nome]
+                );
+                cursoId.set(c.cod_curso, r.rows[0].id_curso);
+                contadores.cursos++;
+            }
+
+            // 3) Disciplinas (upsert por código; nome/carga só preenchem se vazios)
+            const discId = new Map();
+            for (const [dkey, d] of a.disciplinas) {
+                let id = apoio.disciplinasPorCodigo.get(dkey);
+                if (id) {
+                    await client.query(
+                        `UPDATE disciplinas SET
+                           nome = COALESCE(NULLIF(nome, ''), $1),
+                           carga_horaria = COALESCE(carga_horaria, $2)
+                         WHERE id_disciplina = $3`,
+                        [d.nome, d.carga_horaria, id]
+                    );
+                } else {
+                    const r = await client.query(
+                        `INSERT INTO disciplinas (codigo, nome, carga_horaria) VALUES ($1, $2, $3) RETURNING id_disciplina`,
+                        [d.codigo, d.nome, d.carga_horaria]
+                    );
+                    id = r.rows[0].id_disciplina;
+                }
+                discId.set(dkey, id);
+                contadores.disciplinas++;
+            }
+
+            // 4) Professores (por SIAPE; cria mínimo se faltar)
+            const userIdPorSiape = new Map(apoio.usersPorSiape);
+            for (const p of a.professores.values()) {
+                if (userIdPorSiape.has(p.siape)) continue;
+                const r = await client.query(
+                    `INSERT INTO users (nome, siape, senha, permissao, tipo_servidor)
+                     VALUES ($1, $2, $3, 'servidor', 'D') RETURNING user_id`,
+                    [p.nome || `Docente ${p.siape}`, p.siape, hashPorSiape.get(p.siape)]
+                );
+                userIdPorSiape.set(p.siape, r.rows[0].user_id);
+                contadores.professores_criados++;
+            }
+
+            // 5) Turmas (upsert por id_turma_externo) + 6) professores e horários
+            for (const t of a.turmas.values()) {
+                const cId = cursoId.get(t.cod_curso) || null;
+                const dId = discId.get(t.codigoDisc) || null;
+                const pId = periodoId.get(t.periodoNome) || null;
+                if (!dId || !pId) continue; // sem disciplina/período não há turma válida
+                const principal = [...t.professores.keys()].map((s) => userIdPorSiape.get(s)).find(Boolean) || null;
+
+                const r = await client.query(
+                    `INSERT INTO turmas (id_turma_externo, curso_id, disciplina_id, periodo_letivo_id, nome_turma, vagas, professor_user_id)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7)
+                     ON CONFLICT (id_turma_externo) DO UPDATE SET
+                       curso_id = EXCLUDED.curso_id, disciplina_id = EXCLUDED.disciplina_id,
+                       periodo_letivo_id = EXCLUDED.periodo_letivo_id, nome_turma = EXCLUDED.nome_turma,
+                       vagas = EXCLUDED.vagas,
+                       professor_user_id = COALESCE(turmas.professor_user_id, EXCLUDED.professor_user_id)
+                     RETURNING id_turma`,
+                    [t.id_turma_externo, cId, dId, pId, t.nome_turma || "-", t.vagas, principal]
+                );
+                const turmaId = r.rows[0].id_turma;
+                contadores.turmas++;
+
+                // Co-docência (aditivo: insere vínculos faltantes / atualiza encargo)
+                for (const [siape, enc] of t.professores) {
+                    const uid = userIdPorSiape.get(siape);
+                    if (!uid) continue;
+                    await client.query(
+                        `INSERT INTO turmas_professores (turma_id, user_id, encargo) VALUES ($1, $2, $3)
+                         ON CONFLICT (turma_id, user_id) DO UPDATE SET encargo = COALESCE(EXCLUDED.encargo, turmas_professores.encargo)`,
+                        [turmaId, uid, enc]
+                    );
+                    contadores.vinculos++;
+                }
+
+                // Horários (aditivo: só insere os que ainda não existem; preserva sala já alocada)
+                for (const h of t.horarios.values()) {
+                    const existe = await client.query(
+                        `SELECT 1 FROM turmas_horarios
+                         WHERE turma_id = $1 AND dia_semana = $2 AND hora_inicio = $3 AND hora_fim = $4
+                           AND COALESCE(tipo_aula,'') = COALESCE($5,'')
+                           AND COALESCE(data_inicio, DATE '0001-01-01') = COALESCE($6::date, DATE '0001-01-01')
+                           AND COALESCE(data_fim, DATE '0001-01-01') = COALESCE($7::date, DATE '0001-01-01')`,
+                        [turmaId, h.dia_semana, h.hora_inicio, h.hora_fim, h.tipo_aula, h.data_inicio, h.data_fim]
+                    );
+                    if (existe.rowCount === 0) {
+                        await client.query(
+                            `INSERT INTO turmas_horarios (turma_id, dia_semana, hora_inicio, hora_fim, sala_id, tipo_aula, data_inicio, data_fim)
+                             VALUES ($1, $2, $3, $4, NULL, $5, $6, $7)`,
+                            [turmaId, h.dia_semana, h.hora_inicio, h.hora_fim, h.tipo_aula, h.data_inicio, h.data_fim]
+                        );
+                        contadores.horarios++;
+                    }
+                }
+            }
+
+            await client.query("COMMIT");
+        } catch (error) {
+            await client.query("ROLLBACK");
+            throw error;
+        } finally {
+            client.release();
+        }
+
+        return res.status(200).json({
+            status: "success",
+            message: `Grade importada: ${contadores.turmas} turma(s), ${contadores.horarios} horário(s), ${contadores.professores_criados} professor(es) criado(s).`,
+            data: contadores,
+        });
+    } catch (error) {
+        logger.error({ err: error }, "Erro ao importar disciplinas");
+        return res.status(500).json({ status: "error", message: "Erro ao gravar a grade.", data: null });
     }
 });
 
