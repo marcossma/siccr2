@@ -410,6 +410,7 @@ function analisarDisciplinas(linhas) {
                 hora: String(campo(linha, "HR_INICIO") || "").trim(),
                 ano: String(campo(linha, "ANO") || "").trim(),
                 curso: String(campo(linha, "UNIDADE_CURSO") || "").trim().slice(0, 30),
+                raw: String(campo(linha, "__raw") || ""),
             });
         }
     };

@@ -1926,21 +1926,24 @@ document.addEventListener("DOMContentLoaded", function() {
                     if (aoa.length < 2) { alert("A planilha está vazia."); resetar(); return; }
                     const header = aoa[0].map((h) => String(h).trim());
                     const anoIdx = header.indexOf("ANO");
+                    const periodoIdx = header.indexOf("PERIODO");
                     const nomeIdx = header.indexOf("NOME_DISCIPLINA");
+                    // "1. Semestre" / "2. Semestre" — âncora inequívoca de posição
+                    const ehPeriodo = (s) => /^\s*\d+\s*\.\s*semestre/i.test(String(s || ""));
 
                     linhasArquivo = [];
                     let reparadas = 0;
                     for (let i = 1; i < aoa.length; i++) {
                         let row = aoa[i].map(formatarValor);
-                        // Reparo: se ANO não é ano de 4 dígitos, o nome com vírgula
-                        // empurrou as colunas. Acha o ano e reagrupa o nome.
-                        if (anoIdx >= 0 && nomeIdx >= 0 && !/^\d{4}$/.test(String(row[anoIdx] || "").trim())) {
+                        // Reparo: nome com vírgula empurra as colunas. Usa PERIODO
+                        // ("N. Semestre") como âncora: acha-o e reagrupa o nome.
+                        if (periodoIdx >= 0 && nomeIdx >= 0 && !ehPeriodo(row[periodoIdx])) {
                             let j = -1;
-                            for (let k = anoIdx; k <= anoIdx + 6 && k < row.length; k++) {
-                                if (/^\d{4}$/.test(String(row[k] || "").trim())) { j = k; break; }
+                            for (let k = periodoIdx; k <= periodoIdx + 8 && k < row.length; k++) {
+                                if (ehPeriodo(row[k])) { j = k; break; }
                             }
-                            if (j > anoIdx) {
-                                const shift = j - anoIdx;
+                            if (j > periodoIdx) {
+                                const shift = j - periodoIdx;
                                 const nome = row.slice(nomeIdx, nomeIdx + shift + 1).join(", ");
                                 row = [...row.slice(0, nomeIdx), nome, ...row.slice(nomeIdx + shift + 1)];
                                 reparadas++;
@@ -1948,6 +1951,10 @@ document.addEventListener("DOMContentLoaded", function() {
                         }
                         const obj = {};
                         header.forEach((h, idx) => { obj[h] = row[idx] !== undefined ? row[idx] : ""; });
+                        // Se ainda ficou sem ano válido, guarda a linha crua p/ diagnóstico
+                        if (anoIdx >= 0 && !/^\d{4}$/.test(String(obj.ANO || "").trim())) {
+                            obj.__raw = row.map((c) => String(c === null || c === undefined ? "" : c)).join(" | ").slice(0, 320);
+                        }
                         linhasArquivo.push(obj);
                     }
                     dropTexto.textContent = `${file.name} (${linhasArquivo.length} linhas${reparadas ? `, ${reparadas} realinhadas` : ""})`;
@@ -1989,7 +1996,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 // Amostra do que foi descartado (p/ conferência)
                 if (descartadas && descartadas.length > 0) {
                     alertaHtml += `<details style="margin-top:6px"><summary style="cursor:pointer">Ver exemplos de linhas descartadas (${descartadas.length})</summary>` +
-                        descartadas.map(d => `<div style="font-size:11px;color:${d.motivo === 'sem_horario' ? '#999' : '#c92a2a'}">[${d.motivo}] ${d.cod_disciplina} ${d.nome_disciplina} — dia:"${d.dia}" hora:"${d.hora}" ano:"${d.ano}" curso:"${d.curso || ''}"</div>`).join("") +
+                        descartadas.map(d => `<div style="font-size:11px;color:${d.motivo === 'sem_horario' ? '#999' : '#c92a2a'}">[${d.motivo}] ${d.cod_disciplina} ${d.nome_disciplina} — dia:"${d.dia}" hora:"${d.hora}" ano:"${d.ano}" curso:"${d.curso || ''}"${d.raw ? `<br><span style="color:#1971c2">RAW: ${d.raw}</span>` : ''}</div>`).join("") +
                         `</details>`;
                 }
                 if (professores_a_criar.length > 0) {
