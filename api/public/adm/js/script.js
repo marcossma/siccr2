@@ -1989,7 +1989,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 // Amostra do que foi descartado (p/ conferência)
                 if (descartadas && descartadas.length > 0) {
                     alertaHtml += `<details style="margin-top:6px"><summary style="cursor:pointer">Ver exemplos de linhas descartadas (${descartadas.length})</summary>` +
-                        descartadas.map(d => `<div style="font-size:11px;color:#777">[${d.motivo}] ${d.cod_disciplina} ${d.nome_disciplina} — dia:"${d.dia}" hora:"${d.hora}" ano:"${d.ano}"</div>`).join("") +
+                        descartadas.map(d => `<div style="font-size:11px;color:${d.motivo === 'sem_horario' ? '#999' : '#c92a2a'}">[${d.motivo}] ${d.cod_disciplina} ${d.nome_disciplina} — dia:"${d.dia}" hora:"${d.hora}" ano:"${d.ano}" curso:"${d.curso || ''}"</div>`).join("") +
                         `</details>`;
                 }
                 if (professores_a_criar.length > 0) {

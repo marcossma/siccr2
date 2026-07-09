@@ -395,15 +395,21 @@ function analisarDisciplinas(linhas) {
     const turmas = new Map();        // id_turma_externo -> {...}
     let comHorario = 0, semHorario = 0, invalidas = 0;
     const descartadas = [];          // amostra p/ diagnóstico
+    const contMotivo = {};
     const amostrar = (motivo, linha) => {
-        if (descartadas.length < 25) {
+        contMotivo[motivo] = (contMotivo[motivo] || 0) + 1;
+        // "sem horário" é esperado (centenas); mostra poucos exemplos e prioriza
+        // os problemáticos (desalinhada / sem_id_turma)
+        const cap = motivo === "sem_horario" ? 4 : 20;
+        if (contMotivo[motivo] <= cap && descartadas.length < 40) {
             descartadas.push({
                 motivo,
                 cod_disciplina: String(campo(linha, "COD_DISCIPLINA") || "").trim(),
-                nome_disciplina: String(campo(linha, "NOME_DISCIPLINA") || "").trim().slice(0, 60),
+                nome_disciplina: String(campo(linha, "NOME_DISCIPLINA") || "").trim().slice(0, 70),
                 dia: String(campo(linha, "DIA_SEMANA_ITEM") || "").trim(),
                 hora: String(campo(linha, "HR_INICIO") || "").trim(),
                 ano: String(campo(linha, "ANO") || "").trim(),
+                curso: String(campo(linha, "UNIDADE_CURSO") || "").trim().slice(0, 30),
             });
         }
     };
