@@ -1920,14 +1920,37 @@ document.addEventListener("DOMContentLoaded", function() {
                 try {
                     const wb = XLSX.read(new Uint8Array(ev.target.result), { type: "array", cellDates: true });
                     const sheet = wb.Sheets[wb.SheetNames[0]];
-                    const bruto = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: true });
-                    linhasArquivo = bruto.map((linha) => {
-                        const nova = {};
-                        Object.keys(linha).forEach((k) => { nova[k.trim()] = formatarValor(linha[k]); });
-                        return nova;
-                    });
-                    if (linhasArquivo.length === 0) { alert("A planilha está vazia."); resetar(); return; }
-                    dropTexto.textContent = `${file.name} (${linhasArquivo.length} linhas)`;
+                    // Lê posicionalmente (array de arrays) para poder corrigir colunas
+                    // deslocadas por vírgulas no nome da disciplina.
+                    const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: true, blankrows: false });
+                    if (aoa.length < 2) { alert("A planilha está vazia."); resetar(); return; }
+                    const header = aoa[0].map((h) => String(h).trim());
+                    const anoIdx = header.indexOf("ANO");
+                    const nomeIdx = header.indexOf("NOME_DISCIPLINA");
+
+                    linhasArquivo = [];
+                    let reparadas = 0;
+                    for (let i = 1; i < aoa.length; i++) {
+                        let row = aoa[i].map(formatarValor);
+                        // Reparo: se ANO não é ano de 4 dígitos, o nome com vírgula
+                        // empurrou as colunas. Acha o ano e reagrupa o nome.
+                        if (anoIdx >= 0 && nomeIdx >= 0 && !/^\d{4}$/.test(String(row[anoIdx] || "").trim())) {
+                            let j = -1;
+                            for (let k = anoIdx; k <= anoIdx + 6 && k < row.length; k++) {
+                                if (/^\d{4}$/.test(String(row[k] || "").trim())) { j = k; break; }
+                            }
+                            if (j > anoIdx) {
+                                const shift = j - anoIdx;
+                                const nome = row.slice(nomeIdx, nomeIdx + shift + 1).join(", ");
+                                row = [...row.slice(0, nomeIdx), nome, ...row.slice(nomeIdx + shift + 1)];
+                                reparadas++;
+                            }
+                        }
+                        const obj = {};
+                        header.forEach((h, idx) => { obj[h] = row[idx] !== undefined ? row[idx] : ""; });
+                        linhasArquivo.push(obj);
+                    }
+                    dropTexto.textContent = `${file.name} (${linhasArquivo.length} linhas${reparadas ? `, ${reparadas} realinhadas` : ""})`;
                     enviarPreview();
                 } catch (err) {
                     console.error("Erro ao ler planilha:", err);
