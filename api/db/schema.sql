@@ -1,12 +1,12 @@
 -- Schema dump gerado automaticamente. NÃO editar manualmente.
--- Origem: docker compose db (siccr) — 2026-07-08T12:13:21.938Z
+-- Origem: docker compose db (siccr) — 2026-07-09T18:32:03.613Z
 -- Regenere com: npm run db:dump
 
 --
 -- PostgreSQL database dump
 --
 
-\restrict P6Zen6hrAuHOkD1JExhswGCRaM6rdeqbVphediX7SRvnCk0Ae5M1L7yujSRW8BN
+\restrict cUeDp1HRvvARgH5VwGf4bOiQ3JeoROKxAsQ0MzS93kRLPwBG1E57Rb8oR3vdtUi
 
 -- Dumped from database version 16.13
 -- Dumped by pg_dump version 16.13
@@ -183,6 +183,38 @@ CREATE SEQUENCE public.api_keys_id_seq
 --
 
 ALTER SEQUENCE public.api_keys_id_seq OWNED BY public.api_keys.id;
+
+
+--
+-- Name: cursos; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.cursos (
+    id_curso integer NOT NULL,
+    cod_curso character varying(20) NOT NULL,
+    nome character varying(255) NOT NULL,
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: cursos_id_curso_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.cursos_id_curso_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: cursos_id_curso_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.cursos_id_curso_seq OWNED BY public.cursos.id_curso;
 
 
 --
@@ -736,7 +768,9 @@ CREATE TABLE public.turmas (
     nome_turma character varying(30) NOT NULL,
     professor_user_id integer,
     vagas integer,
-    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    curso_id integer,
+    id_turma_externo integer
 );
 
 
@@ -750,7 +784,10 @@ CREATE TABLE public.turmas_horarios (
     dia_semana integer NOT NULL,
     hora_inicio time without time zone NOT NULL,
     hora_fim time without time zone NOT NULL,
-    sala_id integer NOT NULL
+    sala_id integer,
+    tipo_aula character varying(20),
+    data_inicio date,
+    data_fim date
 );
 
 
@@ -792,6 +829,38 @@ CREATE SEQUENCE public.turmas_id_turma_seq
 --
 
 ALTER SEQUENCE public.turmas_id_turma_seq OWNED BY public.turmas.id_turma;
+
+
+--
+-- Name: turmas_professores; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.turmas_professores (
+    id integer NOT NULL,
+    turma_id integer NOT NULL,
+    user_id integer NOT NULL,
+    encargo numeric(6,1)
+);
+
+
+--
+-- Name: turmas_professores_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.turmas_professores_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: turmas_professores_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.turmas_professores_id_seq OWNED BY public.turmas_professores.id;
 
 
 --
@@ -895,6 +964,13 @@ ALTER TABLE ONLY public.agendamentos_ocorrencias ALTER COLUMN id_ocorrencia SET 
 --
 
 ALTER TABLE ONLY public.api_keys ALTER COLUMN id SET DEFAULT nextval('public.api_keys_id_seq'::regclass);
+
+
+--
+-- Name: cursos id_curso; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cursos ALTER COLUMN id_curso SET DEFAULT nextval('public.cursos_id_curso_seq'::regclass);
 
 
 --
@@ -1024,6 +1100,13 @@ ALTER TABLE ONLY public.turmas_horarios ALTER COLUMN id_horario SET DEFAULT next
 
 
 --
+-- Name: turmas_professores id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.turmas_professores ALTER COLUMN id SET DEFAULT nextval('public.turmas_professores_id_seq'::regclass);
+
+
+--
 -- Name: unidades unidade_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1083,6 +1166,22 @@ ALTER TABLE ONLY public.api_keys
 
 ALTER TABLE ONLY public.api_keys
     ADD CONSTRAINT api_keys_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: cursos cursos_cod_curso_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cursos
+    ADD CONSTRAINT cursos_cod_curso_key UNIQUE (cod_curso);
+
+
+--
+-- Name: cursos cursos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cursos
+    ADD CONSTRAINT cursos_pkey PRIMARY KEY (id_curso);
 
 
 --
@@ -1246,11 +1345,35 @@ ALTER TABLE ONLY public.turmas_horarios
 
 
 --
+-- Name: turmas turmas_id_turma_externo_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.turmas
+    ADD CONSTRAINT turmas_id_turma_externo_key UNIQUE (id_turma_externo);
+
+
+--
 -- Name: turmas turmas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.turmas
     ADD CONSTRAINT turmas_pkey PRIMARY KEY (id_turma);
+
+
+--
+-- Name: turmas_professores turmas_professores_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.turmas_professores
+    ADD CONSTRAINT turmas_professores_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: turmas_professores turmas_professores_turma_user_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.turmas_professores
+    ADD CONSTRAINT turmas_professores_turma_user_unique UNIQUE (turma_id, user_id);
 
 
 --
@@ -1512,6 +1635,14 @@ ALTER TABLE ONLY public.professores_disciplinas
 
 
 --
+-- Name: turmas turmas_curso_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.turmas
+    ADD CONSTRAINT turmas_curso_id_fkey FOREIGN KEY (curso_id) REFERENCES public.cursos(id_curso) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
 -- Name: turmas turmas_disciplina_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1552,6 +1683,22 @@ ALTER TABLE ONLY public.turmas
 
 
 --
+-- Name: turmas_professores turmas_professores_turma_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.turmas_professores
+    ADD CONSTRAINT turmas_professores_turma_id_fkey FOREIGN KEY (turma_id) REFERENCES public.turmas(id_turma) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: turmas_professores turmas_professores_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.turmas_professores
+    ADD CONSTRAINT turmas_professores_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: users users_unidade_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1563,5 +1710,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict P6Zen6hrAuHOkD1JExhswGCRaM6rdeqbVphediX7SRvnCk0Ae5M1L7yujSRW8BN
+\unrestrict cUeDp1HRvvARgH5VwGf4bOiQ3JeoROKxAsQ0MzS93kRLPwBG1E57Rb8oR3vdtUi
 
