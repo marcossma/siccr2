@@ -421,14 +421,17 @@ function analisarDisciplinas(linhas) {
         // Só aulas com dia + horário (descarta orientação/TCC/dissertação/estágio/EAD)
         if (dia === null || !horaIni) { semHorario++; amostrar("sem_horario", linha); continue; }
 
-        // Guarda contra CSV desalinhado (vírgula sem aspas no nome da disciplina
-        // desloca colunas): ANO precisa ser um ano de 4 dígitos.
+        // ANO precisa ser um ano de 4 dígitos. Se falhar, distingue:
+        //  - "incompleta": linha truncada na origem (sem ID_TURMA nem período)
+        //  - "desalinhada": colunas deslocadas (vírgula não tratada)
         const anoStr = String(campo(linha, "ANO") || "").trim();
-        if (!/^\d{4}$/.test(anoStr)) { invalidas++; amostrar("desalinhada", linha); continue; }
+        const temTail = String(campo(linha, "ID_TURMA") || "").trim() !== "" ||
+                        String(campo(linha, "PERIODO") || "").trim() !== "";
+        if (!/^\d{4}$/.test(anoStr)) { invalidas++; amostrar(temTail ? "desalinhada" : "incompleta", linha); continue; }
         comHorario++;
 
         const idTurma = parseInt(String(campo(linha, "ID_TURMA") || "").trim(), 10);
-        if (Number.isNaN(idTurma)) { invalidas++; amostrar("sem_id_turma", linha); continue; }
+        if (Number.isNaN(idTurma)) { invalidas++; amostrar("incompleta", linha); continue; }
 
         const codCurso = String(campo(linha, "COD_CURSO") || "").trim();
         const nomeCurso = String(campo(linha, "UNIDADE_CURSO") || "").trim();
@@ -498,7 +501,7 @@ function analisarDisciplinas(linhas) {
         }
     }
 
-    return { periodos, cursos, disciplinas, professores, turmas, comHorario, semHorario, invalidas, descartadas };
+    return { periodos, cursos, disciplinas, professores, turmas, comHorario, semHorario, invalidas, descartadas, porMotivo: contMotivo };
 }
 
 function parseCargaHorariaLocal(v) {
@@ -565,6 +568,8 @@ router.post("/disciplinas/preview", async (req, res) => {
                     horarios: totalHorarios,
                     professores: a.professores.size,
                     professores_a_criar: professoresACriar.length,
+                    incompletas: a.porMotivo.incompleta || 0,
+                    desalinhadas: a.porMotivo.desalinhada || 0,
                 },
                 periodos: [...a.periodos.values()],
                 professores_a_criar: professoresACriar.slice(0, 100),

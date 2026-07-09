@@ -1989,9 +1989,14 @@ document.addEventListener("DOMContentLoaded", function() {
                     alertaHtml += `<div style="color:#555"><strong>${resumo.linhas_ignoradas} linha(s) sem horário</strong> ` +
                         `(orientação, TCC, estágio, dissertação, EAD) — não vão a sala, é esperado ignorá-las.</div>`;
                 }
-                if (resumo.linhas_invalidas > 0) {
-                    alertaHtml += `<div style="color:#c92a2a;margin-top:6px"><strong>⚠ ${resumo.linhas_invalidas} linha(s) desalinhada(s)</strong> ` +
+                if (resumo.desalinhadas > 0) {
+                    alertaHtml += `<div style="color:#c92a2a;margin-top:6px"><strong>⚠ ${resumo.desalinhadas} linha(s) desalinhada(s)</strong> ` +
                         `(colunas fora de posição). Se estiver usando CSV, salve como <strong>.xlsx</strong> e reenvie.</div>`;
+                }
+                if (resumo.incompletas > 0) {
+                    alertaHtml += `<div style="color:#e8590c;margin-top:6px"><strong>ℹ ${resumo.incompletas} linha(s) incompleta(s)</strong> ` +
+                        `no arquivo de origem (preenchidas só até o nome da disciplina, sem turma/horário). ` +
+                        `Não há o que importar delas — pode confirmar; se precisar, cadastre essas disciplinas manualmente.</div>`;
                 }
                 // Amostra do que foi descartado (p/ conferência)
                 if (descartadas && descartadas.length > 0) {
