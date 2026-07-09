@@ -79,7 +79,7 @@ router.post("/login", async (req, res) => {
             is_direcao_centro: userData.is_direcao_centro ?? false,
             data_nascimento: userData.data_nascimento,
             funcionalidades
-        }, process.env.JWT_SECRET, { expiresIn: "8h" });
+        }, process.env.JWT_SECRET, { expiresIn: "12h" });
 
         return res.status(200).json({
             status: "success",
