@@ -72,6 +72,7 @@ router.get("/total-info", async (req, res) => {
             SELECT
                 u.user_id, u.nome, u.email, u.siape, u.data_nascimento,
                 u.subunidade_id, u.unidade_id, u.whatsapp, u.permissao,
+                u.tipo_servidor, u.cargo,
                 s.subunidade_nome, s.subunidade_sigla, s.is_direcao_centro,
                 un.unidade, un.unidade_sigla
             FROM users u
@@ -112,7 +113,8 @@ router.get("/:id", async (req, res) => {
 // POST /api/usuarios — cadastra novo usuário
 router.post("/", async (req, res) => {
     const { nome, email, siape, senha, data_nascimento,
-            subunidade_id, unidade_id, whatsapp, permissao } = req.body;
+            subunidade_id, unidade_id, whatsapp, permissao, tipo_servidor } = req.body;
+    const tipoServidor = tipo_servidor === "D" || tipo_servidor === "T" ? tipo_servidor : null;
 
     if (!nome || !siape || !senha) {
         return res.status(400).json({
@@ -175,11 +177,11 @@ router.post("/", async (req, res) => {
         const { rows } = await pool.query(
             `INSERT INTO users
                 (nome, email, siape, senha, data_nascimento, subunidade_id,
-                 unidade_id, whatsapp, permissao, createdat)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()) RETURNING user_id, nome, siape, permissao`,
+                 unidade_id, whatsapp, permissao, tipo_servidor, createdat)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW()) RETURNING user_id, nome, siape, permissao`,
             [nome.trim(), email || null, siape.trim(), hashedPassword,
              data_nascimento || null, subunidade_id || null,
-             unidade_id || null, whatsapp || null, permissao || "servidor"]
+             unidade_id || null, whatsapp || null, permissao || "servidor", tipoServidor]
         );
 
         return res.status(201).json({ status: "success", message: "Usuário cadastrado com sucesso.", data: rows[0] });
@@ -193,7 +195,8 @@ router.post("/", async (req, res) => {
 router.put("/:id", async (req, res) => {
     const { id } = req.params;
     const { nome, email, siape, senha, data_nascimento,
-            subunidade_id, unidade_id, whatsapp, permissao } = req.body;
+            subunidade_id, unidade_id, whatsapp, permissao, tipo_servidor } = req.body;
+    const tipoServidor = tipo_servidor === "D" || tipo_servidor === "T" ? tipo_servidor : null;
 
     if (!nome || !siape) {
         return res.status(400).json({
@@ -226,18 +229,20 @@ router.put("/:id", async (req, res) => {
         if (senha) {
             const hashedPassword = await bcrypt.hash(senha, 10);
             query = `UPDATE users SET nome=$1, email=$2, siape=$3, senha=$4, data_nascimento=$5,
-                         subunidade_id=$6, unidade_id=$7, whatsapp=$8, permissao=$9, updatedat=NOW()
-                     WHERE user_id=$10 RETURNING user_id, nome, siape, permissao`;
+                         subunidade_id=$6, unidade_id=$7, whatsapp=$8, permissao=$9,
+                         tipo_servidor=$10, updatedat=NOW()
+                     WHERE user_id=$11 RETURNING user_id, nome, siape, permissao`;
             values = [nome.trim(), email || null, siape.trim(), hashedPassword,
                       data_nascimento || null, subunidade_id || null,
-                      unidade_id || null, whatsapp || null, permissao || "servidor", id];
+                      unidade_id || null, whatsapp || null, permissao || "servidor", tipoServidor, id];
         } else {
             query = `UPDATE users SET nome=$1, email=$2, siape=$3, data_nascimento=$4,
-                         subunidade_id=$5, unidade_id=$6, whatsapp=$7, permissao=$8, updatedat=NOW()
-                     WHERE user_id=$9 RETURNING user_id, nome, siape, permissao`;
+                         subunidade_id=$5, unidade_id=$6, whatsapp=$7, permissao=$8,
+                         tipo_servidor=$9, updatedat=NOW()
+                     WHERE user_id=$10 RETURNING user_id, nome, siape, permissao`;
             values = [nome.trim(), email || null, siape.trim(),
                       data_nascimento || null, subunidade_id || null,
-                      unidade_id || null, whatsapp || null, permissao || "servidor", id];
+                      unidade_id || null, whatsapp || null, permissao || "servidor", tipoServidor, id];
         }
 
         const { rows } = await pool.query(query, values);

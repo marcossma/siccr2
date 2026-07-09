@@ -1,4 +1,5 @@
-// Patch global: injeta o token Bearer em todos os fetch da área admin
+// Patch global: injeta o token Bearer em todos os fetch da área admin e
+// intercepta 401 (sessão expirada) para deslogar e voltar ao login.
 (function() {
     const _fetch = window.fetch.bind(window);
     window.fetch = function(url, options = {}) {
@@ -10,6 +11,16 @@
                 ...(options.headers || {}),
                 ...(token ? { "Authorization": `Bearer ${token}` } : {})
             }
+        }).then((res) => {
+            const ehLogin = String(url).includes("/api/auth/login") ||
+                            location.pathname === "/adm/login";
+            if (res.status === 401 && !ehLogin) {
+                localStorage.removeItem("siccr");
+                localStorage.removeItem("siccr_token");
+                alert("Sua sessão expirou. Faça login novamente.");
+                location.replace("/adm/login");
+            }
+            return res;
         });
     };
 })();
@@ -582,7 +593,8 @@ document.addEventListener("DOMContentLoaded", function() {
                                  data-subunidade_id="${u.subunidade_id || ""}"
                                  data-unidade_id="${u.unidade_id || ""}"
                                  data-whatsapp="${u.whatsapp || ""}"
-                                 data-permissao="${u.permissao || "servidor"}"`,
+                                 data-permissao="${u.permissao || "servidor"}"
+                                 data-tipo_servidor="${u.tipo_servidor || ""}"`,
                                 u.user_id, "usuario"
                             )}
                         </div>`;
@@ -663,6 +675,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (d.data_nascimento) {
                     document.querySelector("#data_nascimento").value = d.data_nascimento.split("T")[0];
                 }
+                document.querySelector("#tipo_servidor").value = d.tipo_servidor || "";
 
                 // Permissão (select)
                 document.querySelector("#permissao").value = d.permissao;

@@ -17,7 +17,9 @@ function autenticar(req, res, next) {
         req.usuario = payload;
         next();
     } catch (error) {
-        return res.status(403).json({
+        // 401 (não 403): sessão inválida/expirada. O frontend intercepta 401
+        // para deslogar e redirecionar ao login (403 fica só para permissão).
+        return res.status(401).json({
             status: "error",
             message: "Token inválido ou expirado.",
             data: null

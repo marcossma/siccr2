@@ -1,4 +1,5 @@
-// Injeta o token Bearer em todos os fetch desta área
+// Injeta o token Bearer em todos os fetch desta área e intercepta 401
+// (sessão expirada) para deslogar e voltar ao login.
 (function () {
     const _fetch = window.fetch.bind(window);
     window.fetch = function (url, options = {}) {
@@ -10,6 +11,16 @@
                 ...(options.headers || {}),
                 ...(token ? { "Authorization": `Bearer ${token}` } : {})
             }
+        }).then((res) => {
+            const ehLogin = String(url).includes("/api/auth/login") || location.pathname === "/";
+            // Só desloga se havia um token (sessão de fato) — evita mexer em páginas públicas
+            if (res.status === 401 && token && !ehLogin) {
+                localStorage.removeItem("siccr");
+                localStorage.removeItem("siccr_token");
+                alert("Sua sessão expirou. Faça login novamente.");
+                location.replace("/");
+            }
+            return res;
         });
     };
 })();
