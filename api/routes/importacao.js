@@ -389,17 +389,22 @@ function analisarDisciplinas(linhas) {
     const disciplinas = new Map();   // codigo(norm) -> { codigo, nome, carga_horaria }
     const professores = new Map();   // siape -> { siape, nome }
     const turmas = new Map();        // id_turma_externo -> {...}
-    let comHorario = 0, semHorario = 0;
+    let comHorario = 0, semHorario = 0, invalidas = 0;
 
     for (const linha of linhas) {
         const dia = parseDiaSemana(campo(linha, "DIA_SEMANA_ITEM"));
         const horaIni = parseHora(campo(linha, "HR_INICIO"));
         // Só aulas com dia + horário (descarta orientação/TCC/dissertação/estágio/EAD)
         if (dia === null || !horaIni) { semHorario++; continue; }
+
+        // Guarda contra CSV desalinhado (vírgula sem aspas no nome da disciplina
+        // desloca colunas): ANO precisa ser um ano de 4 dígitos.
+        const anoStr = String(campo(linha, "ANO") || "").trim();
+        if (!/^\d{4}$/.test(anoStr)) { invalidas++; continue; }
         comHorario++;
 
         const idTurma = parseInt(String(campo(linha, "ID_TURMA") || "").trim(), 10);
-        if (Number.isNaN(idTurma)) continue;
+        if (Number.isNaN(idTurma)) { invalidas++; continue; }
 
         const codCurso = String(campo(linha, "COD_CURSO") || "").trim();
         const nomeCurso = String(campo(linha, "UNIDADE_CURSO") || "").trim();
@@ -469,7 +474,7 @@ function analisarDisciplinas(linhas) {
         }
     }
 
-    return { periodos, cursos, disciplinas, professores, turmas, comHorario, semHorario };
+    return { periodos, cursos, disciplinas, professores, turmas, comHorario, semHorario, invalidas };
 }
 
 function parseCargaHorariaLocal(v) {
@@ -528,6 +533,7 @@ router.post("/disciplinas/preview", async (req, res) => {
                     linhas_total: linhas.length,
                     linhas_aula: a.comHorario,
                     linhas_ignoradas: a.semHorario,
+                    linhas_invalidas: a.invalidas,
                     periodos: a.periodos.size,
                     cursos: a.cursos.size, cursos_novos: cursosNovos,
                     disciplinas: a.disciplinas.size, disciplinas_novas: discNovas,
@@ -570,6 +576,7 @@ router.post("/disciplinas", async (req, res) => {
             // 1) Períodos (upsert por nome)
             const periodoId = new Map();
             for (const p of a.periodos.values()) {
+                if (!p.data_inicio || !p.data_fim) continue; // período sem datas → ignora (e suas turmas)
                 const r = await client.query(
                     `INSERT INTO periodos_letivos (nome, data_inicio, data_fim, ativo)
                      VALUES ($1, $2, $3, FALSE)

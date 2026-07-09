@@ -1945,15 +1945,20 @@ document.addEventListener("DOMContentLoaded", function() {
                 document.querySelector("#impProfCriar").textContent = resumo.professores_a_criar;
                 document.querySelector("#impIgnoradas").textContent = resumo.linhas_ignoradas;
 
+                let alertaHtml = "";
+                if (resumo.linhas_invalidas > 0) {
+                    alertaHtml += `<div style="color:#c92a2a"><strong>⚠ ${resumo.linhas_invalidas} linha(s) descartada(s)</strong> ` +
+                        `por desalinhamento de colunas (vírgula sem aspas no CSV). ` +
+                        `Para uma importação completa, salve o arquivo como <strong>.xlsx (Excel)</strong> e reenvie.</div>`;
+                }
                 if (professores_a_criar.length > 0) {
-                    alertaProf.hidden = false;
-                    alertaProf.innerHTML = `<strong>${resumo.professores_a_criar} professor(es) serão criados</strong> ` +
+                    alertaHtml += `<div style="margin-top:6px"><strong>${resumo.professores_a_criar} professor(es) serão criados</strong> ` +
                         `(SIAPE não cadastrado; senha inicial = SIAPE):<br>` +
                         professores_a_criar.map(p => `• ${p.siape} — ${p.nome}`).join("<br>") +
-                        (resumo.professores_a_criar > professores_a_criar.length ? "<br>…" : "");
-                } else {
-                    alertaProf.hidden = true;
+                        (resumo.professores_a_criar > professores_a_criar.length ? "<br>…" : "") + `</div>`;
                 }
+                alertaProf.innerHTML = alertaHtml;
+                alertaProf.hidden = alertaHtml === "";
 
                 corpo.innerHTML = amostra.map((x) => `
                     <tr>
