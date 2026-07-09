@@ -22,6 +22,9 @@ function normalizar(s) {
 function parseDataBr(v) {
     if (!v) return null;
     const s = String(v).trim();
+    // Formato ISO (yyyy-mm-dd), caso o Excel exporte a data assim
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
     const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
     if (!m) return null;
     const [, dd, mm, yyyy] = m;
@@ -348,7 +351,8 @@ router.post("/subunidades", async (req, res) => {
 
 function parseHora(v) {
     const s = String(v || "").trim();
-    const m = s.match(/^(\d{1,2}):(\d{2})/);
+    // Aceita "08:30", "8:30:00" e também um datetime ISO ("1899-12-31T08:30:00")
+    const m = s.match(/(\d{1,2}):(\d{2})/);
     if (!m) return null;
     return `${m[1].padStart(2, "0")}:${m[2]}:00`;
 }
@@ -390,21 +394,34 @@ function analisarDisciplinas(linhas) {
     const professores = new Map();   // siape -> { siape, nome }
     const turmas = new Map();        // id_turma_externo -> {...}
     let comHorario = 0, semHorario = 0, invalidas = 0;
+    const descartadas = [];          // amostra p/ diagnóstico
+    const amostrar = (motivo, linha) => {
+        if (descartadas.length < 25) {
+            descartadas.push({
+                motivo,
+                cod_disciplina: String(campo(linha, "COD_DISCIPLINA") || "").trim(),
+                nome_disciplina: String(campo(linha, "NOME_DISCIPLINA") || "").trim().slice(0, 60),
+                dia: String(campo(linha, "DIA_SEMANA_ITEM") || "").trim(),
+                hora: String(campo(linha, "HR_INICIO") || "").trim(),
+                ano: String(campo(linha, "ANO") || "").trim(),
+            });
+        }
+    };
 
     for (const linha of linhas) {
         const dia = parseDiaSemana(campo(linha, "DIA_SEMANA_ITEM"));
         const horaIni = parseHora(campo(linha, "HR_INICIO"));
         // Só aulas com dia + horário (descarta orientação/TCC/dissertação/estágio/EAD)
-        if (dia === null || !horaIni) { semHorario++; continue; }
+        if (dia === null || !horaIni) { semHorario++; amostrar("sem_horario", linha); continue; }
 
         // Guarda contra CSV desalinhado (vírgula sem aspas no nome da disciplina
         // desloca colunas): ANO precisa ser um ano de 4 dígitos.
         const anoStr = String(campo(linha, "ANO") || "").trim();
-        if (!/^\d{4}$/.test(anoStr)) { invalidas++; continue; }
+        if (!/^\d{4}$/.test(anoStr)) { invalidas++; amostrar("desalinhada", linha); continue; }
         comHorario++;
 
         const idTurma = parseInt(String(campo(linha, "ID_TURMA") || "").trim(), 10);
-        if (Number.isNaN(idTurma)) { invalidas++; continue; }
+        if (Number.isNaN(idTurma)) { invalidas++; amostrar("sem_id_turma", linha); continue; }
 
         const codCurso = String(campo(linha, "COD_CURSO") || "").trim();
         const nomeCurso = String(campo(linha, "UNIDADE_CURSO") || "").trim();
@@ -474,7 +491,7 @@ function analisarDisciplinas(linhas) {
         }
     }
 
-    return { periodos, cursos, disciplinas, professores, turmas, comHorario, semHorario, invalidas };
+    return { periodos, cursos, disciplinas, professores, turmas, comHorario, semHorario, invalidas, descartadas };
 }
 
 function parseCargaHorariaLocal(v) {
@@ -545,6 +562,7 @@ router.post("/disciplinas/preview", async (req, res) => {
                 periodos: [...a.periodos.values()],
                 professores_a_criar: professoresACriar.slice(0, 100),
                 amostra,
+                descartadas: a.descartadas,
             },
         });
     } catch (error) {

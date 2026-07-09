@@ -1889,6 +1889,14 @@ document.addEventListener("DOMContentLoaded", function() {
 
         function formatarValor(v) {
             if (v instanceof Date && !isNaN(v)) {
+                // Excel guarda hora pura como serial de tempo → SheetJS gera Date
+                // no "ano zero" (< 1901). Nesse caso é HORA, não data.
+                if (v.getFullYear() < 1901) {
+                    const hh = String(v.getHours()).padStart(2, "0");
+                    const mi = String(v.getMinutes()).padStart(2, "0");
+                    const ss = String(v.getSeconds()).padStart(2, "0");
+                    return `${hh}:${mi}:${ss}`;
+                }
                 const dd = String(v.getDate()).padStart(2, "0");
                 const mm = String(v.getMonth() + 1).padStart(2, "0");
                 return `${dd}/${mm}/${v.getFullYear()}`;
@@ -1937,7 +1945,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 });
                 const resp = await r.json();
                 if (!r.ok) { alert(resp.message || "Erro no preview."); return; }
-                const { resumo, professores_a_criar, amostra } = resp.data;
+                const { resumo, professores_a_criar, amostra, descartadas } = resp.data;
                 document.querySelector("#impTurmas").textContent = resumo.turmas;
                 document.querySelector("#impHorarios").textContent = resumo.horarios;
                 document.querySelector("#impDisc").textContent = resumo.disciplinas;
@@ -1946,10 +1954,20 @@ document.addEventListener("DOMContentLoaded", function() {
                 document.querySelector("#impIgnoradas").textContent = resumo.linhas_ignoradas;
 
                 let alertaHtml = "";
+                // "sem horário" é esperado (orientação/TCC/estágio/dissertação/EAD)
+                if (resumo.linhas_ignoradas > 0) {
+                    alertaHtml += `<div style="color:#555"><strong>${resumo.linhas_ignoradas} linha(s) sem horário</strong> ` +
+                        `(orientação, TCC, estágio, dissertação, EAD) — não vão a sala, é esperado ignorá-las.</div>`;
+                }
                 if (resumo.linhas_invalidas > 0) {
-                    alertaHtml += `<div style="color:#c92a2a"><strong>⚠ ${resumo.linhas_invalidas} linha(s) descartada(s)</strong> ` +
-                        `por desalinhamento de colunas (vírgula sem aspas no CSV). ` +
-                        `Para uma importação completa, salve o arquivo como <strong>.xlsx (Excel)</strong> e reenvie.</div>`;
+                    alertaHtml += `<div style="color:#c92a2a;margin-top:6px"><strong>⚠ ${resumo.linhas_invalidas} linha(s) desalinhada(s)</strong> ` +
+                        `(colunas fora de posição). Se estiver usando CSV, salve como <strong>.xlsx</strong> e reenvie.</div>`;
+                }
+                // Amostra do que foi descartado (p/ conferência)
+                if (descartadas && descartadas.length > 0) {
+                    alertaHtml += `<details style="margin-top:6px"><summary style="cursor:pointer">Ver exemplos de linhas descartadas (${descartadas.length})</summary>` +
+                        descartadas.map(d => `<div style="font-size:11px;color:#777">[${d.motivo}] ${d.cod_disciplina} ${d.nome_disciplina} — dia:"${d.dia}" hora:"${d.hora}" ano:"${d.ano}"</div>`).join("") +
+                        `</details>`;
                 }
                 if (professores_a_criar.length > 0) {
                     alertaHtml += `<div style="margin-top:6px"><strong>${resumo.professores_a_criar} professor(es) serão criados</strong> ` +
