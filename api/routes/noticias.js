@@ -1,4 +1,5 @@
 const express = require("express");
+const logger = require("../lib/logger.js");
 const router = express.Router();
 
 const WP_API = "https://www.ufsm.br/unidades-universitarias/ccr/wp-json/wp/v2/posts";
@@ -44,7 +45,7 @@ router.get("/", async (req, res) => {
         res.status(200).json({ status: "success", message: "", data: noticias.slice(0, limit) });
 
     } catch (error) {
-        console.error("Erro ao buscar notícias do WordPress:", error.message);
+        logger.error({ err: error }, "Erro ao buscar notícias do WordPress:");
 
         // Se houver cache expirado, retorna ele como fallback
         if (cache.data) {

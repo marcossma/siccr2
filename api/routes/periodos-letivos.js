@@ -1,5 +1,6 @@
 const express = require("express");
 const pool = require("../config/database.js");
+const logger = require("../lib/logger.js");
 
 const router = express.Router();
 
@@ -11,7 +12,7 @@ router.get("/", async (_req, res) => {
         );
         return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
-        console.error("Erro ao listar períodos letivos:", error);
+        logger.error({ err: error }, "Erro ao listar períodos letivos:");
         return res.status(500).json({ status: "error", message: "Erro ao listar períodos letivos.", data: null });
     }
 });
@@ -54,7 +55,7 @@ router.post("/", async (req, res) => {
         if (error.code === "23505") {
             return res.status(400).json({ status: "error", message: "Já existe um período com esse nome.", data: null });
         }
-        console.error("Erro ao cadastrar período letivo:", error);
+        logger.error({ err: error }, "Erro ao cadastrar período letivo:");
         return res.status(500).json({ status: "error", message: "Erro ao cadastrar período letivo.", data: null });
     } finally {
         client.release();
@@ -91,7 +92,7 @@ router.put("/:id", async (req, res) => {
         if (error.code === "23505") {
             return res.status(400).json({ status: "error", message: "Já existe um período com esse nome.", data: null });
         }
-        console.error("Erro ao atualizar período letivo:", error);
+        logger.error({ err: error }, "Erro ao atualizar período letivo:");
         return res.status(500).json({ status: "error", message: "Erro ao atualizar período letivo.", data: null });
     } finally {
         client.release();
@@ -112,7 +113,7 @@ router.delete("/:id", async (req, res) => {
         if (error.code === "23503") {
             return res.status(400).json({ status: "error", message: "Não é possível excluir: há turmas neste período.", data: null });
         }
-        console.error("Erro ao excluir período letivo:", error);
+        logger.error({ err: error }, "Erro ao excluir período letivo:");
         return res.status(500).json({ status: "error", message: "Erro ao excluir período letivo.", data: null });
     }
 });

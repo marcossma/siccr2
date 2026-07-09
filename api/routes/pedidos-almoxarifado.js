@@ -1,6 +1,7 @@
 const express = require("express");
 const WebSocket = require("ws");
 const pool = require("../config/database.js");
+const logger = require("../lib/logger.js");
 const { getNivelAcesso, getEscopoFiltro } = require("../middlewares/autorizar.js");
 
 module.exports = function (wss) {
@@ -67,7 +68,7 @@ module.exports = function (wss) {
             );
             return res.status(200).json({ status: "success", message: "", data: rows });
         } catch (error) {
-            console.error("Erro ao listar pedidos:", error);
+            logger.error({ err: error }, "Erro ao listar pedidos:");
             return res.status(500).json({ status: "error", message: "Erro ao listar pedidos.", data: null });
         }
     });
@@ -85,7 +86,7 @@ module.exports = function (wss) {
             );
             return res.status(200).json({ status: "success", message: "", data: rows });
         } catch (error) {
-            console.error("Erro ao listar itens:", error);
+            logger.error({ err: error }, "Erro ao listar itens:");
             return res.status(500).json({ status: "error", message: "Erro ao listar itens.", data: null });
         }
     });
@@ -160,7 +161,7 @@ module.exports = function (wss) {
             });
         } catch (error) {
             await client.query("ROLLBACK");
-            console.error("Erro ao criar pedido:", error);
+            logger.error({ err: error }, "Erro ao criar pedido:");
             return res.status(500).json({ status: "error", message: "Erro ao criar pedido.", data: null });
         } finally {
             client.release();
@@ -205,7 +206,7 @@ module.exports = function (wss) {
 
             return res.status(200).json({ status: "success", message: "Status atualizado.", data: rows[0] });
         } catch (error) {
-            console.error("Erro ao atualizar status:", error);
+            logger.error({ err: error }, "Erro ao atualizar status:");
             return res.status(500).json({ status: "error", message: "Erro ao atualizar status.", data: null });
         }
     });
@@ -235,7 +236,7 @@ module.exports = function (wss) {
             await pool.query("DELETE FROM pedidos_almoxarifado WHERE id_pedido = $1", [id]);
             return res.status(200).json({ status: "success", message: "Pedido excluído.", data: null });
         } catch (error) {
-            console.error("Erro ao excluir pedido:", error);
+            logger.error({ err: error }, "Erro ao excluir pedido:");
             return res.status(500).json({ status: "error", message: "Erro ao excluir pedido.", data: null });
         }
     });

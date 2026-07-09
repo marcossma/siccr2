@@ -1,5 +1,6 @@
 const express = require("express");
 const pool = require("../config/database.js");
+const logger = require("../lib/logger.js");
 
 const router = express.Router();
 
@@ -11,7 +12,7 @@ router.get("/", async (_req, res) => {
         );
         return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
-        console.error("Erro ao listar unidades:", error);
+        logger.error({ err: error }, "Erro ao listar unidades:");
         return res.status(500).json({ status: "error", message: "Erro ao listar unidades.", data: null });
     }
 });
@@ -35,7 +36,7 @@ router.post("/", async (req, res) => {
         );
         return res.status(201).json({ status: "success", message: "Unidade cadastrada com sucesso.", data: rows[0] });
     } catch (error) {
-        console.error("Erro ao cadastrar unidade:", error);
+        logger.error({ err: error }, "Erro ao cadastrar unidade:");
         return res.status(500).json({ status: "error", message: "Erro ao cadastrar unidade.", data: null });
     }
 });
@@ -63,7 +64,7 @@ router.put("/:id", async (req, res) => {
         }
         return res.status(200).json({ status: "success", message: "Unidade atualizada com sucesso.", data: rows[0] });
     } catch (error) {
-        console.error("Erro ao atualizar unidade:", error);
+        logger.error({ err: error }, "Erro ao atualizar unidade:");
         return res.status(500).json({ status: "error", message: "Erro ao atualizar unidade.", data: null });
     }
 });
@@ -82,7 +83,7 @@ router.delete("/:id", async (req, res) => {
         }
         return res.status(200).json({ status: "success", message: "Unidade excluída com sucesso.", data: null });
     } catch (error) {
-        console.error("Erro ao excluir unidade:", error);
+        logger.error({ err: error }, "Erro ao excluir unidade:");
         return res.status(500).json({ status: "error", message: "Erro ao excluir unidade.", data: null });
     }
 });

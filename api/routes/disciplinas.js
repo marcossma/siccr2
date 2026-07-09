@@ -1,5 +1,6 @@
 const express = require("express");
 const pool = require("../config/database.js");
+const logger = require("../lib/logger.js");
 
 const router = express.Router();
 
@@ -12,7 +13,7 @@ router.get("/professores-disponiveis", async (_req, res) => {
         );
         return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
-        console.error("Erro ao listar professores disponíveis:", error);
+        logger.error({ err: error }, "Erro ao listar professores disponíveis:");
         return res.status(500).json({ status: "error", message: "Erro ao listar usuários.", data: null });
     }
 });
@@ -38,7 +39,7 @@ router.get("/", async (_req, res) => {
         `);
         return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
-        console.error("Erro ao listar disciplinas:", error);
+        logger.error({ err: error }, "Erro ao listar disciplinas:");
         return res.status(500).json({ status: "error", message: "Erro ao listar disciplinas.", data: null });
     }
 });
@@ -85,7 +86,7 @@ router.post("/", async (req, res) => {
         return res.status(201).json({ status: "success", message: "Disciplina cadastrada.", data: rows[0] });
     } catch (error) {
         await client.query("ROLLBACK");
-        console.error("Erro ao cadastrar disciplina:", error);
+        logger.error({ err: error }, "Erro ao cadastrar disciplina:");
         return res.status(500).json({ status: "error", message: "Erro ao cadastrar disciplina.", data: null });
     } finally {
         client.release();
@@ -118,7 +119,7 @@ router.put("/:id", async (req, res) => {
         return res.status(200).json({ status: "success", message: "Disciplina atualizada.", data: rows[0] });
     } catch (error) {
         await client.query("ROLLBACK");
-        console.error("Erro ao atualizar disciplina:", error);
+        logger.error({ err: error }, "Erro ao atualizar disciplina:");
         return res.status(500).json({ status: "error", message: "Erro ao atualizar disciplina.", data: null });
     } finally {
         client.release();
@@ -138,7 +139,7 @@ router.delete("/:id", async (req, res) => {
         if (error.code === "23503") {
             return res.status(400).json({ status: "error", message: "Não é possível excluir: há turmas usando esta disciplina.", data: null });
         }
-        console.error("Erro ao excluir disciplina:", error);
+        logger.error({ err: error }, "Erro ao excluir disciplina:");
         return res.status(500).json({ status: "error", message: "Erro ao excluir disciplina.", data: null });
     }
 });

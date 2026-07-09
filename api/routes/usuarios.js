@@ -1,6 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const pool = require("../config/database.js");
+const logger = require("../lib/logger.js");
 const { getNivelAcesso } = require("../middlewares/autorizar.js");
 
 const router = express.Router();
@@ -48,7 +49,7 @@ router.get("/", async (req, res) => {
         const { rows } = await pool.query(query, params);
         return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
-        console.error("Erro ao listar usuários:", error);
+        logger.error({ err: error }, "Erro ao listar usuários:");
         return res.status(500).json({ status: "error", message: "Erro ao listar usuários.", data: null });
     }
 });
@@ -84,7 +85,7 @@ router.get("/total-info", async (req, res) => {
 
         return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
-        console.error("Erro ao listar usuários (total-info):", error);
+        logger.error({ err: error }, "Erro ao listar usuários (total-info):");
         return res.status(500).json({ status: "error", message: "Erro ao listar informações dos usuários.", data: null });
     }
 });
@@ -105,7 +106,7 @@ router.get("/:id", async (req, res) => {
         }
         return res.status(200).json({ status: "success", message: "", data: rows[0] });
     } catch (error) {
-        console.error("Erro ao buscar usuário:", error);
+        logger.error({ err: error }, "Erro ao buscar usuário:");
         return res.status(500).json({ status: "error", message: "Erro ao buscar usuário.", data: null });
     }
 });
@@ -186,7 +187,7 @@ router.post("/", async (req, res) => {
 
         return res.status(201).json({ status: "success", message: "Usuário cadastrado com sucesso.", data: rows[0] });
     } catch (error) {
-        console.error("Erro ao cadastrar usuário:", error);
+        logger.error({ err: error }, "Erro ao cadastrar usuário:");
         return res.status(500).json({ status: "error", message: "Erro ao cadastrar usuário.", data: null });
     }
 });
@@ -248,7 +249,7 @@ router.put("/:id", async (req, res) => {
         const { rows } = await pool.query(query, values);
         return res.status(200).json({ status: "success", message: "Usuário atualizado com sucesso.", data: rows[0] });
     } catch (error) {
-        console.error("Erro ao atualizar usuário:", error);
+        logger.error({ err: error }, "Erro ao atualizar usuário:");
         return res.status(500).json({ status: "error", message: "Erro ao atualizar usuário.", data: null });
     }
 });
@@ -273,7 +274,7 @@ router.delete("/:id", async (req, res) => {
         }
         return res.status(200).json({ status: "success", message: "Usuário excluído com sucesso.", data: null });
     } catch (error) {
-        console.error("Erro ao excluir usuário:", error);
+        logger.error({ err: error }, "Erro ao excluir usuário:");
         return res.status(500).json({ status: "error", message: "Erro ao excluir usuário.", data: null });
     }
 });

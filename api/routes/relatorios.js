@@ -1,5 +1,6 @@
 const express = require("express");
 const pool = require("../config/database.js");
+const logger = require("../lib/logger.js");
 const { getNivelAcesso } = require("../middlewares/autorizar.js");
 
 const router = express.Router();
@@ -100,7 +101,7 @@ router.get("/resumo", async (req, res) => {
             }
         });
     } catch (error) {
-        console.error("Erro ao gerar relatório resumo:", error);
+        logger.error({ err: error }, "Erro ao gerar relatório resumo:");
         return res.status(500).json({ status: "error", message: "Erro ao gerar relatório.", data: null });
     }
 });
@@ -139,7 +140,7 @@ router.get("/despesas", async (req, res) => {
 
         return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
-        console.error("Erro ao listar relatório de despesas:", error);
+        logger.error({ err: error }, "Erro ao listar relatório de despesas:");
         return res.status(500).json({ status: "error", message: "Erro ao listar despesas.", data: null });
     }
 });
@@ -166,7 +167,7 @@ router.get("/recursos", async (req, res) => {
         `);
         return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
-        console.error("Erro ao listar relatório de recursos:", error);
+        logger.error({ err: error }, "Erro ao listar relatório de recursos:");
         return res.status(500).json({ status: "error", message: "Erro ao listar recursos.", data: null });
     }
 });
@@ -335,7 +336,7 @@ router.get("/salas", async (req, res) => {
             },
         });
     } catch (error) {
-        console.error("Erro ao gerar relatório de salas:", error);
+        logger.error({ err: error }, "Erro ao gerar relatório de salas:");
         return res.status(500).json({
             status: "error",
             message: "Erro ao gerar relatório de salas.",

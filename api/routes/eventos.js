@@ -1,4 +1,5 @@
 const express = require("express");
+const logger = require("../lib/logger.js");
 const router = express.Router();
 
 const EVENTOS_URL = "https://www.ufsm.br/unidades-universitarias/ccr/eventos/";
@@ -74,7 +75,7 @@ router.get("/", async (req, res) => {
         res.status(200).json({ status: "success", message: "", data: eventos });
 
     } catch (error) {
-        console.error("Erro ao buscar eventos do CCR:", error.message);
+        logger.error({ err: error }, "Erro ao buscar eventos do CCR:");
 
         if (cache.data) {
             return res.status(200).json({ status: "success", message: "cache_expirado", data: cache.data });

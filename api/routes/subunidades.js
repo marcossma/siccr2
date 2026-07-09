@@ -1,5 +1,6 @@
 const express = require("express");
 const pool = require("../config/database.js");
+const logger = require("../lib/logger.js");
 const { getNivelAcesso } = require("../middlewares/autorizar.js");
 const { padronizarCodigo } = require("../lib/codigo.js");
 
@@ -21,7 +22,7 @@ router.get("/", async (req, res) => {
         const { rows } = await pool.query(query, params);
         return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
-        console.error("Erro ao listar subunidades:", error);
+        logger.error({ err: error }, "Erro ao listar subunidades:");
         return res.status(500).json({ status: "error", message: "Erro ao listar subunidades.", data: null });
     }
 });
@@ -72,7 +73,7 @@ router.get("/total-info", async (req, res) => {
 
         return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
-        console.error("Erro ao listar subunidades (total-info):", error);
+        logger.error({ err: error }, "Erro ao listar subunidades (total-info):");
         return res.status(500).json({ status: "error", message: "Erro ao listar informações das subunidades.", data: null });
     }
 });
@@ -106,7 +107,7 @@ router.post("/", async (req, res) => {
         );
         return res.status(201).json({ status: "success", message: "Subunidade cadastrada com sucesso.", data: rows[0] });
     } catch (error) {
-        console.error("Erro ao cadastrar subunidade:", error);
+        logger.error({ err: error }, "Erro ao cadastrar subunidade:");
         return res.status(500).json({ status: "error", message: "Erro ao cadastrar subunidade.", data: null });
     }
 });
@@ -144,7 +145,7 @@ router.put("/:id", async (req, res) => {
         }
         return res.status(200).json({ status: "success", message: "Subunidade atualizada com sucesso.", data: rows[0] });
     } catch (error) {
-        console.error("Erro ao atualizar subunidade:", error);
+        logger.error({ err: error }, "Erro ao atualizar subunidade:");
         return res.status(500).json({ status: "error", message: "Erro ao atualizar subunidade.", data: null });
     }
 });
@@ -162,7 +163,7 @@ router.delete("/:id", async (req, res) => {
         }
         return res.status(200).json({ status: "success", message: "Subunidade excluída com sucesso.", data: null });
     } catch (error) {
-        console.error("Erro ao excluir subunidade:", error);
+        logger.error({ err: error }, "Erro ao excluir subunidade:");
         return res.status(500).json({ status: "error", message: "Erro ao excluir subunidade.", data: null });
     }
 });

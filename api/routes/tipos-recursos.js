@@ -1,5 +1,6 @@
 const express = require("express");
 const pool = require("../config/database.js");
+const logger = require("../lib/logger.js");
 
 const router = express.Router();
 
@@ -32,7 +33,7 @@ router.post("/", async (req, res) => {
         });
 
     } catch(error) {
-        console.error("Erro ao tentar cadastrar novo recurso: ", error);
+        logger.error({ err: error }, "Erro ao tentar cadastrar novo recurso: ");
         res.status(500).json({
             status: "error",
             message: "Erro ao tentar cadastrar unidade.",
@@ -50,7 +51,7 @@ router.get ("/", async (req, res) => {
             data: result.rows
         });
     } catch(error) {
-        console.error("Erro ao tentar listar os tipos de recursos.");
+        logger.error("Erro ao tentar listar os tipos de recursos.");
         res.status(500).json({
             status: "error",
             message: "Erro ao tentar listar os tipos de recursos.",
@@ -80,7 +81,7 @@ router.put("/:idrecurso", async (req, res) => {
             data: result.rows
         });
     } catch (error) {
-        console.error("Erro ao tentar atualizar tipo de recurso: ", error);
+        logger.error({ err: error }, "Erro ao tentar atualizar tipo de recurso: ");
         res.status(500).json({
             status: "error",
             message: "Erro ao tentar atualizar tipo de recurso.",
@@ -101,7 +102,7 @@ router.delete("/:idrecurso", async (req, res) => {
             data: ""
         });
     } catch (error) {
-        console.error("Erro ao tentar excluir tipo de recurso: ", error);
+        logger.error({ err: error }, "Erro ao tentar excluir tipo de recurso: ");
         res.status(500).json({
             status: "error",
             message: "Erro ao tentar excluir tipo de recurso.",

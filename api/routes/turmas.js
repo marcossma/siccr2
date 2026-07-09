@@ -1,5 +1,6 @@
 const express = require("express");
 const pool = require("../config/database.js");
+const logger = require("../lib/logger.js");
 const { expandirRecorrencia, detectarConflitos } = require("../lib/recorrencia.js");
 
 const router = express.Router();
@@ -43,7 +44,7 @@ router.get("/", async (req, res) => {
         `, params);
         return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
-        console.error("Erro ao listar turmas:", error);
+        logger.error({ err: error }, "Erro ao listar turmas:");
         return res.status(500).json({ status: "error", message: "Erro ao listar turmas.", data: null });
     }
 });
@@ -79,7 +80,7 @@ router.get("/:id", async (req, res) => {
             data: { ...turma.rows[0], horarios: horarios.rows },
         });
     } catch (error) {
-        console.error("Erro ao buscar turma:", error);
+        logger.error({ err: error }, "Erro ao buscar turma:");
         return res.status(500).json({ status: "error", message: "Erro ao buscar turma.", data: null });
     }
 });
@@ -101,7 +102,7 @@ router.post("/", async (req, res) => {
         );
         return res.status(201).json({ status: "success", message: "Turma cadastrada.", data: rows[0] });
     } catch (error) {
-        console.error("Erro ao cadastrar turma:", error);
+        logger.error({ err: error }, "Erro ao cadastrar turma:");
         return res.status(500).json({ status: "error", message: "Erro ao cadastrar turma.", data: null });
     }
 });
@@ -125,7 +126,7 @@ router.put("/:id", async (req, res) => {
         if (rowCount === 0) return res.status(404).json({ status: "error", message: "Turma não encontrada.", data: null });
         return res.status(200).json({ status: "success", message: "Turma atualizada.", data: rows[0] });
     } catch (error) {
-        console.error("Erro ao atualizar turma:", error);
+        logger.error({ err: error }, "Erro ao atualizar turma:");
         return res.status(500).json({ status: "error", message: "Erro ao atualizar turma.", data: null });
     }
 });
@@ -140,7 +141,7 @@ router.delete("/:id", async (req, res) => {
         if (rowCount === 0) return res.status(404).json({ status: "error", message: "Turma não encontrada.", data: null });
         return res.status(200).json({ status: "success", message: "Turma excluída.", data: null });
     } catch (error) {
-        console.error("Erro ao excluir turma:", error);
+        logger.error({ err: error }, "Erro ao excluir turma:");
         return res.status(500).json({ status: "error", message: "Erro ao excluir turma.", data: null });
     }
 });
@@ -283,7 +284,7 @@ router.post("/:id/horarios", async (req, res) => {
         });
     } catch (error) {
         await client.query("ROLLBACK");
-        console.error("Erro ao alocar horário:", error);
+        logger.error({ err: error }, "Erro ao alocar horário:");
         return res.status(500).json({ status: "error", message: "Erro ao alocar horário.", data: null });
     } finally {
         client.release();
@@ -301,7 +302,7 @@ router.delete("/:id/horarios/:horarioId", async (req, res) => {
         if (rowCount === 0) return res.status(404).json({ status: "error", message: "Horário não encontrado.", data: null });
         return res.status(200).json({ status: "success", message: "Horário removido.", data: null });
     } catch (error) {
-        console.error("Erro ao remover horário:", error);
+        logger.error({ err: error }, "Erro ao remover horário:");
         return res.status(500).json({ status: "error", message: "Erro ao remover horário.", data: null });
     }
 });

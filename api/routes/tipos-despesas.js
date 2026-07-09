@@ -1,5 +1,6 @@
 const express = require("express");
 const pool = require("../config/database.js");
+const logger = require("../lib/logger.js");
 
 const router = express.Router();
 
@@ -32,7 +33,7 @@ router.post("/", async (req, res) => {
         });
 
     } catch(error) {
-        console.error("Erro ao tentar cadastrar nova despesa: ", error);
+        logger.error({ err: error }, "Erro ao tentar cadastrar nova despesa: ");
         res.status(500).json({
             status: "error",
             message: "Erro ao tentar cadastrar despesa.",
@@ -50,7 +51,7 @@ router.get ("/", async (req, res) => {
             data: result.rows
         });
     } catch(error) {
-        console.error("Erro ao tentar listar os tipos de despesas.");
+        logger.error("Erro ao tentar listar os tipos de despesas.");
         res.status(500).json({
             status: "error",
             message: "Erro ao tentar listar os tipos de despesas.",
@@ -80,7 +81,7 @@ router.put("/:iddespesa", async (req, res) => {
             data: result.rows
         });
     } catch (error) {
-        console.error("Erro ao tentar atualizar tipo de despesa: ", error);
+        logger.error({ err: error }, "Erro ao tentar atualizar tipo de despesa: ");
         res.status(500).json({
             status: "error",
             message: "Erro ao tentar atualizar tipo de despesa.",
@@ -101,7 +102,7 @@ router.delete("/:iddespesa", async (req, res) => {
             data: ""
         });
     } catch (error) {
-        console.error("Erro ao tentar excluir tipo de despesa: ", error);
+        logger.error({ err: error }, "Erro ao tentar excluir tipo de despesa: ");
         res.status(500).json({
             status: "error",
             message: "Erro ao tentar excluir tipo de despesa.",

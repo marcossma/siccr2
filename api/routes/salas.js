@@ -1,5 +1,6 @@
 const express = require("express");
 const pool = require("../config/database.js");
+const logger = require("../lib/logger.js");
 const { getNivelAcesso } = require("../middlewares/autorizar.js");
 
 const router = express.Router();
@@ -10,7 +11,7 @@ router.get("/", async (req, res) => {
         const { rows } = await pool.query("SELECT * FROM salas ORDER BY sala_nome");
         return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
-        console.error("Erro ao listar salas:", error);
+        logger.error({ err: error }, "Erro ao listar salas:");
         return res.status(500).json({ status: "error", message: "Erro ao listar salas.", data: null });
     }
 });
@@ -49,7 +50,7 @@ router.get("/total-info", async (req, res) => {
 
         return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
-        console.error("Erro ao listar salas (total-info):", error);
+        logger.error({ err: error }, "Erro ao listar salas (total-info):");
         return res.status(500).json({ status: "error", message: "Erro ao listar informações das salas.", data: null });
     }
 });
@@ -90,7 +91,7 @@ router.post("/", async (req, res) => {
         );
         return res.status(201).json({ status: "success", message: "Sala cadastrada com sucesso.", data: rows[0] });
     } catch (error) {
-        console.error("Erro ao cadastrar sala:", error);
+        logger.error({ err: error }, "Erro ao cadastrar sala:");
         return res.status(500).json({ status: "error", message: "Erro ao cadastrar sala.", data: null });
     }
 });
@@ -121,7 +122,7 @@ router.put("/:id", async (req, res) => {
         }
         return res.status(200).json({ status: "success", message: "Sala atualizada com sucesso.", data: rows[0] });
     } catch (error) {
-        console.error("Erro ao atualizar sala:", error);
+        logger.error({ err: error }, "Erro ao atualizar sala:");
         return res.status(500).json({ status: "error", message: "Erro ao atualizar sala.", data: null });
     }
 });
@@ -137,7 +138,7 @@ router.delete("/:id", async (req, res) => {
         }
         return res.status(200).json({ status: "success", message: "Sala excluída com sucesso.", data: null });
     } catch (error) {
-        console.error("Erro ao excluir sala:", error);
+        logger.error({ err: error }, "Erro ao excluir sala:");
         return res.status(500).json({ status: "error", message: "Erro ao excluir sala.", data: null });
     }
 });

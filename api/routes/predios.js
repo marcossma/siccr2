@@ -1,5 +1,6 @@
 const express = require("express");
 const pool = require("../config/database.js");
+const logger = require("../lib/logger.js");
 const { getNivelAcesso } = require("../middlewares/autorizar.js");
 
 const router = express.Router();
@@ -10,7 +11,7 @@ router.get("/", async (req, res) => {
         const { rows } = await pool.query("SELECT * FROM predios ORDER BY predio");
         return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
-        console.error("Erro ao listar prédios:", error);
+        logger.error({ err: error }, "Erro ao listar prédios:");
         return res.status(500).json({ status: "error", message: "Erro ao listar prédios.", data: null });
     }
 });
@@ -40,7 +41,7 @@ router.get("/total-info", async (req, res) => {
 
         return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
-        console.error("Erro ao listar prédios (total-info):", error);
+        logger.error({ err: error }, "Erro ao listar prédios (total-info):");
         return res.status(500).json({ status: "error", message: "Erro ao listar informações dos prédios.", data: null });
     }
 });
@@ -64,7 +65,7 @@ router.post("/", async (req, res) => {
         );
         return res.status(201).json({ status: "success", message: "Prédio cadastrado com sucesso.", data: rows[0] });
     } catch (error) {
-        console.error("Erro ao cadastrar prédio:", error);
+        logger.error({ err: error }, "Erro ao cadastrar prédio:");
         return res.status(500).json({ status: "error", message: "Erro ao cadastrar prédio.", data: null });
     }
 });
@@ -92,7 +93,7 @@ router.put("/:id", async (req, res) => {
         }
         return res.status(200).json({ status: "success", message: "Prédio atualizado com sucesso.", data: rows[0] });
     } catch (error) {
-        console.error("Erro ao atualizar prédio:", error);
+        logger.error({ err: error }, "Erro ao atualizar prédio:");
         return res.status(500).json({ status: "error", message: "Erro ao atualizar prédio.", data: null });
     }
 });
@@ -108,7 +109,7 @@ router.delete("/:id", async (req, res) => {
         }
         return res.status(200).json({ status: "success", message: "Prédio excluído com sucesso.", data: null });
     } catch (error) {
-        console.error("Erro ao excluir prédio:", error);
+        logger.error({ err: error }, "Erro ao excluir prédio:");
         return res.status(500).json({ status: "error", message: "Erro ao excluir prédio.", data: null });
     }
 });

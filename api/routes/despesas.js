@@ -1,5 +1,6 @@
 const express = require("express");
 const pool = require("../config/database.js");
+const logger = require("../lib/logger.js");
 
 const router = express.Router();
 
@@ -32,7 +33,7 @@ router.post("/", async (req, res) => {
         });
 
     } catch(error) {
-        console.error("Erro ao tentar cadastrar nova despesa: ", error);
+        logger.error({ err: error }, "Erro ao tentar cadastrar nova despesa: ");
         res.status(500).json({
             status: "error",
             message: "Erro ao tentar cadastrar despesa.",
@@ -50,7 +51,7 @@ router.get ("/", async (req, res) => {
             data: result.rows
         });
     } catch(error) {
-        console.error("Erro ao tentar listar as despesas.");
+        logger.error("Erro ao tentar listar as despesas.");
         res.status(500).json({
             status: "error",
             message: "Erro ao tentar listar as despesas.",
@@ -90,7 +91,7 @@ router.get("/total-info", async (req, res) => {
             data: result.rows
         });
     } catch(error) {
-        console.error("Erro ao tentar listar informações completas (total-info).");
+        logger.error("Erro ao tentar listar informações completas (total-info).");
         res.status(500).json({
             status: "error",
             message: "Erro ao tentar listar as informações completas (total-info).",
@@ -112,7 +113,7 @@ router.put("/:iddespesa", async (req, res) => {
             data: result.rows
         });
     } catch (error) {
-        console.error("Erro ao tentar atualizar despesa: ", error);
+        logger.error({ err: error }, "Erro ao tentar atualizar despesa: ");
         res.status(500).json({
             status: "error",
             message: "Erro ao tentar atualizar despesa.",
@@ -133,7 +134,7 @@ router.delete("/:iddespesa", async (req, res) => {
             data: ""
         });
     } catch (error) {
-        console.error("Erro ao tentar excluir despesa: ", error);
+        logger.error({ err: error }, "Erro ao tentar excluir despesa: ");
         res.status(500).json({
             status: "error",
             message: "Erro ao tentar excluir despesa.",

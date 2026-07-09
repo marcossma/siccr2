@@ -1,5 +1,6 @@
 const express = require("express");
 const pool = require("../config/database.js");
+const logger = require("../lib/logger.js");
 const { getNivelAcesso } = require("../middlewares/autorizar.js");
 
 const router = express.Router();
@@ -20,7 +21,7 @@ router.get("/", async (req, res) => {
         `);
         return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
-        console.error("Erro ao listar recursos recebidos:", error);
+        logger.error({ err: error }, "Erro ao listar recursos recebidos:");
         return res.status(500).json({ status: "error", message: "Erro ao listar recursos recebidos.", data: null });
     }
 });
@@ -51,7 +52,7 @@ router.post("/", async (req, res) => {
         );
         return res.status(201).json({ status: "success", message: "Recurso registrado com sucesso.", data: rows[0] });
     } catch (error) {
-        console.error("Erro ao registrar recurso recebido:", error);
+        logger.error({ err: error }, "Erro ao registrar recurso recebido:");
         return res.status(500).json({ status: "error", message: "Erro ao registrar recurso recebido.", data: null });
     }
 });
@@ -80,7 +81,7 @@ router.put("/:id", async (req, res) => {
         if (rowCount === 0) return res.status(404).json({ status: "error", message: "Recurso não encontrado.", data: null });
         return res.status(200).json({ status: "success", message: "Recurso atualizado com sucesso.", data: rows[0] });
     } catch (error) {
-        console.error("Erro ao atualizar recurso recebido:", error);
+        logger.error({ err: error }, "Erro ao atualizar recurso recebido:");
         return res.status(500).json({ status: "error", message: "Erro ao atualizar recurso recebido.", data: null });
     }
 });
@@ -95,7 +96,7 @@ router.delete("/:id", async (req, res) => {
         if (rowCount === 0) return res.status(404).json({ status: "error", message: "Recurso não encontrado.", data: null });
         return res.status(200).json({ status: "success", message: "Recurso excluído com sucesso.", data: null });
     } catch (error) {
-        console.error("Erro ao excluir recurso recebido:", error);
+        logger.error({ err: error }, "Erro ao excluir recurso recebido:");
         return res.status(500).json({ status: "error", message: "Erro ao excluir recurso recebido.", data: null });
     }
 });

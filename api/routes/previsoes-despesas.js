@@ -1,5 +1,6 @@
 const express = require("express");
 const pool = require("../config/database.js");
+const logger = require("../lib/logger.js");
 
 const router = express.Router();
 
@@ -17,7 +18,7 @@ router.get("/", async (req, res) => {
         `);
         return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
-        console.error("Erro ao listar previsões de despesas:", error);
+        logger.error({ err: error }, "Erro ao listar previsões de despesas:");
         return res.status(500).json({ status: "error", message: "Erro ao listar previsões.", data: null });
     }
 });
@@ -43,7 +44,7 @@ router.post("/", async (req, res) => {
         );
         return res.status(201).json({ status: "success", message: "Previsão registrada com sucesso.", data: rows[0] });
     } catch (error) {
-        console.error("Erro ao registrar previsão de despesa:", error);
+        logger.error({ err: error }, "Erro ao registrar previsão de despesa:");
         return res.status(500).json({ status: "error", message: "Erro ao registrar previsão.", data: null });
     }
 });
@@ -72,7 +73,7 @@ router.put("/:id", async (req, res) => {
         if (rowCount === 0) return res.status(404).json({ status: "error", message: "Previsão não encontrada.", data: null });
         return res.status(200).json({ status: "success", message: "Previsão atualizada com sucesso.", data: rows[0] });
     } catch (error) {
-        console.error("Erro ao atualizar previsão de despesa:", error);
+        logger.error({ err: error }, "Erro ao atualizar previsão de despesa:");
         return res.status(500).json({ status: "error", message: "Erro ao atualizar previsão.", data: null });
     }
 });
@@ -87,7 +88,7 @@ router.delete("/:id", async (req, res) => {
         if (rowCount === 0) return res.status(404).json({ status: "error", message: "Previsão não encontrada.", data: null });
         return res.status(200).json({ status: "success", message: "Previsão excluída com sucesso.", data: null });
     } catch (error) {
-        console.error("Erro ao excluir previsão de despesa:", error);
+        logger.error({ err: error }, "Erro ao excluir previsão de despesa:");
         return res.status(500).json({ status: "error", message: "Erro ao excluir previsão.", data: null });
     }
 });

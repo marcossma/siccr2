@@ -1,5 +1,6 @@
 const express = require("express");
 const pool = require("../config/database.js");
+const logger = require("../lib/logger.js");
 
 const router = express.Router();
 
@@ -25,7 +26,7 @@ router.get("/predios", async (_req, res) => {
         `);
         return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
-        console.error("Erro ao listar prédios (painel-tv):", error);
+        logger.error({ err: error }, "Erro ao listar prédios (painel-tv):");
         return res.status(500).json({ status: "error", message: "Erro ao listar prédios.", data: null });
     }
 });
@@ -91,7 +92,7 @@ router.get("/:predio_id", async (req, res) => {
             },
         });
     } catch (error) {
-        console.error("Erro ao montar painel-tv:", error);
+        logger.error({ err: error }, "Erro ao montar painel-tv:");
         return res.status(500).json({ status: "error", message: "Erro ao montar painel.", data: null });
     }
 });
