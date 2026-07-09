@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICCR - Importar Disciplinas</title>
+    <link rel="shortcut icon" href="../img/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/dialogs.css">
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/ui-kit.css">
+    <link rel="stylesheet" href="./css/dialogs.css">
+    <script src="./js/guard.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script type="module" src="./js/script.js"></script>
+    <style>
+        .imp-dropzone { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border: 2px dashed #009536; border-radius: 10px; padding: 30px; text-align: center; background: #f5fbf7; cursor: pointer; }
+        .imp-dropzone input { display: none; }
+        .imp-dropzone i { line-height: 1; }
+        .imp-cards { display: flex; gap: 12px; flex-wrap: wrap; margin: 16px 0; }
+        .imp-card { flex: 1; min-width: 110px; background: #fff; border-radius: 8px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.1); text-align: center; }
+        .imp-card .num { font-size: 24px; font-weight: bold; color: #007a2e; }
+        .imp-card small { color: #888; }
+        .imp-alerta { background: #fff8e1; border-left: 4px solid #f59f00; padding: 10px 12px; border-radius: 4px; margin: 12px 0; font-size: 13px; max-height: 160px; overflow: auto; }
+        .imp-tabela-wrap { max-height: 320px; overflow: auto; border: 1px solid #eee; border-radius: 6px; margin-top: 12px; }
+        .imp-tabela { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .imp-tabela th, .imp-tabela td { padding: 6px 8px; border-bottom: 1px solid #eee; text-align: left; white-space: nowrap; }
+        .imp-tabela th { position: sticky; top: 0; background: #009536; color: #fff; z-index: 1; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/"><img src="../img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo"></a>
+            <div class="acesso"><span id="adminNome"></span><a href="#" id="btnSair">Sair</a></div>
+        </header>
+        <div><responsive-menu></responsive-menu></div>
+        <main class="flex flex--column">
+            <section class="titulo_painel flex justify--space--between align--items--center">
+                <h1 class="flex align--items--center gap--15">
+                    <i class="bi bi-calendar3 font--size--40"></i>
+                    Painel Administrativo - Importar Disciplinas (grade)
+                </h1>
+            </section>
+            <div><menu-navegacao-adm></menu-navegacao-adm></div>
+
+            <section class="informacoes_painel" style="padding:16px">
+                <p style="margin-bottom:12px;font-size:13px;color:#555">
+                    Importe a grade horária do SIA (.xlsx/.csv). São criados/atualizados
+                    <strong>período, cursos, disciplinas, turmas, horários e professores</strong>.
+                    Só linhas com dia + horário entram (orientação, TCC, estágio e EAD são ignorados).
+                    Os horários entram <strong>sem sala</strong> — a alocação de salas é o passo seguinte.
+                </p>
+
+                <label class="imp-dropzone" id="impDrop">
+                    <i class="bi bi-cloud-arrow-up font--size--40" style="color:#009536"></i>
+                    <div id="impDropTexto">Clique para escolher o arquivo (.xlsx ou .csv)</div>
+                    <input type="file" id="impArquivo" accept=".xlsx,.xls,.csv">
+                </label>
+
+                <div id="impResultado" hidden>
+                    <div class="imp-cards">
+                        <div class="imp-card"><div class="num" id="impTurmas">0</div><small>Turmas</small></div>
+                        <div class="imp-card"><div class="num" id="impHorarios">0</div><small>Horários</small></div>
+                        <div class="imp-card"><div class="num" id="impDisc">0</div><small>Disciplinas</small></div>
+                        <div class="imp-card"><div class="num" id="impCursos">0</div><small>Cursos</small></div>
+                        <div class="imp-card"><div class="num" id="impProfCriar">0</div><small>Professores a criar</small></div>
+                        <div class="imp-card"><div class="num" id="impIgnoradas">0</div><small>Linhas ignoradas</small></div>
+                    </div>
+
+                    <div id="impAlertaProf" class="imp-alerta" hidden></div>
+
+                    <p style="font-size:12px;color:#888;margin-top:8px">Amostra das primeiras turmas:</p>
+                    <div class="imp-tabela-wrap">
+                        <table class="imp-tabela">
+                            <thead><tr><th>ID Turma</th><th>Curso</th><th>Disciplina</th><th>Turma</th><th>Horários</th><th>Profs</th></tr></thead>
+                            <tbody id="impCorpo"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="row" style="margin-top:16px">
+                        <button type="button" id="impConfirmar" class="btnPainelFormulario cadastrarUnidade">Confirmar importação</button>
+                        <button type="button" id="impCancelar" class="btnPainelFormulario cancelarUnidade">Cancelar</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+        <footer>Rodapé</footer>
+    </div>
+    <script type="module" src="../js/components/index.js"></script>
+</body>
+</html>

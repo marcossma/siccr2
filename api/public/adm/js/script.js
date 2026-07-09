@@ -1873,4 +1873,130 @@ document.addEventListener("DOMContentLoaded", function() {
         btnCancelar.addEventListener("click", () => resetar());
     } // fim /adm/importar-subunidades
 
+    // =========================================================================
+    // IMPORTAR DISCIPLINAS (grade) — /adm/importar-disciplinas
+    // =========================================================================
+    if (urlParam === "/adm/importar-disciplinas") {
+        const inputArquivo = document.querySelector("#impArquivo");
+        const dropTexto    = document.querySelector("#impDropTexto");
+        const resultado    = document.querySelector("#impResultado");
+        const corpo        = document.querySelector("#impCorpo");
+        const alertaProf   = document.querySelector("#impAlertaProf");
+        const btnConfirmar = document.querySelector("#impConfirmar");
+        const btnCancelar  = document.querySelector("#impCancelar");
+
+        let linhasArquivo = [];
+
+        function formatarValor(v) {
+            if (v instanceof Date && !isNaN(v)) {
+                const dd = String(v.getDate()).padStart(2, "0");
+                const mm = String(v.getMonth() + 1).padStart(2, "0");
+                return `${dd}/${mm}/${v.getFullYear()}`;
+            }
+            return v === null || v === undefined ? "" : String(v).trim();
+        }
+
+        function resetar(texto) {
+            resultado.hidden = true;
+            linhasArquivo = [];
+            inputArquivo.value = "";
+            dropTexto.textContent = texto || "Clique para escolher o arquivo (.xlsx ou .csv)";
+        }
+
+        inputArquivo.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            dropTexto.textContent = `${file.name} — processando…`;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    const wb = XLSX.read(new Uint8Array(ev.target.result), { type: "array", cellDates: true });
+                    const sheet = wb.Sheets[wb.SheetNames[0]];
+                    const bruto = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: true });
+                    linhasArquivo = bruto.map((linha) => {
+                        const nova = {};
+                        Object.keys(linha).forEach((k) => { nova[k.trim()] = formatarValor(linha[k]); });
+                        return nova;
+                    });
+                    if (linhasArquivo.length === 0) { alert("A planilha está vazia."); resetar(); return; }
+                    dropTexto.textContent = `${file.name} (${linhasArquivo.length} linhas)`;
+                    enviarPreview();
+                } catch (err) {
+                    console.error("Erro ao ler planilha:", err);
+                    alert("Não foi possível ler o arquivo. Verifique se é um .xlsx ou .csv válido.");
+                    resetar();
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        async function enviarPreview() {
+            try {
+                const r = await fetch(`${apiUrl}/importacao/disciplinas/preview`, {
+                    method: "POST", body: JSON.stringify({ linhas: linhasArquivo }),
+                });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message || "Erro no preview."); return; }
+                const { resumo, professores_a_criar, amostra } = resp.data;
+                document.querySelector("#impTurmas").textContent = resumo.turmas;
+                document.querySelector("#impHorarios").textContent = resumo.horarios;
+                document.querySelector("#impDisc").textContent = resumo.disciplinas;
+                document.querySelector("#impCursos").textContent = resumo.cursos;
+                document.querySelector("#impProfCriar").textContent = resumo.professores_a_criar;
+                document.querySelector("#impIgnoradas").textContent = resumo.linhas_ignoradas;
+
+                if (professores_a_criar.length > 0) {
+                    alertaProf.hidden = false;
+                    alertaProf.innerHTML = `<strong>${resumo.professores_a_criar} professor(es) serão criados</strong> ` +
+                        `(SIAPE não cadastrado; senha inicial = SIAPE):<br>` +
+                        professores_a_criar.map(p => `• ${p.siape} — ${p.nome}`).join("<br>") +
+                        (resumo.professores_a_criar > professores_a_criar.length ? "<br>…" : "");
+                } else {
+                    alertaProf.hidden = true;
+                }
+
+                corpo.innerHTML = amostra.map((x) => `
+                    <tr>
+                        <td>${x.id_turma_externo}</td>
+                        <td>${x.curso || "—"}</td>
+                        <td>${x.disciplina || "—"}</td>
+                        <td>${x.turma || "—"}</td>
+                        <td>${x.horarios}</td>
+                        <td>${x.professores}</td>
+                    </tr>`).join("");
+
+                resultado.hidden = false;
+                btnConfirmar.disabled = resumo.turmas === 0;
+            } catch (err) {
+                console.error("Erro no preview:", err);
+                alert("Erro de comunicação ao processar o arquivo.");
+            }
+        }
+
+        btnConfirmar.addEventListener("click", async () => {
+            if (linhasArquivo.length === 0) return;
+            if (!confirm("Confirmar a importação da grade? Isso cria/atualiza cursos, disciplinas, turmas, horários e professores.")) return;
+            btnConfirmar.disabled = true;
+            const textoOrig = btnConfirmar.textContent;
+            btnConfirmar.textContent = "Importando…";
+            try {
+                const r = await fetch(`${apiUrl}/importacao/disciplinas`, {
+                    method: "POST", body: JSON.stringify({ linhas: linhasArquivo }),
+                });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message || "Erro ao importar."); btnConfirmar.disabled = false; btnConfirmar.textContent = textoOrig; return; }
+                alert(resp.message);
+                resetar();
+                btnConfirmar.textContent = textoOrig;
+            } catch (err) {
+                console.error("Erro ao importar:", err);
+                alert("Erro de comunicação ao gravar a grade.");
+                btnConfirmar.disabled = false;
+                btnConfirmar.textContent = textoOrig;
+            }
+        });
+
+        btnCancelar.addEventListener("click", () => resetar());
+    } // fim /adm/importar-disciplinas
+
 }); // fim DOMContentLoaded
