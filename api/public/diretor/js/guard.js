@@ -3,7 +3,7 @@
     const t = localStorage.getItem("siccr_token");
     if (!t || !s) {
         document.documentElement.style.visibility = "hidden";
-        location.replace("/login");
+        location.replace("/");
         return;
     }
     // Nível de acesso efetivo: super_admin ou diretor/vice_diretor ou is_direcao_centro
@@ -16,6 +16,6 @@
         isDirecao;
     if (!temAcesso) {
         document.documentElement.style.visibility = "hidden";
-        location.replace("/login");
+        location.replace("/");
     }
 })();

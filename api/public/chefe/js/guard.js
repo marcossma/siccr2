@@ -3,7 +3,7 @@
     const t = localStorage.getItem("siccr_token");
     if (!t || !s) {
         document.documentElement.style.visibility = "hidden";
-        location.replace("/login");
+        location.replace("/");
         return;
     }
     const permissao = s.permissao || "";
@@ -18,6 +18,6 @@
         isDirecao;
     if (!temAcesso) {
         document.documentElement.style.visibility = "hidden";
-        location.replace("/login");
+        location.replace("/");
     }
 })();

@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", function () {
             e.preventDefault();
             localStorage.removeItem("siccr");
             localStorage.removeItem("siccr_token");
-            location.replace("/login");
+            location.replace("/");
         });
     }
 });
