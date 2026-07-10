@@ -1,12 +1,12 @@
 -- Schema dump gerado automaticamente. NÃO editar manualmente.
--- Origem: docker compose db (siccr) — 2026-07-09T18:32:03.613Z
+-- Origem: docker compose db (siccr) — 2026-07-10T14:21:10.550Z
 -- Regenere com: npm run db:dump
 
 --
 -- PostgreSQL database dump
 --
 
-\restrict cUeDp1HRvvARgH5VwGf4bOiQ3JeoROKxAsQ0MzS93kRLPwBG1E57Rb8oR3vdtUi
+\restrict bTi6NP5W5TyqaqCXh5ijV1H8WHYHjCfJYi6Lbl6XB36IQSZgEJhb0YjlqIYW75Z
 
 -- Dumped from database version 16.13
 -- Dumped by pg_dump version 16.13
@@ -193,7 +193,8 @@ CREATE TABLE public.cursos (
     id_curso integer NOT NULL,
     cod_curso character varying(20) NOT NULL,
     nome character varying(255) NOT NULL,
-    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    nivel character varying(20) DEFAULT 'graduacao'::character varying NOT NULL
 );
 
 
@@ -1710,5 +1711,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict cUeDp1HRvvARgH5VwGf4bOiQ3JeoROKxAsQ0MzS93kRLPwBG1E57Rb8oR3vdtUi
+\unrestrict bTi6NP5W5TyqaqCXh5ijV1H8WHYHjCfJYi6Lbl6XB36IQSZgEJhb0YjlqIYW75Z
 

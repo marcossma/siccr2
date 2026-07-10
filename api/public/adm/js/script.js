@@ -1400,6 +1400,8 @@ document.addEventListener("DOMContentLoaded", function() {
     if (urlParam === "/adm/turmas") {
         const filtroPeriodo = document.querySelector("#filtroPeriodo");
         const filtroCurso   = document.querySelector("#filtroCurso");
+        const incluirPos    = document.querySelector("#incluirPos");
+        const cursoNivelBox = document.querySelector("#cursoNivelBox");
         const btnAdicionar  = document.querySelector(".btn_adicionar");
         const listaUnidades = document.querySelector(".listaUnidades");
 
@@ -1418,6 +1420,10 @@ document.addEventListener("DOMContentLoaded", function() {
         const btnAddHorario  = document.querySelector("#btnAddHorario");
         const btnFecharHorarios = document.querySelector("#btnFecharHorarios");
         const horarioFeedback   = document.querySelector("#horarioFeedback");
+        const tituloAddHorario  = document.querySelector("#tituloAddHorario");
+        const btnCancelarEdicaoHorario = document.querySelector("#btnCancelarEdicaoHorario");
+
+        let editandoHorarioId = null; // null = modo adicionar; id = editando aquele horário
 
         const NOMES_DIAS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
@@ -1426,25 +1432,46 @@ document.addEventListener("DOMContentLoaded", function() {
         let salasCache = [];
         let cursosCache = [];
 
+        // Recarrega o dropdown de cursos conforme o checkbox de pós, preservando a seleção
+        async function carregarCursos() {
+            const q = incluirPos.checked ? "?incluir_pos=1" : "";
+            const anterior = filtroCurso.value;
+            cursosCache = ((await (await fetch(`${apiUrl}/cursos${q}`)).json()).data) || [];
+            filtroCurso.innerHTML = '<option value="">Todos os cursos</option>' +
+                cursosCache.map(c => `<option value="${c.id_curso}">${c.nome}${c.nivel === "pos_graduacao" ? " (pós)" : ""} (${c.total_turmas})</option>`).join("");
+            // Se o curso selecionado sumiu (ex.: pós desmarcado), volta a "todos"
+            filtroCurso.value = cursosCache.some(c => String(c.id_curso) === anterior) ? anterior : "";
+            atualizarNivelBox();
+        }
+
+        // Mostra o nível do curso selecionado + botão de ajuste manual (PATCH)
+        function atualizarNivelBox() {
+            const c = cursosCache.find(x => String(x.id_curso) === filtroCurso.value);
+            if (!c) { cursoNivelBox.innerHTML = ""; return; }
+            const ehPos = c.nivel === "pos_graduacao";
+            cursoNivelBox.innerHTML = `
+                <span class="badge ${ehPos ? "badge--info" : "badge--atendido"}">${ehPos ? "Pós-graduação" : "Graduação"}</span>
+                <button type="button" id="btnToggleNivel" class="btnPainelFormulario" style="height:30px;padding:2px 10px;font-size:12px"
+                        data-id="${c.id_curso}" data-novo="${ehPos ? "graduacao" : "pos_graduacao"}">
+                    ${ehPos ? "Marcar como graduação" : "Marcar como pós"}
+                </button>`;
+        }
+
         async function carregarBases() {
-            const [rd, rp, rs, rc] = await Promise.all([
+            const [rd, rp, rs] = await Promise.all([
                 fetch(`${apiUrl}/disciplinas`).then(r => r.json()),
                 fetch(`${apiUrl}/periodos-letivos`).then(r => r.json()),
                 fetch(`${apiUrl}/agendamentos/salas/agendaveis`).then(r => r.json()),
-                fetch(`${apiUrl}/cursos`).then(r => r.json()),
             ]);
             disciplinasCache = rd.data || [];
             periodosCache = rp.data || [];
             salasCache = rs.data || [];
-            cursosCache = rc.data || [];
 
             // Filtro de período no topo (+ opção "todos")
             filtroPeriodo.innerHTML = '<option value="">Todos os períodos</option>' +
                 periodosCache.map(p => `<option value="${p.id_periodo}" ${p.ativo ? "selected" : ""}>${p.nome}${p.ativo ? " (ativo)" : ""}</option>`).join("");
 
-            // Filtro de curso no topo (+ opção "todos")
-            filtroCurso.innerHTML = '<option value="">Todos os cursos</option>' +
-                cursosCache.map(c => `<option value="${c.id_curso}">${c.nome} (${c.total_turmas})</option>`).join("");
+            await carregarCursos();
 
             // Selects do dialog de turma
             selDisciplina.innerHTML = '<option value="">Selecione a disciplina...</option>' +
@@ -1472,6 +1499,7 @@ document.addEventListener("DOMContentLoaded", function() {
             const params = new URLSearchParams();
             if (filtroPeriodo.value) params.set("periodo_letivo_id", filtroPeriodo.value);
             if (filtroCurso.value)   params.set("curso_id", filtroCurso.value);
+            if (incluirPos.checked)  params.set("incluir_pos", "1");
             const q = params.toString() ? `?${params.toString()}` : "";
             try {
                 const turmas = (await (await fetch(`${apiUrl}/turmas${q}`)).json()).data || [];
@@ -1518,7 +1546,21 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         filtroPeriodo.addEventListener("change", renderizar);
-        filtroCurso.addEventListener("change", renderizar);
+        filtroCurso.addEventListener("change", () => { atualizarNivelBox(); renderizar(); });
+        incluirPos.addEventListener("change", async () => { await carregarCursos(); renderizar(); });
+
+        // Ajuste manual do nível do curso (delegação: o botão é recriado a cada seleção)
+        cursoNivelBox.addEventListener("click", async (e) => {
+            const btn = e.target.closest("#btnToggleNivel");
+            if (!btn) return;
+            const r = await fetch(`${apiUrl}/cursos/${btn.dataset.id}`, {
+                method: "PATCH", body: JSON.stringify({ nivel: btn.dataset.novo }),
+            });
+            const resp = await r.json();
+            if (!r.ok) { alert(resp.message); return; }
+            await carregarCursos();
+            renderizar();
+        });
 
         // ── Criar/editar turma ──────────────────────────────────────────
         btnAdicionar.addEventListener("click", (e) => {
@@ -1565,7 +1607,7 @@ document.addEventListener("DOMContentLoaded", function() {
         async function abrirHorarios(turmaId, titulo) {
             dialogHorarios.dataset.turmaId = turmaId;
             document.querySelector("#dialogHorariosLegend").textContent = `Horários — ${titulo}`;
-            horarioFeedback.innerHTML = "";
+            sairModoEdicao();
             await renderizarHorarios(turmaId);
             dialogHorarios.showModal();
         }
@@ -1621,13 +1663,39 @@ document.addEventListener("DOMContentLoaded", function() {
                             ${tipo}
                             ${modular}
                             <span class="flex--1">${salaTxt}</span>
-                            <i class="bi bi-trash cursor--pointer remover-horario" title="Remover" data-id="${h.id_horario}" style="color:#c92a2a"></i>
+                            <i class="bi bi-pencil-square cursor--pointer editar-horario font--size--18" title="Editar"
+                               data-id="${h.id_horario}" data-dia="${h.dia_semana}"
+                               data-inicio="${(h.hora_inicio || '').slice(0,5)}" data-fim="${(h.hora_fim || '').slice(0,5)}"
+                               data-sala="${temSala ? h.sala_id : ''}"></i>
+                            <i class="bi bi-trash cursor--pointer remover-horario font--size--18" title="Remover" data-id="${h.id_horario}" style="color:#c92a2a"></i>
                         </div>`;
                     }).join("");
                 }
                 listaHorarios.innerHTML = profHtml + horHtml;
             } catch (e) { console.error("Erro ao listar horários:", e); }
         }
+
+        function entrarModoEdicao(d) {
+            editandoHorarioId = d.id;
+            document.querySelector("#h_dia").value = d.dia;
+            document.querySelector("#h_inicio").value = d.inicio;
+            document.querySelector("#h_fim").value = d.fim;
+            selSala.value = d.sala || "";
+            tituloAddHorario.textContent = "Editar horário";
+            btnAddHorario.textContent = "Salvar";
+            btnCancelarEdicaoHorario.style.display = "inline-block";
+            horarioFeedback.innerHTML = "";
+        }
+
+        function sairModoEdicao() {
+            editandoHorarioId = null;
+            tituloAddHorario.textContent = "Adicionar horário";
+            btnAddHorario.textContent = "+ Alocar";
+            btnCancelarEdicaoHorario.style.display = "none";
+            horarioFeedback.innerHTML = "";
+        }
+
+        btnCancelarEdicaoHorario.addEventListener("click", sairModoEdicao);
 
         btnAddHorario.addEventListener("click", async () => {
             const turmaId = dialogHorarios.dataset.turmaId;
@@ -1638,9 +1706,16 @@ document.addEventListener("DOMContentLoaded", function() {
                 hora_fim: document.querySelector("#h_fim").value,
                 sala_id: selSala.value || null,
             };
-            if (!body.sala_id) { horarioFeedback.innerHTML = '<div class="horario-conflito">Selecione uma sala.</div>'; return; }
+            // Ao adicionar, sala é obrigatória; ao editar, sala vazia = desalocar
+            if (!editandoHorarioId && !body.sala_id) {
+                horarioFeedback.innerHTML = '<div class="horario-conflito">Selecione uma sala.</div>'; return;
+            }
 
-            const r = await fetch(`${apiUrl}/turmas/${turmaId}/horarios`, { method: "POST", body: JSON.stringify(body) });
+            const url = editandoHorarioId
+                ? `${apiUrl}/turmas/${turmaId}/horarios/${editandoHorarioId}`
+                : `${apiUrl}/turmas/${turmaId}/horarios`;
+            const metodo = editandoHorarioId ? "PUT" : "POST";
+            const r = await fetch(url, { method: metodo, body: JSON.stringify(body) });
             const resp = await r.json();
             if (r.status === 409 && resp.data) {
                 const datas = (resp.data.conflitos || []).map(c => `${c.data} (${c.ocupada_por})`).join("<br>");
@@ -1648,11 +1723,15 @@ document.addEventListener("DOMContentLoaded", function() {
                 return;
             }
             if (!r.ok) { horarioFeedback.innerHTML = `<div class="horario-conflito">${resp.message}</div>`; return; }
+            sairModoEdicao();
             await renderizarHorarios(turmaId);
             renderizar(); // atualiza contagem de horários na lista
         });
 
         listaHorarios.addEventListener("click", async (e) => {
+            const edit = e.target.closest(".editar-horario");
+            if (edit) { entrarModoEdicao(edit.dataset); return; }
+
             const rem = e.target.closest(".remover-horario");
             if (!rem) return;
             if (!confirm("Remover este horário? As aulas geradas serão desalocadas.")) return;
@@ -1660,6 +1739,7 @@ document.addEventListener("DOMContentLoaded", function() {
             const r = await fetch(`${apiUrl}/turmas/${turmaId}/horarios/${rem.dataset.id}`, { method: "DELETE" });
             const resp = await r.json();
             if (!r.ok) { alert(resp.message); return; }
+            if (editandoHorarioId === rem.dataset.id) sairModoEdicao();
             await renderizarHorarios(turmaId);
             renderizar();
         });

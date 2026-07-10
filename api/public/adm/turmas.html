@@ -58,6 +58,10 @@
                     <select id="filtroPeriodo" class="formInput" style="padding:6px 10px"></select>
                     <label class="painelLabel" for="filtroCurso" style="white-space:nowrap">Curso:</label>
                     <select id="filtroCurso" class="formInput" style="padding:6px 10px"></select>
+                    <label class="painelLabel flex align--items--center gap--5 cursor--pointer" style="white-space:nowrap">
+                        <input type="checkbox" id="incluirPos"> Incluir pós-graduação
+                    </label>
+                    <span id="cursoNivelBox" class="flex align--items--center gap--5"></span>
                     <button class="btn_adicionar turma flex align--items--center gap--10 cursor--pointer">Adicionar <i class="bi bi-plus-circle font--size--20"></i></button>
                 </div>
             </section>
@@ -126,7 +130,7 @@
 
             <div id="listaHorarios" style="margin-bottom:15px"></div>
 
-            <div class="pedido-secao-titulo" style="font-weight:600;margin-bottom:8px">Adicionar horário</div>
+            <div id="tituloAddHorario" class="pedido-secao-titulo" style="font-weight:600;margin-bottom:8px">Adicionar horário</div>
             <div class="flex gap--10 align--items--end flex--wrap">
                 <div class="flex flex--column gap--5">
                     <label class="painelLabel" for="h_dia">Dia</label>
@@ -153,6 +157,7 @@
                     <select id="h_sala" class="formInput"></select>
                 </div>
                 <button type="button" id="btnAddHorario" class="btnPainelFormulario" style="height:38px">+ Alocar</button>
+                <button type="button" id="btnCancelarEdicaoHorario" class="btnPainelFormulario cancelarUnidade" style="height:38px;display:none">Cancelar edição</button>
             </div>
             <div id="horarioFeedback"></div>
 

@@ -18,12 +18,16 @@ function hhmm(v) {
 // GET / — lista turmas (filtros: periodo_letivo_id, disciplina_id)
 // ───────────────────────────────────────────────────────────────
 router.get("/", async (req, res) => {
-    const { periodo_letivo_id, disciplina_id, curso_id } = req.query;
+    const { periodo_letivo_id, disciplina_id, curso_id, incluir_pos } = req.query;
+    const incluirPos = incluir_pos === "1" || incluir_pos === "true";
     const params = [];
     const where = [];
     if (periodo_letivo_id) { params.push(periodo_letivo_id); where.push(`t.periodo_letivo_id = $${params.length}`); }
     if (disciplina_id) { params.push(disciplina_id); where.push(`t.disciplina_id = $${params.length}`); }
     if (curso_id) { params.push(curso_id); where.push(`t.curso_id = $${params.length}`); }
+    // Por padrão, pós-graduação fica fora da listagem de ensalamento.
+    // Turma sem curso (curso_id NULL) é tratada como graduação → sempre aparece.
+    if (!incluirPos) { where.push(`(c.nivel IS DISTINCT FROM 'pos_graduacao')`); }
     const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
     try {
@@ -302,6 +306,132 @@ router.post("/:id/horarios", async (req, res) => {
         await client.query("ROLLBACK");
         logger.error({ err: error }, "Erro ao alocar horário:");
         return res.status(500).json({ status: "error", message: "Erro ao alocar horário.", data: null });
+    } finally {
+        client.release();
+    }
+});
+
+// ───────────────────────────────────────────────────────────────
+// PUT /:id/horarios/:horarioId — edita horário e re-materializa a aula
+//   body: { dia_semana, hora_inicio, hora_fim, sala_id }
+//   Preserva tipo_aula e o bloco modular (data_inicio/fim) do horário.
+//   Se houver sala, regenera o agendamento (origem=aula) + ocorrências,
+//   checando conflito (a própria aula é removida antes da checagem, então
+//   não conflita consigo mesma). Sem sala, apenas desaloca.
+// ───────────────────────────────────────────────────────────────
+router.put("/:id/horarios/:horarioId", async (req, res) => {
+    const { id, horarioId } = req.params;
+    const { dia_semana, hora_inicio, hora_fim, sala_id } = req.body;
+
+    const dia = parseInt(dia_semana, 10);
+    if (Number.isNaN(dia) || dia < 0 || dia > 6) {
+        return res.status(400).json({ status: "error", message: "Dia da semana inválido.", data: null });
+    }
+    if (!hora_inicio || !hora_fim || hora_inicio >= hora_fim) {
+        return res.status(400).json({ status: "error", message: "Horário inválido (início deve ser antes do fim).", data: null });
+    }
+
+    const client = await pool.connect();
+    try {
+        // Horário existente (bloco modular preservado) + turma + período
+        const h0 = await client.query(`
+            SELECT h.id_horario, h.data_inicio, h.data_fim,
+                   t.id_turma, t.nome_turma, t.professor_user_id,
+                   d.nome AS disciplina_nome,
+                   pl.data_inicio AS periodo_inicio, pl.data_fim AS periodo_fim
+            FROM turmas_horarios h
+            JOIN turmas t ON t.id_turma = h.turma_id
+            JOIN disciplinas d ON d.id_disciplina = t.disciplina_id
+            JOIN periodos_letivos pl ON pl.id_periodo = t.periodo_letivo_id
+            WHERE h.id_horario = $1 AND h.turma_id = $2`, [horarioId, id]);
+        if (h0.rows.length === 0) {
+            return res.status(404).json({ status: "error", message: "Horário não encontrado.", data: null });
+        }
+        const info = h0.rows[0];
+
+        // Bounds da recorrência: bloco modular do horário, se houver; senão o período
+        const inicioBound = info.data_inicio ? toDateStr(info.data_inicio) : toDateStr(info.periodo_inicio);
+        const fimBound = info.data_fim ? toDateStr(info.data_fim) : toDateStr(info.periodo_fim);
+
+        await client.query("BEGIN");
+
+        // Remove a aula antiga (se existir) antes de checar conflito → não conflita consigo mesma
+        await client.query(
+            "DELETE FROM agendamentos WHERE turma_horario_id = $1 AND origem = 'aula'", [horarioId]
+        );
+
+        // Atualiza o horário (tipo_aula e bloco modular ficam intactos)
+        await client.query(
+            `UPDATE turmas_horarios SET dia_semana=$1, hora_inicio=$2, hora_fim=$3, sala_id=$4
+             WHERE id_horario=$5`,
+            [dia, hora_inicio, hora_fim, sala_id || null, horarioId]
+        );
+
+        // Sem sala: só desaloca (horário permanece na grade, aguardando ensalamento)
+        if (!sala_id) {
+            await client.query("COMMIT");
+            return res.status(200).json({ status: "success", message: "Horário atualizado (sem sala).", data: null });
+        }
+
+        // Expande datas no bloco e checa conflito com a ocupação restante da sala
+        const datas = expandirRecorrencia({
+            tipo: "semanal",
+            data_inicio: inicioBound,
+            data_fim_recorrencia: fimBound,
+            dias_semana: String(dia),
+            intervalo_semanas: 1,
+        });
+        if (datas.length === 0) {
+            await client.query("ROLLBACK");
+            return res.status(400).json({ status: "error", message: "Nenhuma data gerada — verifique as datas do período/bloco.", data: null });
+        }
+
+        const existentes = await ocorrenciasDaSala(client, sala_id, datas);
+        const novas = datas.map((d) => ({ data: d, dia_inteiro: false, hora_inicio, hora_fim }));
+        const conflitos = detectarConflitos(novas, existentes);
+        if (conflitos.length > 0) {
+            await client.query("ROLLBACK");
+            return res.status(409).json({
+                status: "error",
+                message: `Conflito: a sala já está ocupada em ${conflitos.length} data(s) neste horário.`,
+                data: {
+                    conflitos: conflitos.slice(0, 10).map((c) => ({ data: c.data, ocupada_por: c.comExistente.motivo })),
+                    total_conflitos: conflitos.length,
+                },
+            });
+        }
+
+        const motivo = `${info.disciplina_nome} — ${info.nome_turma}`;
+        const ag = await client.query(
+            `INSERT INTO agendamentos
+                (sala_id, solicitante_user_id, motivo, dia_inteiro, hora_inicio, hora_fim,
+                 data_inicio, data_fim_recorrencia, tipo_recorrencia, dias_semana, intervalo_semanas,
+                 status, aprovado_por_user_id, data_decisao, origem, turma_horario_id)
+             VALUES ($1, $2, $3, FALSE, $4, $5, $6, $7, 'semanal', $8, 1,
+                     'aprovada', $9, NOW(), 'aula', $10)
+             RETURNING id_agendamento`,
+            [sala_id, info.professor_user_id || req.usuario.id, motivo, hora_inicio, hora_fim,
+             inicioBound, fimBound, String(dia), req.usuario.id, horarioId]
+        );
+        const agendamentoId = ag.rows[0].id_agendamento;
+        for (const d of datas) {
+            await client.query(
+                `INSERT INTO agendamentos_ocorrencias (agendamento_id, data_ocorrencia, status_individual)
+                 VALUES ($1, $2, 'ativa')`,
+                [agendamentoId, d]
+            );
+        }
+
+        await client.query("COMMIT");
+        return res.status(200).json({
+            status: "success",
+            message: `Horário atualizado (${datas.length} aulas em ${NOMES_DIAS[dia]}).`,
+            data: { total_ocorrencias: datas.length },
+        });
+    } catch (error) {
+        await client.query("ROLLBACK");
+        logger.error({ err: error }, "Erro ao editar horário:");
+        return res.status(500).json({ status: "error", message: "Erro ao editar horário.", data: null });
     } finally {
         client.release();
     }

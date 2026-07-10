@@ -378,6 +378,16 @@ function normalizarTipoAula(v) {
     return null;
 }
 
+// Detecta pós-graduação pelo nome do curso (heurística; ajustável manualmente depois).
+// Retorna 'pos_graduacao' ou 'graduacao'.
+function detectarNivelCurso(nome) {
+    const n = normalizar(nome); // sem acento, maiúsculas
+    if (/\b(MESTRADO|DOUTORADO|POS[- ]?GRADUACAO|ESPECIALIZACAO|PPG|PG)\b/.test(n)) {
+        return "pos_graduacao";
+    }
+    return "graduacao";
+}
+
 // Nome do período letivo a partir de ANO + PERIODO ("1. Semestre" → "2026.1")
 function nomePeriodo(ano, periodo) {
     const a = String(ano || "").trim();
@@ -451,7 +461,7 @@ function analisarDisciplinas(linhas) {
             if (dtFim && (!p.data_fim || dtFim > p.data_fim)) p.data_fim = dtFim;
             periodos.set(periodoNome, p);
         }
-        if (codCurso && !cursos.has(codCurso)) cursos.set(codCurso, { cod_curso: codCurso, nome: nomeCurso });
+        if (codCurso && !cursos.has(codCurso)) cursos.set(codCurso, { cod_curso: codCurso, nome: nomeCurso, nivel: detectarNivelCurso(nomeCurso) });
         const dkey = normalizar(codDisc);
         if (dkey && !disciplinas.has(dkey)) disciplinas.set(dkey, { codigo: codDisc, nome: nomeDisc, carga_horaria: ch });
         if (siape && /^\d+$/.test(siape) && !professores.has(siape)) professores.set(siape, { siape, nome: nomeDoc });
@@ -623,11 +633,12 @@ router.post("/disciplinas", async (req, res) => {
             // 2) Cursos (upsert por cod_curso)
             const cursoId = new Map();
             for (const c of a.cursos.values()) {
+                // nivel só é semeado ao inserir; re-import NÃO sobrescreve (preserva ajuste manual)
                 const r = await client.query(
-                    `INSERT INTO cursos (cod_curso, nome) VALUES ($1, $2)
+                    `INSERT INTO cursos (cod_curso, nome, nivel) VALUES ($1, $2, $3)
                      ON CONFLICT (cod_curso) DO UPDATE SET nome = EXCLUDED.nome
                      RETURNING id_curso`,
-                    [c.cod_curso, c.nome]
+                    [c.cod_curso, c.nome, c.nivel || "graduacao"]
                 );
                 cursoId.set(c.cod_curso, r.rows[0].id_curso);
                 contadores.cursos++;
