@@ -95,9 +95,23 @@
         min-width: 0 !important;
         max-width: 95vw !important;
         max-height: 92vh;
-        width: auto !important;
         overflow: auto;
         box-sizing: border-box;
+    }
+
+    /* Dialogs de formulário: largura consistente (não encolhem pro conteúdo) */
+    dialog.dialogPainel,
+    dialog#dialogNovoPedido,
+    dialog#dialogVerItens,
+    dialog#dialogDetalheAgendamento,
+    dialog#dialogRejeitar,
+    dialog#dialogEventoCal {
+        width: 92vw !important;
+    }
+
+    /* Login se auto-dimensiona pelo fieldset interno (largura própria) */
+    dialog#dialogLogin {
+        width: auto !important;
     }
 
     dialog fieldset {
