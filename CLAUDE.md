@@ -172,11 +172,14 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 
 ### Acadêmico
 - **periodos_letivos** — `id_periodo`, `nome` (ex: `'2026.1'`), `data_inicio`, `data_fim`, `ativo` (só um ativo por vez)
+- **cursos** — `id_curso`, `cod_curso`(unique), `nome`, `nivel`(`graduacao`|`pos_graduacao`, default graduação)
+  - Pós-graduação fica **fora da listagem de ensalamento por padrão** (`?incluir_pos=1` inclui). Nível semeado por heurística no nome (MESTRADO/DOUTORADO/PÓS-GRAD/ESPECIALIZAÇÃO/PPG/PG); ajustável manualmente (`PATCH /cursos/:id`). Re-import **não** sobrescreve o nível.
 - **disciplinas** — `id_disciplina`, `codigo`, `nome`, `carga_horaria`, `subunidade_id`(FK, depto que oferece)
 - **professores_disciplinas** — `id`, `user_id`(FK), `disciplina_id`(FK) — N:N. "Professor" = qualquer `user` vinculado; sem tipo de permissão novo.
-- **turmas** — `id_turma`, `disciplina_id`(FK), `periodo_letivo_id`(FK), `nome_turma`, `professor_user_id`(FK), `vagas`
-- **turmas_horarios** — `id_horario`, `turma_id`(FK), `dia_semana`(0=dom..6=sáb), `hora_inicio`, `hora_fim`, `sala_id`(FK)
-  - **Alocação:** ao adicionar um `turma_horario` com sala, o backend materializa a aula — cria um `agendamento` (`origem='aula'`, `status='aprovada'`) expandido em ocorrências semanais por todo o período letivo (reusa `lib/recorrencia.js`), checando conflito de sala. Apagar o horário/turma cascateia para a aula e ocorrências (FK CASCADE).
+- **turmas** — `id_turma`, `disciplina_id`(FK), `periodo_letivo_id`(FK), `nome_turma`, `professor_user_id`(FK), `vagas`, `curso_id`(FK cursos, SET NULL), `id_turma_externo`(unique — chave do import idempotente)
+- **turmas_professores** — `id`, `turma_id`(FK CASCADE), `user_id`(FK CASCADE), `encargo`(DECIMAL) — N:N de co-docência; unique `(turma_id, user_id)`
+- **turmas_horarios** — `id_horario`, `turma_id`(FK), `dia_semana`(0=dom..6=sáb), `hora_inicio`, `hora_fim`, `sala_id`(FK, **nullable** — importado entra sem sala), `tipo_aula`(`teorica`/`pratica`/`teorica_ext`/`pratica_ext`), `data_inicio`/`data_fim`(DATEONLY, nullable — bloco modular; NULL = período inteiro)
+  - **Alocação:** ao adicionar/editar um `turma_horario` **com sala**, o backend materializa a aula — cria um `agendamento` (`origem='aula'`, `status='aprovada'`) expandido em ocorrências semanais (reusa `lib/recorrencia.js`), respeitando o bloco modular quando presente (senão o período inteiro) e checando conflito de sala. Horário sem sala fica na grade aguardando ensalamento. Apagar o horário/turma cascateia para a aula e ocorrências (FK CASCADE).
 
 ### Financeiro
 - **tipos_recursos** — `id_tipo_recurso`, `tipo_recurso`, `descricao_recurso`
@@ -221,6 +224,7 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 | `/api/periodos-letivos` | chefe | routes/periodos-letivos.js |
 | `/api/disciplinas` | chefe | routes/disciplinas.js |
 | `/api/turmas` | chefe | routes/turmas.js |
+| `/api/cursos` | chefe | routes/cursos.js |
 | `/api/funcionalidades` | chefe | routes/funcionalidades.js |
 | `/api/permissoes-usuario` | chefe | routes/permissoes-usuario.js |
 | `/api/api-keys` | autenticado | routes/api-keys.js |
@@ -245,7 +249,9 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 
 `GET /api/relatorios/salas` (direção) — resumo, ocupação por sala (split aula/reserva), timeline, top solicitantes, rejeições e detalhe. Métricas de workflow filtram `origem='solicitacao'`; ocupação inclui aulas. Usado em `/relatorios-salas`.
 
-`/api/turmas` sub-rotas: `GET/POST/PUT/DELETE /` (CRUD turma), `GET /:id` (detalhe + horários), `POST /:id/horarios` (aloca + materializa aula; 409 com datas em conflito), `DELETE /:id/horarios/:horarioId`.
+`/api/turmas` sub-rotas: `GET /` (lista; filtros `?periodo_letivo_id=&curso_id=&disciplina_id=`, pós excluída salvo `?incluir_pos=1`; devolve `horarios_com_sala`/`total_horarios` e `total_professores`), `POST/PUT/DELETE /` (CRUD turma), `GET /:id` (detalhe + horários com tipo/bloco modular + professores de co-docência), `POST /:id/horarios` (aloca + materializa aula; 409 com datas em conflito), `PUT /:id/horarios/:horarioId` (edição in-place — re-materializa preservando tipo/bloco; sala vazia = desaloca), `DELETE /:id/horarios/:horarioId`.
+
+`/api/cursos`: `GET /` (lista p/ filtro; pós excluída salvo `?incluir_pos=1`), `PATCH /:id` (ajuste manual do `nivel`).
 
 "Direção" = `super_admin`/`diretor`/`vice_diretor`, ou `is_direcao_centro=true`, ou funcionalidade `aprovar_agendamento`/`ver_todos_agendamentos`.
 
@@ -346,5 +352,5 @@ Impressão/PDF: páginas usam `@media print` p/ esconder menu/toolbar.
 
 - Relatórios financeiros não têm filtro por ano no frontend (endpoint `?ano=` existe no backend)
 - 5 vulnerabilidades npm restantes só corrigíveis com `--force` (breaking: bcrypt@6, downgrade sequelize@3) — tooling de build/migration, fora do request path; deixadas conscientemente
-- Alocação de aula (turma_horario) não tem edição in-place: edita-se removendo e re-adicionando o horário
 - Aulas alocadas não disparam tempo real (WS) no calendário/portaria/TV — refletem no próximo carregamento (TV faz polling 60s). Real-time só vale p/ solicitações.
+- Ensalamento em massa: hoje atribui-se sala horário a horário (via editar horário na tela de turmas). Falta uma tela dedicada de ensalamento (atribuição em lote das salas aos horários importados).
