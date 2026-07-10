@@ -204,3 +204,41 @@ h1 {
     color: #009536;
     border-bottom-color: #009536;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   Responsividade — telas pequenas (tablets/celulares)
+   ══════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+    section {
+        padding: 12px 10px;
+        margin-top: 12px;
+        margin-bottom: 12px;
+    }
+
+    /* Título + botão "Adicionar" quebram em vez de comprimir */
+    .titulo_painel {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .titulo_painel .font--size--40 {
+        font-size: 26px;
+    }
+
+    .btn_adicionar {
+        font-size: 13px;
+    }
+
+    /* "Tabelas" do painel: rola horizontalmente em vez de estourar o layout.
+       As linhas mantêm largura mínima legível e o container é que rola. */
+    .informacoes_painel {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .cabecalho,
+    .listaUnidades,
+    .dados {
+        min-width: 700px;
+    }
+}

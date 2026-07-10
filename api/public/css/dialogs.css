@@ -15,6 +15,14 @@
     padding: 20px;
     border-radius: 10px;
     background: white;
+    width: 320px;
+    max-width: 90vw;
+    box-sizing: border-box;
+}
+
+#dialogLogin .formInput {
+    width: 100%;
+    box-sizing: border-box;
 }
 
 #dialogLogin fieldset legend {
