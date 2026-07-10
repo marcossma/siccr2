@@ -569,6 +569,8 @@ footer {
 }
 .badge--pendente  { background: #fff3cd; color: #856404; }
 .badge--atendido  { background: #d1e7dd; color: #0a5732; }
+.badge--parcial   { background: #cfe2ff; color: #084298; }
+.badge--info      { background: #e2e3e5; color: #41464b; }
 .badge--cancelado { background: #f8d7da; color: #842029; }
 
 /* ─── Pedido de Almoxarifado ──────────────────────────────────────────── */

@@ -1399,6 +1399,7 @@ document.addEventListener("DOMContentLoaded", function() {
     // =========================================================================
     if (urlParam === "/adm/turmas") {
         const filtroPeriodo = document.querySelector("#filtroPeriodo");
+        const filtroCurso   = document.querySelector("#filtroCurso");
         const btnAdicionar  = document.querySelector(".btn_adicionar");
         const listaUnidades = document.querySelector(".listaUnidades");
 
@@ -1423,20 +1424,27 @@ document.addEventListener("DOMContentLoaded", function() {
         let disciplinasCache = [];
         let periodosCache = [];
         let salasCache = [];
+        let cursosCache = [];
 
         async function carregarBases() {
-            const [rd, rp, rs] = await Promise.all([
+            const [rd, rp, rs, rc] = await Promise.all([
                 fetch(`${apiUrl}/disciplinas`).then(r => r.json()),
                 fetch(`${apiUrl}/periodos-letivos`).then(r => r.json()),
                 fetch(`${apiUrl}/agendamentos/salas/agendaveis`).then(r => r.json()),
+                fetch(`${apiUrl}/cursos`).then(r => r.json()),
             ]);
             disciplinasCache = rd.data || [];
             periodosCache = rp.data || [];
             salasCache = rs.data || [];
+            cursosCache = rc.data || [];
 
             // Filtro de período no topo (+ opção "todos")
             filtroPeriodo.innerHTML = '<option value="">Todos os períodos</option>' +
                 periodosCache.map(p => `<option value="${p.id_periodo}" ${p.ativo ? "selected" : ""}>${p.nome}${p.ativo ? " (ativo)" : ""}</option>`).join("");
+
+            // Filtro de curso no topo (+ opção "todos")
+            filtroCurso.innerHTML = '<option value="">Todos os cursos</option>' +
+                cursosCache.map(c => `<option value="${c.id_curso}">${c.nome} (${c.total_turmas})</option>`).join("");
 
             // Selects do dialog de turma
             selDisciplina.innerHTML = '<option value="">Selecione a disciplina...</option>' +
@@ -1461,25 +1469,40 @@ document.addEventListener("DOMContentLoaded", function() {
         selDisciplina.addEventListener("change", () => atualizarProfessores(selDisciplina.value));
 
         async function renderizar() {
-            const periodoId = filtroPeriodo.value;
-            const q = periodoId ? `?periodo_letivo_id=${periodoId}` : "";
+            const params = new URLSearchParams();
+            if (filtroPeriodo.value) params.set("periodo_letivo_id", filtroPeriodo.value);
+            if (filtroCurso.value)   params.set("curso_id", filtroCurso.value);
+            const q = params.toString() ? `?${params.toString()}` : "";
             try {
                 const turmas = (await (await fetch(`${apiUrl}/turmas${q}`)).json()).data || [];
                 listaUnidades.innerHTML = "";
                 if (turmas.length === 0) {
-                    listaUnidades.innerHTML = '<p class="pedido-lista-vazia" style="padding:15px">Nenhuma turma neste período.</p>';
+                    listaUnidades.innerHTML = '<p class="pedido-lista-vazia" style="padding:15px">Nenhuma turma para este filtro.</p>';
                     return;
                 }
                 turmas.forEach(t => {
+                    // total_horarios = horários da grade; horarios_com_sala = já ensalados
+                    const comSala = t.horarios_com_sala ?? 0;
+                    const total   = t.total_horarios ?? 0;
+                    let badgeClasse, badgeTexto;
+                    if (total === 0)            { badgeClasse = "badge--pendente"; badgeTexto = "0"; }
+                    else if (comSala === 0)     { badgeClasse = "badge--pendente"; badgeTexto = `0/${total}`; }
+                    else if (comSala < total)   { badgeClasse = "badge--parcial";  badgeTexto = `${comSala}/${total}`; }
+                    else                        { badgeClasse = "badge--atendido"; badgeTexto = `${comSala}/${total}`; }
+                    const nProfs = t.total_professores ?? (t.professor_nome ? 1 : 0);
+                    const profLabel = t.professor_nome
+                        ? t.professor_nome.split(" ").slice(0,2).join(" ") + (nProfs > 1 ? ` +${nProfs - 1}` : "")
+                        : (nProfs > 0 ? `${nProfs} professor(es)` : "—");
                     const div = document.createElement("div");
                     div.classList.add("dados", "flex", "align--items--center");
                     div.innerHTML = `
                         <div class="dado flex flex--4">${t.disciplina_codigo ? t.disciplina_codigo + " - " : ""}${t.disciplina_nome}</div>
                         <div class="dado flex flex--2">${t.nome_turma}</div>
-                        <div class="dado flex flex--3">${t.professor_nome ? t.professor_nome.split(" ").slice(0,2).join(" ") : "—"}</div>
+                        <div class="dado flex flex--3">${t.curso_nome || "—"}</div>
+                        <div class="dado flex flex--3">${profLabel}</div>
                         <div class="dado flex flex--2">${t.periodo_nome}</div>
                         <div class="dado flex flex--2">
-                            <span class="badge ${t.total_horarios > 0 ? "badge--atendido" : "badge--pendente"}">${t.total_horarios}</span>
+                            <span class="badge ${badgeClasse}" title="Ensalados / total de horários">${badgeTexto}</span>
                         </div>
                         <div class="dado flex flex--2 gap--10 font--size--20">
                             <i class="bi bi-calendar-week gerenciar-horarios cursor--pointer" title="Horários e salas" data-id="${t.id_turma}" data-nome="${t.disciplina_nome} — ${t.nome_turma}"></i>
@@ -1495,6 +1518,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         filtroPeriodo.addEventListener("change", renderizar);
+        filtroCurso.addEventListener("change", renderizar);
 
         // ── Criar/editar turma ──────────────────────────────────────────
         btnAdicionar.addEventListener("click", (e) => {
@@ -1546,22 +1570,62 @@ document.addEventListener("DOMContentLoaded", function() {
             dialogHorarios.showModal();
         }
 
+        const ROTULO_TIPO = {
+            teorica: "Teórica", pratica: "Prática",
+            teorica_ext: "Teórica (ext.)", pratica_ext: "Prática (ext.)",
+        };
+        // formatarData vive noutro escopo; helper local para as datas dos blocos modulares
+        const fmtData = (v) => {
+            if (!v) return "";
+            const p = String(v).substring(0, 10).split("-");
+            return p.length === 3 ? `${p[2]}/${p[1]}` : v;
+        };
+
         async function renderizarHorarios(turmaId) {
             try {
                 const turma = (await (await fetch(`${apiUrl}/turmas/${turmaId}`)).json()).data;
                 const horarios = turma.horarios || [];
-                if (horarios.length === 0) {
-                    listaHorarios.innerHTML = '<p class="pedido-lista-vazia" style="padding:10px">Nenhum horário alocado ainda.</p>';
-                    return;
+                const professores = turma.professores || [];
+
+                // Bloco de co-docência (professores vinculados à turma + encargo)
+                let profHtml = "";
+                if (professores.length > 0) {
+                    profHtml = `
+                        <div class="pedido-secao-titulo" style="font-weight:600;margin:4px 0 6px">Professores (${professores.length})</div>
+                        <div class="flex flex--column gap--5" style="margin-bottom:12px">
+                            ${professores.map(p => `
+                                <div class="flex justify--space--between" style="font-size:13px">
+                                    <span>${p.nome}</span>
+                                    <span style="color:#666">${(p.encargo !== null && p.encargo !== undefined) ? "encargo " + p.encargo : ""}</span>
+                                </div>`).join("")}
+                        </div>`;
                 }
-                listaHorarios.innerHTML = horarios.map(h => `
-                    <div class="horario-item">
-                        <span class="dia">${NOMES_DIAS[h.dia_semana]}</span>
-                        <span>${(h.hora_inicio || "").slice(0,5)}–${(h.hora_fim || "").slice(0,5)}</span>
-                        <span class="flex--1">${h.sala_nome}${h.predio_nome ? " (" + h.predio_nome + ")" : ""}</span>
-                        <i class="bi bi-trash cursor--pointer remover-horario" title="Remover" data-id="${h.id_horario}" style="color:#c92a2a"></i>
-                    </div>
-                `).join("");
+
+                let horHtml;
+                if (horarios.length === 0) {
+                    horHtml = '<p class="pedido-lista-vazia" style="padding:10px">Nenhum horário na grade.</p>';
+                } else {
+                    horHtml = horarios.map(h => {
+                        const temSala = h.sala_id !== null && h.sala_id !== undefined;
+                        const salaTxt = temSala
+                            ? `${h.sala_nome}${h.predio_nome ? " (" + h.predio_nome + ")" : ""}`
+                            : '<span style="color:#c76a00">— sem sala —</span>';
+                        const tipo = h.tipo_aula ? `<span class="badge badge--info" title="Tipo de aula">${ROTULO_TIPO[h.tipo_aula] || h.tipo_aula}</span>` : "";
+                        const modular = (h.data_inicio || h.data_fim)
+                            ? `<span style="font-size:11px;color:#888" title="Bloco modular">${fmtData(h.data_inicio) || "?"}→${fmtData(h.data_fim) || "?"}</span>`
+                            : "";
+                        return `
+                        <div class="horario-item">
+                            <span class="dia">${NOMES_DIAS[h.dia_semana]}</span>
+                            <span>${(h.hora_inicio || "").slice(0,5)}–${(h.hora_fim || "").slice(0,5)}</span>
+                            ${tipo}
+                            ${modular}
+                            <span class="flex--1">${salaTxt}</span>
+                            <i class="bi bi-trash cursor--pointer remover-horario" title="Remover" data-id="${h.id_horario}" style="color:#c92a2a"></i>
+                        </div>`;
+                    }).join("");
+                }
+                listaHorarios.innerHTML = profHtml + horHtml;
             } catch (e) { console.error("Erro ao listar horários:", e); }
         }
 

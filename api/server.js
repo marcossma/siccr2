@@ -47,6 +47,7 @@ const permissoesUsuario = require("./routes/permissoes-usuario.js");
 const periodosLetivos = require("./routes/periodos-letivos.js");
 const disciplinas = require("./routes/disciplinas.js");
 const turmas = require("./routes/turmas.js");
+const cursos = require("./routes/cursos.js");
 // Importar rota de importação de dados (super_admin)
 const importacao = require("./routes/importacao.js");
 // Importar rota pública do painel de TV (hall dos prédios)
@@ -207,6 +208,7 @@ app.use("/api/agendamentos",         autenticar, autorizar("servidor"),     agen
 app.use("/api/periodos-letivos",     autenticar, autorizar("chefe"),        periodosLetivos);
 app.use("/api/disciplinas",          autenticar, autorizar("chefe"),        disciplinas);
 app.use("/api/turmas",               autenticar, autorizar("chefe"),        turmas);
+app.use("/api/cursos",               autenticar, autorizar("chefe"),        cursos);
 
 // Importação de dados em massa (planilhas) — restrito ao super_admin
 app.use("/api/importacao",           autenticar, autorizar("super_admin"),  importacao);

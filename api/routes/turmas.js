@@ -18,29 +18,34 @@ function hhmm(v) {
 // GET / — lista turmas (filtros: periodo_letivo_id, disciplina_id)
 // ───────────────────────────────────────────────────────────────
 router.get("/", async (req, res) => {
-    const { periodo_letivo_id, disciplina_id } = req.query;
+    const { periodo_letivo_id, disciplina_id, curso_id } = req.query;
     const params = [];
     const where = [];
     if (periodo_letivo_id) { params.push(periodo_letivo_id); where.push(`t.periodo_letivo_id = $${params.length}`); }
     if (disciplina_id) { params.push(disciplina_id); where.push(`t.disciplina_id = $${params.length}`); }
+    if (curso_id) { params.push(curso_id); where.push(`t.curso_id = $${params.length}`); }
     const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
     try {
         const { rows } = await pool.query(`
             SELECT t.id_turma, t.disciplina_id, t.periodo_letivo_id, t.nome_turma,
-                   t.professor_user_id, t.vagas,
+                   t.professor_user_id, t.vagas, t.curso_id,
                    d.nome AS disciplina_nome, d.codigo AS disciplina_codigo,
-                   pl.nome AS periodo_nome,
+                   pl.nome AS periodo_nome, c.nome AS curso_nome,
                    u.nome AS professor_nome,
-                   COUNT(h.id_horario)::int AS total_horarios
+                   COUNT(DISTINCT h.id_horario)::int AS total_horarios,
+                   COUNT(DISTINCT h.id_horario) FILTER (WHERE h.sala_id IS NOT NULL)::int AS horarios_com_sala,
+                   GREATEST(COUNT(DISTINCT tp.user_id), CASE WHEN t.professor_user_id IS NOT NULL THEN 1 ELSE 0 END)::int AS total_professores
             FROM turmas t
             JOIN disciplinas d ON d.id_disciplina = t.disciplina_id
             JOIN periodos_letivos pl ON pl.id_periodo = t.periodo_letivo_id
+            LEFT JOIN cursos c ON c.id_curso = t.curso_id
             LEFT JOIN users u ON u.user_id = t.professor_user_id
             LEFT JOIN turmas_horarios h ON h.turma_id = t.id_turma
+            LEFT JOIN turmas_professores tp ON tp.turma_id = t.id_turma
             ${whereSql}
-            GROUP BY t.id_turma, d.nome, d.codigo, pl.nome, u.nome
-            ORDER BY pl.nome DESC, d.nome, t.nome_turma
+            GROUP BY t.id_turma, d.nome, d.codigo, pl.nome, c.nome, u.nome
+            ORDER BY c.nome NULLS LAST, d.nome, t.nome_turma
         `, params);
         return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
@@ -56,28 +61,39 @@ router.get("/:id", async (req, res) => {
     const { id } = req.params;
     try {
         const turma = await pool.query(`
-            SELECT t.*, d.nome AS disciplina_nome, pl.nome AS periodo_nome,
+            SELECT t.*, d.nome AS disciplina_nome, d.codigo AS disciplina_codigo,
+                   pl.nome AS periodo_nome,
                    pl.data_inicio AS periodo_inicio, pl.data_fim AS periodo_fim,
-                   u.nome AS professor_nome
+                   c.nome AS curso_nome, u.nome AS professor_nome
             FROM turmas t
             JOIN disciplinas d ON d.id_disciplina = t.disciplina_id
             JOIN periodos_letivos pl ON pl.id_periodo = t.periodo_letivo_id
+            LEFT JOIN cursos c ON c.id_curso = t.curso_id
             LEFT JOIN users u ON u.user_id = t.professor_user_id
             WHERE t.id_turma = $1`, [id]);
         if (turma.rows.length === 0) {
             return res.status(404).json({ status: "error", message: "Turma não encontrada.", data: null });
         }
+        // LEFT JOIN nas salas: horários importados entram SEM sala (aguardando ensalamento)
         const horarios = await pool.query(`
             SELECT h.id_horario, h.dia_semana, h.hora_inicio, h.hora_fim, h.sala_id,
+                   h.tipo_aula, h.data_inicio, h.data_fim,
                    s.sala_nome, p.predio AS predio_nome
             FROM turmas_horarios h
-            JOIN salas s ON s.sala_id = h.sala_id
+            LEFT JOIN salas s ON s.sala_id = h.sala_id
             LEFT JOIN predios p ON p.predio_id = s.predio_id
             WHERE h.turma_id = $1
             ORDER BY h.dia_semana, h.hora_inicio`, [id]);
+        // Co-docência (professores vinculados à turma) + encargo
+        const professores = await pool.query(`
+            SELECT u.user_id, u.nome, tp.encargo
+            FROM turmas_professores tp
+            JOIN users u ON u.user_id = tp.user_id
+            WHERE tp.turma_id = $1
+            ORDER BY u.nome`, [id]);
         return res.status(200).json({
             status: "success", message: "",
-            data: { ...turma.rows[0], horarios: horarios.rows },
+            data: { ...turma.rows[0], horarios: horarios.rows, professores: professores.rows },
         });
     } catch (error) {
         logger.error({ err: error }, "Erro ao buscar turma:");
