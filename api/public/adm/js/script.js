@@ -748,7 +748,9 @@ document.addEventListener("DOMContentLoaded", function() {
                         <div class="dado flex flex--1">${s.sala_capacidade ?? "—"}</div>
                         <div class="dado flex flex--4">${s.sala_descricao || ""}</div>
                         <div class="dado flex flex--2">${s.is_agendavel ? "Sim" : "Não"}</div>
-                        <div class="dado flex flex--2 font--size--20">
+                        <div class="dado flex flex--2 gap--10 font--size--20">
+                            <i class="bi bi-box-seam gerenciar-patrimonio cursor--pointer" title="Patrimônio da sala"
+                               data-sala_id="${s.sala_id}" data-sala_nome="${s.sala_nome}"></i>
                             ${iconeAcoes(
                                 `data-sala_id="${s.sala_id}"
                                  data-sala_nome="${s.sala_nome}"
@@ -756,6 +758,9 @@ document.addEventListener("DOMContentLoaded", function() {
                                  data-subunidade_id="${s.subunidade_id || ""}"
                                  data-sala_descricao="${s.sala_descricao || ""}"
                                  data-sala_capacidade="${s.sala_capacidade ?? ""}"
+                                 data-sala_largura="${s.sala_largura ?? ""}"
+                                 data-sala_comprimento="${s.sala_comprimento ?? ""}"
+                                 data-sala_altura="${s.sala_altura ?? ""}"
                                  data-is_agendavel="${s.is_agendavel ? 1 : 0}"
                                  data-sala_tipo_id="${s.sala_tipo_id || ""}"
                                  data-presta_servicos_externos="${s.presta_servicos_externos ?? ""}"`,
@@ -876,6 +881,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
         listaUnidades.addEventListener("click", async function(e) {
             const el = e.target;
+            if (el.classList.contains("gerenciar-patrimonio")) {
+                abrirPatrimonio(el.dataset.sala_id, el.dataset.sala_nome);
+                return;
+            }
             if (el.classList.contains("editar")) {
                 const d = el.dataset;
                 document.querySelector(".dialogPainel fieldset legend").textContent = "Editar sala";
@@ -887,6 +896,9 @@ document.addEventListener("DOMContentLoaded", function() {
                 document.querySelector("#sala_nome").value        = d.sala_nome;
                 document.querySelector("#sala_descricao").value   = d.sala_descricao;
                 document.querySelector("#sala_capacidade").value  = d.sala_capacidade || "";
+                document.querySelector("#sala_largura").value     = d.sala_largura || "";
+                document.querySelector("#sala_comprimento").value = d.sala_comprimento || "";
+                document.querySelector("#sala_altura").value      = d.sala_altura || "";
                 // Marcar radio is_agendavel
                 document.querySelectorAll("input[name='is_agendavel']").forEach(radio => {
                     radio.checked = radio.value === d.is_agendavel;
@@ -897,6 +909,179 @@ document.addEventListener("DOMContentLoaded", function() {
             }
             if (el.classList.contains("excluir")) excluirSala(el.dataset.id);
         });
+
+        // ─────────────────────────────────────────────────────────────
+        //  PATRIMÔNIO — bens permanentes por sala
+        // ─────────────────────────────────────────────────────────────
+        const dialogPatrimonio = document.querySelector("#dialogPatrimonio");
+        const listaBens        = document.querySelector("#listaBens");
+        const frmBem           = document.querySelector("#frmBem");
+        const inpNumero        = document.querySelector("#numero_registro");
+        const inpDescricao     = document.querySelector("#bem_descricao");
+        const selEstado        = document.querySelector("#bem_estado");
+        const inpData          = document.querySelector("#bem_data");
+        const inpObservacao    = document.querySelector("#bem_observacao");
+        const bemFeedback      = document.querySelector("#bemFeedback");
+        const tituloAddBem     = document.querySelector("#tituloAddBem");
+        const btnSalvarBem     = document.querySelector("#btnSalvarBem");
+        const btnCancelarEdicaoBem = document.querySelector("#btnCancelarEdicaoBem");
+        const btnFecharPatrimonio  = document.querySelector("#btnFecharPatrimonio");
+        const btnEscanear      = document.querySelector("#btnEscanear");
+        const btnPararScan     = document.querySelector("#btnPararScan");
+        const scannerArea      = document.querySelector("#scannerArea");
+        const scannerVideo     = document.querySelector("#scannerVideo");
+        const scannerStatus    = document.querySelector("#scannerStatus");
+
+        const ROTULO_ESTADO = { novo: "Novo", bom: "Bom", regular: "Regular", ruim: "Ruim", inservivel: "Inservível" };
+        let editandoBemId = null;
+
+        async function abrirPatrimonio(salaId, salaNome) {
+            dialogPatrimonio.dataset.salaId = salaId;
+            document.querySelector("#dialogPatrimonioLegend").textContent = `Patrimônio — ${salaNome}`;
+            sairEdicaoBem();
+            inpData.value = new Date().toISOString().slice(0, 10); // default: hoje
+            await renderizarBens(salaId);
+            dialogPatrimonio.showModal();
+        }
+
+        async function renderizarBens(salaId) {
+            try {
+                const bens = (await (await fetch(`${apiUrl}/patrimonio?sala_id=${salaId}`)).json()).data || [];
+                if (bens.length === 0) {
+                    listaBens.innerHTML = '<p class="pedido-lista-vazia" style="padding:10px">Nenhum bem cadastrado nesta sala.</p>';
+                    return;
+                }
+                listaBens.innerHTML = `<div style="font-size:13px;color:#555;margin-bottom:6px">${bens.length} bem(ns) nesta sala</div>` +
+                    bens.map(b => `
+                    <div class="horario-item">
+                        <span class="dia" style="min-width:auto">${b.numero_registro}</span>
+                        <span class="flex--1">${b.descricao}</span>
+                        ${b.estado_conservacao ? `<span class="badge badge--info">${ROTULO_ESTADO[b.estado_conservacao] || b.estado_conservacao}</span>` : ""}
+                        <i class="bi bi-pencil-square cursor--pointer editar-bem font--size--18" title="Editar"
+                           data-id="${b.id_bem}" data-numero="${b.numero_registro}" data-descricao="${(b.descricao || '').replace(/"/g, '&quot;')}"
+                           data-estado="${b.estado_conservacao || ''}" data-data="${b.data_levantamento || ''}"
+                           data-observacao="${(b.observacao || '').replace(/"/g, '&quot;')}"></i>
+                        <i class="bi bi-trash cursor--pointer remover-bem font--size--18" title="Remover" data-id="${b.id_bem}" style="color:#c92a2a"></i>
+                    </div>`).join("");
+            } catch (e) { console.error("Erro ao listar bens:", e); }
+        }
+
+        function sairEdicaoBem() {
+            editandoBemId = null;
+            frmBem.reset();
+            inpData.value = new Date().toISOString().slice(0, 10);
+            tituloAddBem.textContent = "Adicionar bem";
+            btnSalvarBem.textContent = "Adicionar";
+            btnCancelarEdicaoBem.style.display = "none";
+            bemFeedback.innerHTML = "";
+            pararScanner();
+        }
+
+        function entrarEdicaoBem(d) {
+            editandoBemId = d.id;
+            inpNumero.value = d.numero;
+            inpDescricao.value = d.descricao;
+            selEstado.value = d.estado || "";
+            inpData.value = d.data ? String(d.data).slice(0, 10) : "";
+            inpObservacao.value = d.observacao || "";
+            tituloAddBem.textContent = "Editar bem";
+            btnSalvarBem.textContent = "Salvar";
+            btnCancelarEdicaoBem.style.display = "inline-block";
+            bemFeedback.innerHTML = "";
+        }
+
+        btnCancelarEdicaoBem.addEventListener("click", sairEdicaoBem);
+        btnFecharPatrimonio.addEventListener("click", () => { pararScanner(); dialogPatrimonio.close(); });
+
+        btnSalvarBem.addEventListener("click", async () => {
+            bemFeedback.innerHTML = "";
+            const body = {
+                numero_registro: inpNumero.value.trim(),
+                descricao: inpDescricao.value.trim(),
+                sala_id: dialogPatrimonio.dataset.salaId,
+                estado_conservacao: selEstado.value || null,
+                data_levantamento: inpData.value || null,
+                observacao: inpObservacao.value.trim() || null,
+            };
+            if (!body.numero_registro || !body.descricao) {
+                bemFeedback.innerHTML = '<div class="horario-conflito">Número de registro e descrição são obrigatórios.</div>';
+                return;
+            }
+            const url = editandoBemId ? `${apiUrl}/patrimonio/${editandoBemId}` : `${apiUrl}/patrimonio`;
+            const r = await fetch(url, { method: editandoBemId ? "PUT" : "POST", body: JSON.stringify(body) });
+            const resp = await r.json();
+            if (!r.ok) { bemFeedback.innerHTML = `<div class="horario-conflito">${resp.message}</div>`; return; }
+            const salaId = dialogPatrimonio.dataset.salaId;
+            sairEdicaoBem();
+            await renderizarBens(salaId);
+            inpNumero.focus(); // fluxo rápido de levantamento em série
+        });
+
+        listaBens.addEventListener("click", async (e) => {
+            const edit = e.target.closest(".editar-bem");
+            if (edit) { entrarEdicaoBem(edit.dataset); return; }
+            const rem = e.target.closest(".remover-bem");
+            if (!rem) return;
+            if (!confirm("Remover este bem?")) return;
+            const salaId = dialogPatrimonio.dataset.salaId;
+            const r = await fetch(`${apiUrl}/patrimonio/${rem.dataset.id}`, { method: "DELETE" });
+            const resp = await r.json();
+            if (!r.ok) { alert(resp.message); return; }
+            if (editandoBemId === rem.dataset.id) sairEdicaoBem();
+            await renderizarBens(salaId);
+        });
+
+        // ── Leitura de código de barras (BarcodeDetector nativo) ──────
+        let scanStream = null;
+        let scanTimer = null;
+
+        function pararScanner() {
+            if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
+            if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+            if (scannerVideo) scannerVideo.srcObject = null;
+            scannerArea.style.display = "none";
+        }
+
+        async function iniciarScanner() {
+            // Pré-condições: contexto seguro (HTTPS/localhost) + suporte a BarcodeDetector
+            if (!window.isSecureContext || !navigator.mediaDevices || !("BarcodeDetector" in window)) {
+                bemFeedback.innerHTML = '<div class="horario-conflito">Leitura por câmera indisponível neste dispositivo/conexão (requer HTTPS e navegador compatível). Digite o número manualmente.</div>';
+                return;
+            }
+            try {
+                const formatos = await window.BarcodeDetector.getSupportedFormats();
+                const detector = new window.BarcodeDetector({
+                    formats: formatos.filter(f => ["code_128", "code_39", "ean_13", "ean_8", "codabar", "itf", "upc_a"].includes(f)),
+                });
+                scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                scannerVideo.srcObject = scanStream;
+                await scannerVideo.play();
+                scannerArea.style.display = "block";
+                scannerStatus.textContent = "Aponte a câmera para o código de barras…";
+
+                scanTimer = setInterval(async () => {
+                    try {
+                        const codigos = await detector.detect(scannerVideo);
+                        if (codigos && codigos.length > 0) {
+                            inpNumero.value = codigos[0].rawValue;
+                            scannerStatus.textContent = `Lido: ${codigos[0].rawValue}`;
+                            pararScanner();
+                            inpDescricao.focus();
+                        }
+                    } catch { /* frame sem código; segue tentando */ }
+                }, 350);
+            } catch (err) {
+                console.error("Erro na câmera:", err);
+                bemFeedback.innerHTML = '<div class="horario-conflito">Não foi possível acessar a câmera. Verifique a permissão do navegador.</div>';
+                pararScanner();
+            }
+        }
+
+        btnEscanear.addEventListener("click", () => {
+            if (scannerArea.style.display === "block") { pararScanner(); return; }
+            iniciarScanner();
+        });
+        btnPararScan.addEventListener("click", pararScanner);
     } // fim /adm/salas
 
     // =========================================================================

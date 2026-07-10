@@ -1,12 +1,12 @@
 -- Schema dump gerado automaticamente. NÃO editar manualmente.
--- Origem: docker compose db (siccr) — 2026-07-10T14:21:10.550Z
+-- Origem: docker compose db (siccr) — 2026-07-10T17:20:41.538Z
 -- Regenere com: npm run db:dump
 
 --
 -- PostgreSQL database dump
 --
 
-\restrict bTi6NP5W5TyqaqCXh5ijV1H8WHYHjCfJYi6Lbl6XB36IQSZgEJhb0YjlqIYW75Z
+\restrict epAnok3PLu7GURbWBCQbbhlbIqJYpxrSr9vHay585YiRc5megBGH8iloDlm88qa
 
 -- Dumped from database version 16.13
 -- Dumped by pg_dump version 16.13
@@ -183,6 +183,43 @@ CREATE SEQUENCE public.api_keys_id_seq
 --
 
 ALTER SEQUENCE public.api_keys_id_seq OWNED BY public.api_keys.id;
+
+
+--
+-- Name: bens_permanentes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.bens_permanentes (
+    id_bem integer NOT NULL,
+    numero_registro character varying(60) NOT NULL,
+    descricao character varying(255) NOT NULL,
+    sala_id integer,
+    subunidade_id integer,
+    estado_conservacao character varying(20),
+    observacao character varying(255),
+    data_levantamento date,
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: bens_permanentes_id_bem_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.bens_permanentes_id_bem_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: bens_permanentes_id_bem_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.bens_permanentes_id_bem_seq OWNED BY public.bens_permanentes.id_bem;
 
 
 --
@@ -602,7 +639,10 @@ CREATE TABLE public.salas (
     sala_descricao character varying(255),
     sala_tipo_id integer,
     sala_capacidade integer,
-    presta_servicos_externos integer
+    presta_servicos_externos integer,
+    sala_largura numeric(6,2),
+    sala_comprimento numeric(6,2),
+    sala_altura numeric(6,2)
 );
 
 
@@ -968,6 +1008,13 @@ ALTER TABLE ONLY public.api_keys ALTER COLUMN id SET DEFAULT nextval('public.api
 
 
 --
+-- Name: bens_permanentes id_bem; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.bens_permanentes ALTER COLUMN id_bem SET DEFAULT nextval('public.bens_permanentes_id_bem_seq'::regclass);
+
+
+--
 -- Name: cursos id_curso; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1167,6 +1214,22 @@ ALTER TABLE ONLY public.api_keys
 
 ALTER TABLE ONLY public.api_keys
     ADD CONSTRAINT api_keys_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: bens_permanentes bens_permanentes_numero_registro_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.bens_permanentes
+    ADD CONSTRAINT bens_permanentes_numero_registro_key UNIQUE (numero_registro);
+
+
+--
+-- Name: bens_permanentes bens_permanentes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.bens_permanentes
+    ADD CONSTRAINT bens_permanentes_pkey PRIMARY KEY (id_bem);
 
 
 --
@@ -1450,6 +1513,13 @@ CREATE INDEX agendamentos_turma_horario_id ON public.agendamentos USING btree (t
 
 
 --
+-- Name: bens_permanentes_sala_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX bens_permanentes_sala_id ON public.bens_permanentes USING btree (sala_id);
+
+
+--
 -- Name: disciplinas_subunidade_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1545,6 +1615,22 @@ ALTER TABLE ONLY public.api_keys
 
 ALTER TABLE ONLY public.api_keys
     ADD CONSTRAINT api_keys_subunidade_id_fkey FOREIGN KEY (subunidade_id) REFERENCES public.subunidades(subunidade_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: bens_permanentes bens_permanentes_sala_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.bens_permanentes
+    ADD CONSTRAINT bens_permanentes_sala_id_fkey FOREIGN KEY (sala_id) REFERENCES public.salas(sala_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: bens_permanentes bens_permanentes_subunidade_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.bens_permanentes
+    ADD CONSTRAINT bens_permanentes_subunidade_id_fkey FOREIGN KEY (subunidade_id) REFERENCES public.subunidades(subunidade_id) ON UPDATE CASCADE ON DELETE SET NULL;
 
 
 --
@@ -1711,5 +1797,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict bTi6NP5W5TyqaqCXh5ijV1H8WHYHjCfJYi6Lbl6XB36IQSZgEJhb0YjlqIYW75Z
+\unrestrict epAnok3PLu7GURbWBCQbbhlbIqJYpxrSr9vHay585YiRc5megBGH8iloDlm88qa
 

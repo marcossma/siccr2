@@ -155,8 +155,12 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 - **unidades** — `unidade_id`, `unidade_nome`
 - **predios** — `predio_id`, `predio` (nome, sem sufixo), `descricao`, `unidade_id`
 - **subunidades** — `subunidade_id`, `subunidade_nome`, `subunidade_sigla`, `is_direcao_centro`
-- **salas** — `sala_id`, `sala_nome`, `predio_id`, `subunidade_id`, `sala_tipo_id`(FK), `sala_descricao`, `is_agendavel`(int 0/1), `sala_capacidade`(int, nullable), `presta_servicos_externos`(int, nullable — só p/ laboratórios)
+- **salas** — `sala_id`, `sala_nome`, `predio_id`, `subunidade_id`, `sala_tipo_id`(FK), `sala_descricao`, `is_agendavel`(int 0/1), `sala_capacidade`(int, nullable — lugares; insumo do ensalamento), `presta_servicos_externos`(int, nullable — só p/ laboratórios), `sala_largura`/`sala_comprimento`/`sala_altura`(DECIMAL, metros, nullable)
 - **salas_tipo** — `sala_tipo_id`, `sala_tipo_nome`
+
+### Patrimônio
+- **bens_permanentes** — `id_bem`, `numero_registro`(unique — código da etiqueta patrimonial), `descricao`, `sala_id`(FK SET NULL), `subunidade_id`(FK SET NULL — derivada da sala no cadastro), `estado_conservacao`(`novo`/`bom`/`regular`/`ruim`/`inservivel`), `observacao`, `data_levantamento`, `createdat`
+  - Levantamento por sala: dialog na tela `/adm/salas` (ícone de patrimônio por sala). `numero_registro` preenchível manualmente **ou** por leitura de código de barras (`BarcodeDetector` nativo — só em contexto seguro/HTTPS; degrada para manual).
 
 ### Usuários
 - **users** — `user_id`, `nome`, `siape`, `email`, `senha`(bcrypt), `whatsapp`, `data_nascimento`, `permissao`, `subunidade_id`, `unidade_id`
@@ -213,6 +217,7 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 | `/api/subunidades` | chefe | routes/subunidades.js |
 | `/api/salas` | chefe | routes/salas.js |
 | `/api/salas-tipo` | chefe | routes/salas-tipo.js |
+| `/api/patrimonio` | chefe | routes/patrimonio.js |
 | `/api/tipos-recursos` | chefe | routes/tipos-recursos.js |
 | `/api/tipos-despesas` | chefe | routes/tipos-despesas.js |
 | `/api/despesas` | chefe | routes/despesas.js |
@@ -252,6 +257,8 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 `/api/turmas` sub-rotas: `GET /` (lista; filtros `?periodo_letivo_id=&curso_id=&disciplina_id=`, pós excluída salvo `?incluir_pos=1`; devolve `horarios_com_sala`/`total_horarios` e `total_professores`), `POST/PUT/DELETE /` (CRUD turma), `GET /:id` (detalhe + horários com tipo/bloco modular + professores de co-docência), `POST /:id/horarios` (aloca + materializa aula; 409 com datas em conflito), `PUT /:id/horarios/:horarioId` (edição in-place — re-materializa preservando tipo/bloco; sala vazia = desaloca), `DELETE /:id/horarios/:horarioId`.
 
 `/api/cursos`: `GET /` (lista p/ filtro; pós excluída salvo `?incluir_pos=1`), `PATCH /:id` (ajuste manual do `nivel`).
+
+`/api/patrimonio`: `GET /?sala_id=` (bens da sala), `POST /` (cadastra; `subunidade_id` derivada da sala; 409 se `numero_registro` duplicado), `PUT /:id`, `DELETE /:id`.
 
 "Direção" = `super_admin`/`diretor`/`vice_diretor`, ou `is_direcao_centro=true`, ou funcionalidade `aprovar_agendamento`/`ver_todos_agendamentos`.
 
@@ -354,3 +361,5 @@ Impressão/PDF: páginas usam `@media print` p/ esconder menu/toolbar.
 - 5 vulnerabilidades npm restantes só corrigíveis com `--force` (breaking: bcrypt@6, downgrade sequelize@3) — tooling de build/migration, fora do request path; deixadas conscientemente
 - Aulas alocadas não disparam tempo real (WS) no calendário/portaria/TV — refletem no próximo carregamento (TV faz polling 60s). Real-time só vale p/ solicitações.
 - Ensalamento em massa: hoje atribui-se sala horário a horário (via editar horário na tela de turmas). Falta uma tela dedicada de ensalamento (atribuição em lote das salas aos horários importados).
+- Leitura de código de barras do patrimônio via câmera exige **HTTPS** (contexto seguro); em HTTP na LAN o navegador bloqueia a câmera — hoje o sistema roda em HTTP, então a câmera só funciona quando servido por HTTPS (o cadastro manual funciona sempre).
+- Ensalamento automático (matrícula × `sala_capacidade`) ainda não implementado.
