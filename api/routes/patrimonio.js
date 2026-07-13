@@ -19,6 +19,29 @@ async function subunidadeDaSala(salaId) {
     return rows.length ? rows[0].subunidade_id : null;
 }
 
+// Busca o bem existente por número (com a sala atual) — usado ao tratar duplicidade
+async function bemPorNumero(numero) {
+    const { rows } = await pool.query(
+        `SELECT b.id_bem, b.numero_registro, b.descricao, b.sala_id, s.sala_nome
+         FROM bens_permanentes b
+         LEFT JOIN salas s ON s.sala_id = b.sala_id
+         WHERE b.numero_registro = $1`,
+        [numero]
+    );
+    return rows[0] || null;
+}
+
+// Monta a resposta 409 de duplicidade informando ONDE o bem já está (para oferecer "mover")
+async function conflito409(res, numero) {
+    const existente = await bemPorNumero(numero);
+    const onde = existente && existente.sala_nome ? ` na sala ${existente.sala_nome}` : "";
+    return res.status(409).json({
+        status: "error",
+        message: `Tombo "${numero}" já cadastrado${onde}.`,
+        data: { bem_existente: existente },
+    });
+}
+
 // GET /api/patrimonio?sala_id= — lista bens de uma sala
 router.get("/", async (req, res) => {
     const { sala_id } = req.query;
@@ -67,7 +90,7 @@ router.post("/", async (req, res) => {
         return res.status(201).json({ status: "success", message: "Bem cadastrado.", data: rows[0] });
     } catch (error) {
         if (error.code === "23505") {
-            return res.status(409).json({ status: "error", message: `Número de registro "${numero}" já cadastrado.`, data: null });
+            return conflito409(res, numero);
         }
         logger.error({ err: error }, "Erro ao cadastrar bem:");
         return res.status(500).json({ status: "error", message: "Erro ao cadastrar bem.", data: null });
@@ -103,10 +126,34 @@ router.put("/:id", async (req, res) => {
         return res.status(200).json({ status: "success", message: "Bem atualizado.", data: rows[0] });
     } catch (error) {
         if (error.code === "23505") {
-            return res.status(409).json({ status: "error", message: `Número de registro "${numero}" já cadastrado.`, data: null });
+            return conflito409(res, numero);
         }
         logger.error({ err: error }, "Erro ao atualizar bem:");
         return res.status(500).json({ status: "error", message: "Erro ao atualizar bem.", data: null });
+    }
+});
+
+// PATCH /api/patrimonio/:id/mover — transfere um bem para outra sala (levantamento)
+//   body: { sala_id }. Atualiza sala + subunidade derivada + data do levantamento (hoje).
+router.patch("/:id/mover", async (req, res) => {
+    const { id } = req.params;
+    const salaId = req.body.sala_id || null;
+    if (!salaId) {
+        return res.status(400).json({ status: "error", message: "sala_id é obrigatório.", data: null });
+    }
+    try {
+        const subId = await subunidadeDaSala(salaId);
+        const { rows, rowCount } = await pool.query(
+            `UPDATE bens_permanentes
+             SET sala_id = $1, subunidade_id = $2, data_levantamento = CURRENT_DATE
+             WHERE id_bem = $3 RETURNING *`,
+            [salaId, subId, id]
+        );
+        if (rowCount === 0) return res.status(404).json({ status: "error", message: "Bem não encontrado.", data: null });
+        return res.status(200).json({ status: "success", message: "Bem movido para esta sala.", data: rows[0] });
+    } catch (error) {
+        logger.error({ err: error }, "Erro ao mover bem:");
+        return res.status(500).json({ status: "error", message: "Erro ao mover bem.", data: null });
     }
 });
 

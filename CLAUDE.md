@@ -258,7 +258,7 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 
 `/api/cursos`: `GET /` (lista p/ filtro; pós excluída salvo `?incluir_pos=1`), `PATCH /:id` (ajuste manual do `nivel`).
 
-`/api/patrimonio`: `GET /?sala_id=` (bens da sala), `POST /` (cadastra; `subunidade_id` derivada da sala; 409 se `numero_registro` duplicado), `PUT /:id`, `DELETE /:id`.
+`/api/patrimonio`: `GET /?sala_id=` (bens da sala), `POST /` (cadastra; `subunidade_id` derivada da sala; 409 se `numero_registro` duplicado — o 409 traz `data.bem_existente` com a sala atual), `PUT /:id`, `PATCH /:id/mover` (transfere o bem p/ outra sala + atualiza `data_levantamento`; usado no botão "Mover para esta sala" quando o tombo já existe noutra sala), `DELETE /:id`.
 
 "Direção" = `super_admin`/`diretor`/`vice_diretor`, ou `is_direcao_centro=true`, ou funcionalidade `aprovar_agendamento`/`ver_todos_agendamentos`.
 

@@ -1010,11 +1010,43 @@ document.addEventListener("DOMContentLoaded", function() {
             const url = editandoBemId ? `${apiUrl}/patrimonio/${editandoBemId}` : `${apiUrl}/patrimonio`;
             const r = await fetch(url, { method: editandoBemId ? "PUT" : "POST", body: JSON.stringify(body) });
             const resp = await r.json();
-            if (!r.ok) { bemFeedback.innerHTML = `<div class="horario-conflito">${resp.message}</div>`; return; }
+            if (!r.ok) {
+                const be = resp.data && resp.data.bem_existente;
+                const salaAtual = dialogPatrimonio.dataset.salaId;
+                if (r.status === 409 && be && String(be.sala_id) !== String(salaAtual)) {
+                    // Tombo já cadastrado em OUTRA sala → provavelmente o bem mudou de sala; oferece mover
+                    bemFeedback.innerHTML = `
+                        <div class="horario-conflito">
+                            ${resp.message}${be.descricao ? ` — <em>${be.descricao}</em>` : ""}<br>
+                            <button type="button" id="btnMoverBem" class="btnPainelFormulario" style="margin-top:8px;height:32px;padding:2px 12px"
+                                    data-id="${be.id_bem}">Mover para esta sala</button>
+                        </div>`;
+                } else if (r.status === 409 && be) {
+                    bemFeedback.innerHTML = '<div class="horario-conflito">Este tombo já está cadastrado nesta sala.</div>';
+                } else {
+                    bemFeedback.innerHTML = `<div class="horario-conflito">${resp.message}</div>`;
+                }
+                return;
+            }
             const salaId = dialogPatrimonio.dataset.salaId;
             sairEdicaoBem();
             await renderizarBens(salaId);
             inpNumero.focus(); // fluxo rápido de levantamento em série
+        });
+
+        // "Mover para esta sala" (aparece no 409 quando o tombo existe em outra sala)
+        bemFeedback.addEventListener("click", async (e) => {
+            const btn = e.target.closest("#btnMoverBem");
+            if (!btn) return;
+            const salaId = dialogPatrimonio.dataset.salaId;
+            const r = await fetch(`${apiUrl}/patrimonio/${btn.dataset.id}/mover`, {
+                method: "PATCH", body: JSON.stringify({ sala_id: salaId }),
+            });
+            const resp = await r.json();
+            if (!r.ok) { bemFeedback.innerHTML = `<div class="horario-conflito">${resp.message}</div>`; return; }
+            sairEdicaoBem();
+            await renderizarBens(salaId);
+            inpNumero.focus();
         });
 
         listaBens.addEventListener("click", async (e) => {
