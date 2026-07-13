@@ -49,6 +49,7 @@ const disciplinas = require("./routes/disciplinas.js");
 const turmas = require("./routes/turmas.js");
 const cursos = require("./routes/cursos.js");
 const patrimonio = require("./routes/patrimonio.js");
+const aniversariantes = require("./routes/aniversariantes.js");
 // Importar rota de importação de dados (super_admin)
 const importacao = require("./routes/importacao.js");
 // Importar rota pública do painel de TV (hall dos prédios)
@@ -217,6 +218,9 @@ app.use("/api/cursos",               autenticar, autorizar("chefe"),        curs
 // Patrimônio: levantamento de bens por sala — chefe+ sempre; servidor só com a
 // funcionalidade 'fazer_levantamento' concedida (nível mínimo chefe + fallback por funcionalidade)
 app.use("/api/patrimonio",           autenticar, autorizar("chefe", "fazer_levantamento"), patrimonio);
+
+// Aniversariantes do mês: qualquer usuário logado
+app.use("/api/aniversariantes",      autenticar, autorizar("servidor"),     aniversariantes);
 
 // Importação de dados em massa (planilhas) — restrito ao super_admin
 app.use("/api/importacao",           autenticar, autorizar("super_admin"),  importacao);

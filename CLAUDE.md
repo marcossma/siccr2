@@ -222,6 +222,7 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 | `/api/salas` | chefe | routes/salas.js |
 | `/api/salas-tipo` | chefe | routes/salas-tipo.js |
 | `/api/patrimonio` | chefe / servidor c/ `fazer_levantamento` | routes/patrimonio.js |
+| `/api/aniversariantes` | servidor (logado) | routes/aniversariantes.js |
 | `/api/tipos-recursos` | chefe | routes/tipos-recursos.js |
 | `/api/tipos-despesas` | chefe | routes/tipos-despesas.js |
 | `/api/despesas` | chefe | routes/despesas.js |

@@ -3371,4 +3371,45 @@ document.addEventListener("DOMContentLoaded", function() {
         carregarSalas();
     }
 
+    // =========================================================================
+    // ANIVERSARIANTES DO MÊS — /aniversariantes (qualquer usuário logado)
+    // =========================================================================
+    if (urlParam === "/aniversariantes") {
+        const selMes = document.querySelector("#anivMes");
+        const lista  = document.querySelector("#anivLista");
+        const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        const mesAtual = new Date().getMonth() + 1;
+        const hojeDia  = new Date().getDate();
+
+        selMes.innerHTML = MESES.map((m, i) => `<option value="${i + 1}" ${i + 1 === mesAtual ? "selected" : ""}>${m}</option>`).join("");
+        const inicial = (nome) => (nome || "?").trim()[0].toUpperCase();
+
+        async function carregar() {
+            lista.innerHTML = '<p style="padding:12px;color:#888">Carregando…</p>';
+            try {
+                const d = (await (await fetch(`${apiUrl}/aniversariantes?mes=${selMes.value}`)).json()).data || {};
+                const arr = d.aniversariantes || [];
+                if (arr.length === 0) {
+                    lista.innerHTML = `<p class="pedido-lista-vazia" style="padding:16px">Nenhum aniversariante em ${MESES[selMes.value - 1]}.</p>`;
+                    return;
+                }
+                const ehMesAtual = parseInt(selMes.value, 10) === mesAtual;
+                lista.innerHTML = '<div class="flex flex--column gap--10">' + arr.map(a => {
+                    const hoje = ehMesAtual && a.dia === hojeDia;
+                    return `<div class="flex align--items--center gap--15" style="padding:10px 12px;border:1px solid ${hoje ? "#009536" : "#e0e0e0"};border-radius:10px;background:${hoje ? "#f0fbf3" : "#fff"}">
+                        <div style="min-width:44px;height:44px;border-radius:50%;background:#009536;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:18px">${inicial(a.nome)}</div>
+                        <div class="flex--1">
+                            <div style="font-weight:600">${a.nome}${hoje ? " 🎉" : ""}</div>
+                            <div style="font-size:12px;color:#777">${a.subunidade_sigla || a.subunidade_nome || ""}</div>
+                        </div>
+                        <div style="text-align:right;color:#009536;font-weight:bold;white-space:nowrap"><i class="bi bi-cake2"></i> ${a.dia_mes}</div>
+                    </div>`;
+                }).join("") + "</div>";
+            } catch (e) { lista.innerHTML = '<p style="padding:12px;color:#c00">Erro ao carregar aniversariantes.</p>'; console.error(e); }
+        }
+
+        selMes.addEventListener("change", carregar);
+        carregar();
+    }
+
 });
