@@ -77,6 +77,25 @@ router.get("/", async (req, res) => {
     }
 });
 
+// GET /api/patrimonio/salas — lista salas para o seletor da tela de levantamento
+router.get("/salas", async (_req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT s.sala_id, s.sala_nome, p.predio AS predio_nome,
+                    su.subunidade_sigla, su.subunidade_nome,
+                    (SELECT COUNT(*)::int FROM bens_permanentes b WHERE b.sala_id = s.sala_id) AS total_bens
+             FROM salas s
+             LEFT JOIN predios p ON p.predio_id = s.predio_id
+             LEFT JOIN subunidades su ON su.subunidade_id = s.subunidade_id
+             ORDER BY p.predio NULLS LAST, s.sala_nome`
+        );
+        return res.status(200).json({ status: "success", message: "", data: rows });
+    } catch (error) {
+        logger.error({ err: error }, "Erro ao listar salas para patrimônio:");
+        return res.status(500).json({ status: "error", message: "Erro ao listar salas.", data: null });
+    }
+});
+
 // GET /api/patrimonio/:id/historico — linha do tempo de eventos do bem (auditoria)
 router.get("/:id/historico", async (req, res) => {
     const { id } = req.params;

@@ -161,7 +161,7 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 
 ### Patrimônio
 - **bens_permanentes** — `id_bem`, `numero_registro`(unique — código da etiqueta patrimonial), `descricao`, `sala_id`(FK SET NULL), `subunidade_id`(FK SET NULL — derivada da sala no cadastro), `estado_conservacao`(`novo`/`bom`/`regular`/`ruim`/`inservivel`), `observacao`, `data_levantamento`, `created_by_user_id`(FK users SET NULL — quem cadastrou), `createdat`
-  - Levantamento por sala: dialog na tela `/adm/salas` (ícone de patrimônio por sala). `numero_registro` preenchível manualmente **ou** por leitura de código de barras (`BarcodeDetector` nativo — só em contexto seguro/HTTPS; degrada para manual).
+  - Levantamento por sala: dialog na tela `/adm/salas` (super_admin) **e** página servidor-facing `/levantamento-patrimonial` (menu **Patrimônio**, visível p/ chefe+ ou `fazer_levantamento`) — seletor de sala + lista/cadastro de bens, scan, mover e histórico. `numero_registro` preenchível manualmente **ou** por leitura de código de barras (`BarcodeDetector` nativo — só em contexto seguro/HTTPS; degrada para manual).
   - **RBAC:** rota `chefe+` sempre; **servidor** com a funcionalidade `fazer_levantamento` concedida pelo chefe (`autorizar("chefe", "fazer_levantamento")`).
 - **patrimonio_historico** — `id_historico`, `bem_id`(FK SET NULL — vira NULL ao excluir o bem), `numero_registro`(snapshot, sobrevive à exclusão), `acao`(`cadastro`/`edicao`/`movimentacao`/`exclusao`), `user_id`(FK users SET NULL — quem fez), `sala_id`(destino/atual), `sala_anterior_id`(origem, em movimentação), `detalhe`(o que mudou), `createdat`
   - Log de auditoria: cada POST/PUT/PATCH-mover/DELETE grava um evento **na mesma transação** da mudança. Consultável em `GET /patrimonio/:id/historico`.
@@ -262,7 +262,7 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 
 `/api/cursos`: `GET /` (lista p/ filtro; pós excluída salvo `?incluir_pos=1`), `PATCH /:id` (ajuste manual do `nivel`).
 
-`/api/patrimonio`: `GET /?sala_id=` (bens da sala + quem cadastrou), `GET /:id/historico` (linha do tempo de auditoria), `POST /` (cadastra; `subunidade_id` derivada da sala; 409 se `numero_registro` duplicado — o 409 traz `data.bem_existente` com a sala atual), `PUT /:id`, `PATCH /:id/mover` (transfere o bem p/ outra sala + atualiza `data_levantamento`; usado no botão "Mover para esta sala" quando o tombo já existe noutra sala), `DELETE /:id`. Toda mutação grava um evento em `patrimonio_historico`.
+`/api/patrimonio`: `GET /salas` (salas p/ o seletor do levantamento, com total de bens), `GET /?sala_id=` (bens da sala + quem cadastrou), `GET /:id/historico` (linha do tempo de auditoria), `POST /` (cadastra; `subunidade_id` derivada da sala; 409 se `numero_registro` duplicado — o 409 traz `data.bem_existente` com a sala atual), `PUT /:id`, `PATCH /:id/mover` (transfere o bem p/ outra sala + atualiza `data_levantamento`; usado no botão "Mover para esta sala" quando o tombo já existe noutra sala), `DELETE /:id`. Toda mutação grava um evento em `patrimonio_historico`.
 
 "Direção" = `super_admin`/`diretor`/`vice_diretor`, ou `is_direcao_centro=true`, ou funcionalidade `aprovar_agendamento`/`ver_todos_agendamentos`.
 

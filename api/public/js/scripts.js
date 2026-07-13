@@ -3177,4 +3177,198 @@ document.addEventListener("DOMContentLoaded", function() {
         carregar();
     }
 
+    // =========================================================================
+    // LEVANTAMENTO PATRIMONIAL — /levantamento-patrimonial (chefe+ ou fazer_levantamento)
+    // =========================================================================
+    if (urlParam === "/levantamento-patrimonial") {
+        const selSala   = document.querySelector("#lpSala");
+        const aviso     = document.querySelector("#lpAviso");
+        const painel    = document.querySelector("#lpPainel");
+        const salaInfo  = document.querySelector("#lpSalaInfo");
+        const lista     = document.querySelector("#lpListaBens");
+        const inpNumero = document.querySelector("#lpNumero");
+        const inpDesc   = document.querySelector("#lpDescricao");
+        const selEstado = document.querySelector("#lpEstado");
+        const inpData   = document.querySelector("#lpData");
+        const inpObs    = document.querySelector("#lpObservacao");
+        const feedback  = document.querySelector("#lpFeedback");
+        const tituloAdd = document.querySelector("#lpTituloAdd");
+        const btnSalvar = document.querySelector("#lpSalvar");
+        const btnCancelarEd = document.querySelector("#lpCancelarEdicao");
+        const btnEscanear = document.querySelector("#lpEscanear");
+        const btnPararScan = document.querySelector("#lpPararScan");
+        const scannerArea = document.querySelector("#lpScannerArea");
+        const video     = document.querySelector("#lpVideo");
+        const scanStatus = document.querySelector("#lpScannerStatus");
+
+        const ROT_ESTADO = { novo: "Novo", bom: "Bom", regular: "Regular", ruim: "Ruim", inservivel: "Inservível" };
+        const ROT_ACAO = { cadastro: "Cadastro", edicao: "Edição", movimentacao: "Movimentação", exclusao: "Exclusão" };
+        let editandoId = null;
+
+        const fmtData = (v) => { if (!v) return "—"; const p = String(v).substring(0, 10).split("-"); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : v; };
+        const fmtDataHora = (v) => { if (!v) return ""; const d = new Date(v); if (Number.isNaN(d.getTime())) return ""; const z = (n) => String(n).padStart(2, "0"); return `${z(d.getDate())}/${z(d.getMonth() + 1)}/${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}`; };
+        const esc = (s) => String(s || "").replace(/"/g, "&quot;");
+        const salaId = () => selSala.value;
+
+        async function carregarSalas() {
+            try {
+                const r = await fetch(`${apiUrl}/patrimonio/salas`);
+                if (r.status === 403) { aviso.textContent = "Você não tem permissão para o levantamento patrimonial. Peça ao seu chefe a liberação."; selSala.style.display = "none"; return; }
+                const salas = (await r.json()).data || [];
+                if (salas.length === 0) { aviso.textContent = "Nenhuma sala cadastrada."; return; }
+                const grupos = {};
+                salas.forEach(s => { const g = s.predio_nome || "Sem prédio"; (grupos[g] = grupos[g] || []).push(s); });
+                selSala.innerHTML = '<option value="">Selecione a sala…</option>' +
+                    Object.keys(grupos).map(g => `<optgroup label="${g}">` +
+                        grupos[g].map(s => `<option value="${s.sala_id}" data-nome="${esc(s.sala_nome)}" data-predio="${esc(s.predio_nome || "")}" data-sub="${esc(s.subunidade_sigla || s.subunidade_nome || "")}">${s.sala_nome}${s.total_bens ? ` (${s.total_bens})` : ""}</option>`).join("") +
+                        "</optgroup>").join("");
+            } catch (e) { aviso.textContent = "Erro ao carregar salas."; console.error(e); }
+        }
+
+        selSala.addEventListener("change", async () => {
+            sairEdicao(); pararScanner();
+            if (!salaId()) { painel.style.display = "none"; return; }
+            const opt = selSala.selectedOptions[0];
+            salaInfo.innerHTML = `<strong>${opt.dataset.nome}</strong> <span style="color:#888">— ${opt.dataset.predio || "—"}${opt.dataset.sub ? " · " + opt.dataset.sub : ""}</span>`;
+            inpData.value = new Date().toISOString().slice(0, 10);
+            painel.style.display = "block";
+            await renderBens();
+            inpNumero.focus();
+        });
+
+        async function renderBens() {
+            try {
+                const bens = (await (await fetch(`${apiUrl}/patrimonio?sala_id=${salaId()}`)).json()).data || [];
+                if (bens.length === 0) { lista.innerHTML = '<p class="pedido-lista-vazia" style="padding:10px">Nenhum bem cadastrado nesta sala ainda.</p>'; return; }
+                lista.innerHTML = `<div style="font-size:13px;color:#555;margin-bottom:6px">${bens.length} bem(ns) nesta sala</div>` +
+                    bens.map(b => `
+                    <div class="bem-item" style="border-bottom:1px solid #eee;padding:6px 0">
+                        <div class="horario-item" style="border:none;padding:0">
+                            <span class="dia" style="min-width:auto">${b.numero_registro}</span>
+                            <span class="flex--1">${b.descricao}</span>
+                            ${b.estado_conservacao ? `<span class="badge badge--info">${ROT_ESTADO[b.estado_conservacao] || b.estado_conservacao}</span>` : ""}
+                            <i class="bi bi-clock-history cursor--pointer lp-hist font--size--18" title="Histórico" data-id="${b.id_bem}"></i>
+                            <i class="bi bi-pencil-square cursor--pointer lp-edit font--size--18" title="Editar"
+                               data-id="${b.id_bem}" data-numero="${esc(b.numero_registro)}" data-descricao="${esc(b.descricao)}"
+                               data-estado="${b.estado_conservacao || ""}" data-data="${b.data_levantamento || ""}" data-observacao="${esc(b.observacao)}"></i>
+                            <i class="bi bi-trash cursor--pointer lp-del font--size--18" title="Remover" data-id="${b.id_bem}" style="color:#c92a2a"></i>
+                        </div>
+                        <div style="font-size:11px;color:#888;padding-left:2px">${b.created_by_nome ? "cadastrado por " + b.created_by_nome : ""}${b.data_levantamento ? `${b.created_by_nome ? " · " : ""}levantamento ${fmtData(b.data_levantamento)}` : ""}</div>
+                        <div class="lp-histbox" data-id="${b.id_bem}" style="display:none;margin:4px 0 2px;padding:6px 8px;background:#f6f6f6;border-radius:6px;font-size:12px"></div>
+                    </div>`).join("");
+            } catch (e) { console.error("Erro ao listar bens:", e); }
+        }
+
+        async function toggleHist(bemId, box) {
+            if (box.style.display === "block") { box.style.display = "none"; return; }
+            box.style.display = "block"; box.innerHTML = "carregando histórico…";
+            try {
+                const evs = (await (await fetch(`${apiUrl}/patrimonio/${bemId}/historico`)).json()).data || [];
+                if (evs.length === 0) { box.innerHTML = "Sem histórico."; return; }
+                box.innerHTML = evs.map(ev => {
+                    const quem = ev.usuario_nome ? ` por <strong>${ev.usuario_nome}</strong>` : "";
+                    const extra = ev.acao === "movimentacao" ? `${ev.sala_anterior_nome || "?"} → ${ev.sala_nome || "?"}` : (ev.detalhe || "");
+                    return `<div style="padding:2px 0;border-bottom:1px dashed #ddd"><span style="color:#009536;font-weight:600">${ROT_ACAO[ev.acao] || ev.acao}</span>${quem}<span style="color:#999"> · ${fmtDataHora(ev.createdat)}</span>${extra ? `<div style="color:#555">${extra}</div>` : ""}</div>`;
+                }).join("");
+            } catch (e) { box.innerHTML = "Erro ao carregar histórico."; console.error(e); }
+        }
+
+        function sairEdicao() {
+            editandoId = null;
+            document.querySelector("#lpForm").reset();
+            inpData.value = new Date().toISOString().slice(0, 10);
+            tituloAdd.textContent = "Adicionar bem";
+            btnSalvar.textContent = "Adicionar";
+            btnCancelarEd.style.display = "none";
+            feedback.innerHTML = "";
+        }
+        function entrarEdicao(d) {
+            editandoId = d.id;
+            inpNumero.value = d.numero; inpDesc.value = d.descricao;
+            selEstado.value = d.estado || ""; inpData.value = d.data ? String(d.data).slice(0, 10) : "";
+            inpObs.value = d.observacao || "";
+            tituloAdd.textContent = "Editar bem"; btnSalvar.textContent = "Salvar";
+            btnCancelarEd.style.display = "inline-block"; feedback.innerHTML = "";
+            inpNumero.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        btnCancelarEd.addEventListener("click", sairEdicao);
+
+        btnSalvar.addEventListener("click", async () => {
+            feedback.innerHTML = "";
+            const body = { numero_registro: inpNumero.value.trim(), descricao: inpDesc.value.trim(), sala_id: salaId(), estado_conservacao: selEstado.value || null, data_levantamento: inpData.value || null, observacao: inpObs.value.trim() || null };
+            if (!body.numero_registro || !body.descricao) { feedback.innerHTML = '<div class="horario-conflito">Número de registro e descrição são obrigatórios.</div>'; return; }
+            const url = editandoId ? `${apiUrl}/patrimonio/${editandoId}` : `${apiUrl}/patrimonio`;
+            const r = await fetch(url, { method: editandoId ? "PUT" : "POST", body: JSON.stringify(body) });
+            const resp = await r.json();
+            if (!r.ok) {
+                const be = resp.data && resp.data.bem_existente;
+                if (r.status === 409 && be && String(be.sala_id) !== String(salaId())) {
+                    feedback.innerHTML = `<div class="horario-conflito">${resp.message}${be.descricao ? ` — <em>${be.descricao}</em>` : ""}<br><button type="button" id="lpMover" class="btnPainelFormulario" style="margin-top:8px;height:32px;padding:2px 12px" data-id="${be.id_bem}">Mover para esta sala</button></div>`;
+                } else if (r.status === 409 && be) {
+                    feedback.innerHTML = '<div class="horario-conflito">Este tombo já está cadastrado nesta sala.</div>';
+                } else {
+                    feedback.innerHTML = `<div class="horario-conflito">${resp.message}</div>`;
+                }
+                return;
+            }
+            sairEdicao(); await renderBens(); inpNumero.focus();
+        });
+
+        feedback.addEventListener("click", async (e) => {
+            const btn = e.target.closest("#lpMover");
+            if (!btn) return;
+            const r = await fetch(`${apiUrl}/patrimonio/${btn.dataset.id}/mover`, { method: "PATCH", body: JSON.stringify({ sala_id: salaId() }) });
+            const resp = await r.json();
+            if (!r.ok) { feedback.innerHTML = `<div class="horario-conflito">${resp.message}</div>`; return; }
+            sairEdicao(); await renderBens(); inpNumero.focus();
+        });
+
+        lista.addEventListener("click", async (e) => {
+            const h = e.target.closest(".lp-hist");
+            if (h) { toggleHist(h.dataset.id, h.closest(".bem-item").querySelector(".lp-histbox")); return; }
+            const ed = e.target.closest(".lp-edit");
+            if (ed) { entrarEdicao(ed.dataset); return; }
+            const del = e.target.closest(".lp-del");
+            if (!del) return;
+            if (!confirm("Remover este bem?")) return;
+            const r = await fetch(`${apiUrl}/patrimonio/${del.dataset.id}`, { method: "DELETE" });
+            const resp = await r.json();
+            if (!r.ok) { alert(resp.message); return; }
+            if (editandoId === del.dataset.id) sairEdicao();
+            await renderBens();
+        });
+
+        // ── Leitura de código de barras (BarcodeDetector nativo; requer HTTPS) ──
+        let scanStream = null, scanTimer = null;
+        function pararScanner() {
+            if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
+            if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+            if (video) video.srcObject = null;
+            scannerArea.style.display = "none";
+        }
+        async function iniciarScanner() {
+            if (!window.isSecureContext || !navigator.mediaDevices || !("BarcodeDetector" in window)) {
+                feedback.innerHTML = '<div class="horario-conflito">Leitura por câmera indisponível neste dispositivo/conexão (requer HTTPS e navegador compatível). Digite o número manualmente.</div>';
+                return;
+            }
+            try {
+                const formatos = await window.BarcodeDetector.getSupportedFormats();
+                const detector = new window.BarcodeDetector({ formats: formatos.filter(f => ["code_128", "code_39", "ean_13", "ean_8", "codabar", "itf", "upc_a"].includes(f)) });
+                scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                video.srcObject = scanStream; await video.play();
+                scannerArea.style.display = "block"; scanStatus.textContent = "Aponte a câmera para o código de barras…";
+                scanTimer = setInterval(async () => {
+                    try {
+                        const cods = await detector.detect(video);
+                        if (cods && cods.length > 0) { inpNumero.value = cods[0].rawValue; scanStatus.textContent = `Lido: ${cods[0].rawValue}`; pararScanner(); inpDesc.focus(); }
+                    } catch { /* frame sem código */ }
+                }, 350);
+            } catch (err) { console.error("Erro na câmera:", err); feedback.innerHTML = '<div class="horario-conflito">Não foi possível acessar a câmera. Verifique a permissão do navegador.</div>'; pararScanner(); }
+        }
+        btnEscanear.addEventListener("click", () => { if (scannerArea.style.display === "block") pararScanner(); else iniciarScanner(); });
+        btnPararScan.addEventListener("click", pararScanner);
+
+        carregarSalas();
+    }
+
 });

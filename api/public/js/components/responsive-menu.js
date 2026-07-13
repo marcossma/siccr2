@@ -26,6 +26,9 @@ class ResponsiveMenu extends HTMLElement {
         // Portaria / quem pode ver a agenda da semana
         const ehPortaria = nivel >= 2 || funcs.includes("ver_agenda_portaria");
 
+        // Levantamento patrimonial: chefe+ ou servidor com a funcionalidade concedida
+        const podeLevantamento = nivel >= 2 || funcs.includes("fazer_levantamento");
+
         // Monta os itens de menu por nível — só mostra para usuários logados
         const admDropdown = nivel >= 1 ? `
             <li class="nav-dropdown">
@@ -72,15 +75,15 @@ class ResponsiveMenu extends HTMLElement {
                     <li><a href="/">Início</a></li>
                     ${admDropdown}
                     ${finDropdown}
+                    ${podeLevantamento ? `
                     <li class="nav-dropdown">
                         <button class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true">
                             Patrimônio <span aria-hidden="true">⤵</span>
                         </button>
                         <ul class="nav-dropdown-menu">
-                            <li><a href="#">Equipe</a></li>
-                            <li><a href="#">História</a></li>
+                            <li><a href="/levantamento-patrimonial">Levantamento patrimonial</a></li>
                         </ul>
-                    </li>
+                    </li>` : ""}
                     <li class="nav-dropdown">
                         <button class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true">
                             Infraestrutura <span aria-hidden="true">⤵</span>

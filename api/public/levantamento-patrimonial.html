@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICCR - Levantamento Patrimonial</title>
+    <link rel="shortcut icon" href="./img/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/dialogs.css">
+    <link rel="stylesheet" href="./adm/css/style.css">
+    <link rel="stylesheet" href="./adm/css/dialogs.css">
+    <link rel="stylesheet" href="./css/ui-kit.css">
+    <script type="module" src="./js/scripts.js"></script>
+</head>
+<body>
+    <!-- Formulário de Login DIALOG -->
+    <dialog id="dialogLogin">
+        <fieldset>
+            <legend>Login</legend>
+            <form id="frmLogin">
+                <div class="row">
+                    <input type="text" name="txtLogin" id="txtLogin" class="formInput" placeholder="Digite o seu login">
+                </div>
+                <div class="row">
+                    <input type="password" name="txtSenha" id="txtSenha" class="formInput" placeholder="Digite a sua senha">
+                </div>
+                <p id="loginErro" class="login-erro" hidden></p>
+                <div class="row">
+                    <button id="btnLogin" type="button">Entrar</button>
+                    <button id="btnCancelarLogin" type="button">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+
+    <div class="container">
+        <header>
+            <a href="/">
+                <img src="./img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo">
+            </a>
+            <div class="acesso">
+                <a href="#" id="btnEntrar" class="">Entrar</a>
+            </div>
+        </header>
+        <div>
+            <responsive-menu></responsive-menu>
+        </div>
+        <main class="flex flex--column">
+            <section class="titulo_secao flex justify--space--between align--items--center" style="flex-wrap:wrap;gap:10px">
+                <h1 class="flex align--items--center gap--10"><i class="bi bi-box-seam"></i> Levantamento Patrimonial</h1>
+                <div class="flex gap--10 align--items--center" style="flex-wrap:wrap">
+                    <label class="painelLabel" for="lpSala" style="white-space:nowrap">Sala:</label>
+                    <select id="lpSala" class="formInput" style="padding:6px 10px;min-width:220px"></select>
+                </div>
+            </section>
+
+            <p id="lpAviso" style="padding:10px;color:#555"></p>
+
+            <!-- Painel do levantamento (aparece ao escolher a sala) -->
+            <section id="lpPainel" class="informacoes_painel" style="display:none">
+                <div id="lpSalaInfo" style="padding:6px 4px 12px;border-bottom:1px solid #ddd;margin-bottom:12px"></div>
+
+                <div id="lpListaBens" style="margin-bottom:16px"></div>
+
+                <div id="lpTituloAdd" class="pedido-secao-titulo" style="font-weight:600;margin-bottom:8px">Adicionar bem</div>
+                <form id="lpForm" class="flex flex--column gap--10">
+                    <input type="hidden" id="lpBemId">
+                    <div class="flex flex--column gap--5">
+                        <label class="painelLabel" for="lpNumero">Número de registro (etiqueta)</label>
+                        <div class="flex gap--10 align--items--center flex--wrap">
+                            <input type="text" id="lpNumero" class="formInput flex--1" placeholder="Digite ou escaneie o código" autocomplete="off" style="min-width:180px">
+                            <button type="button" id="lpEscanear" class="btnPainelFormulario" style="height:38px;white-space:nowrap">
+                                <i class="bi bi-upc-scan"></i> Escanear
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="lpScannerArea" style="display:none">
+                        <video id="lpVideo" style="width:100%;max-height:300px;background:#000;border-radius:6px" muted playsinline></video>
+                        <div class="flex gap--10 align--items--center" style="margin-top:6px">
+                            <span id="lpScannerStatus" style="font-size:13px;color:#555">Aponte a câmera para o código de barras…</span>
+                            <button type="button" id="lpPararScan" class="btnPainelFormulario" style="height:30px;padding:2px 10px;font-size:12px;margin-left:auto">Parar</button>
+                        </div>
+                    </div>
+
+                    <div class="flex flex--column gap--5">
+                        <label class="painelLabel" for="lpDescricao">Descrição do bem</label>
+                        <input type="text" id="lpDescricao" class="formInput width--100" placeholder="Ex.: Cadeira estofada, Projetor Epson...">
+                    </div>
+
+                    <div class="flex gap--10 flex--wrap">
+                        <div class="flex flex--column gap--5 flex--1">
+                            <label class="painelLabel" for="lpEstado">Estado de conservação</label>
+                            <select id="lpEstado" class="formInput">
+                                <option value="">—</option>
+                                <option value="novo">Novo</option>
+                                <option value="bom">Bom</option>
+                                <option value="regular">Regular</option>
+                                <option value="ruim">Ruim</option>
+                                <option value="inservivel">Inservível</option>
+                            </select>
+                        </div>
+                        <div class="flex flex--column gap--5 flex--1">
+                            <label class="painelLabel" for="lpData">Data do levantamento</label>
+                            <input type="date" id="lpData" class="formInput">
+                        </div>
+                    </div>
+
+                    <div class="flex flex--column gap--5">
+                        <label class="painelLabel" for="lpObservacao">Observação (opcional)</label>
+                        <input type="text" id="lpObservacao" class="formInput width--100" placeholder="Observação">
+                    </div>
+
+                    <div id="lpFeedback"></div>
+
+                    <div class="flex gap--10">
+                        <button type="button" id="lpSalvar" class="btnPainelFormulario">Adicionar</button>
+                        <button type="button" id="lpCancelarEdicao" class="btnPainelFormulario cancelarUnidade" style="display:none">Cancelar edição</button>
+                    </div>
+                </form>
+            </section>
+        </main>
+        <footer>Rodapé</footer>
+    </div>
+
+    <script type="module" src="./js/components/index.js"></script>
+</body>
+</html>
