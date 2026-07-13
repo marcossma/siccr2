@@ -11,6 +11,7 @@
     "format:check": "prettier --check .",
     "db:dump": "node scripts/dump-schema.js",
     "db:migrate": "sequelize-cli db:migrate",
+    "seed:superadmin": "node scripts/seed-superadmin.js",
     "prepare": "node scripts/install-husky.js"
   },
   "lint-staged": {
