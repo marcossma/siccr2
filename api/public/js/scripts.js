@@ -66,7 +66,9 @@ document.addEventListener("DOMContentLoaded", function() {
         const wsSiccr = JSON.parse(localStorage.getItem("siccr") || "null");
         if (!wsToken || !wsSiccr) return;
 
-        const ws = new WebSocket(`ws://${window.location.host}`);
+        // wss:// em páginas HTTPS (ws:// em HTTP na LAN) — evita bloqueio de conteúdo misto
+        const wsProto = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const ws = new WebSocket(`${wsProto}//${window.location.host}`);
         ws.onopen = () => ws.send(JSON.stringify({ tipo: "auth", token: wsToken }));
         ws.onmessage = (e) => {
             try {

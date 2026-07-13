@@ -97,6 +97,9 @@ app.use(helmet({
             "img-src": ["'self'", "https://www.ufsm.br", "data:"],
             "script-src": ["'self'", "https://cdn.jsdelivr.net"],
             "style-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+            // WebSocket de notificações em tempo real (mesmo host: ws:// em HTTP, wss:// em HTTPS).
+            // 'self' cobre a mesma origem; ws:/wss: garantem o WebSocket em ambos os esquemas.
+            "connect-src": ["'self'", "ws:", "wss:"],
             // Desabilita upgrade automático para HTTPS — o sistema é servido em HTTP na rede interna
             "upgrade-insecure-requests": null,
         },
