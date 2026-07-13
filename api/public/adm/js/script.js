@@ -944,6 +944,20 @@ document.addEventListener("DOMContentLoaded", function() {
             dialogPatrimonio.showModal();
         }
 
+        const fmtBemData = (v) => {
+            if (!v) return "—";
+            const p = String(v).substring(0, 10).split("-");
+            return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : v;
+        };
+        const fmtDataHora = (v) => {
+            if (!v) return "";
+            const d = new Date(v);
+            if (Number.isNaN(d.getTime())) return "";
+            const p = (n) => String(n).padStart(2, "0");
+            return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+        };
+        const ROTULO_ACAO = { cadastro: "Cadastro", edicao: "Edição", movimentacao: "Movimentação", exclusao: "Exclusão" };
+
         async function renderizarBens(salaId) {
             try {
                 const bens = (await (await fetch(`${apiUrl}/patrimonio?sala_id=${salaId}`)).json()).data || [];
@@ -953,17 +967,47 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
                 listaBens.innerHTML = `<div style="font-size:13px;color:#555;margin-bottom:6px">${bens.length} bem(ns) nesta sala</div>` +
                     bens.map(b => `
-                    <div class="horario-item">
-                        <span class="dia" style="min-width:auto">${b.numero_registro}</span>
-                        <span class="flex--1">${b.descricao}</span>
-                        ${b.estado_conservacao ? `<span class="badge badge--info">${ROTULO_ESTADO[b.estado_conservacao] || b.estado_conservacao}</span>` : ""}
-                        <i class="bi bi-pencil-square cursor--pointer editar-bem font--size--18" title="Editar"
-                           data-id="${b.id_bem}" data-numero="${b.numero_registro}" data-descricao="${(b.descricao || '').replace(/"/g, '&quot;')}"
-                           data-estado="${b.estado_conservacao || ''}" data-data="${b.data_levantamento || ''}"
-                           data-observacao="${(b.observacao || '').replace(/"/g, '&quot;')}"></i>
-                        <i class="bi bi-trash cursor--pointer remover-bem font--size--18" title="Remover" data-id="${b.id_bem}" style="color:#c92a2a"></i>
+                    <div class="bem-item" style="border-bottom:1px solid #eee;padding:6px 0">
+                        <div class="horario-item" style="border:none;padding:0">
+                            <span class="dia" style="min-width:auto">${b.numero_registro}</span>
+                            <span class="flex--1">${b.descricao}</span>
+                            ${b.estado_conservacao ? `<span class="badge badge--info">${ROTULO_ESTADO[b.estado_conservacao] || b.estado_conservacao}</span>` : ""}
+                            <i class="bi bi-clock-history cursor--pointer historico-bem font--size--18" title="Histórico" data-id="${b.id_bem}"></i>
+                            <i class="bi bi-pencil-square cursor--pointer editar-bem font--size--18" title="Editar"
+                               data-id="${b.id_bem}" data-numero="${b.numero_registro}" data-descricao="${(b.descricao || '').replace(/"/g, '&quot;')}"
+                               data-estado="${b.estado_conservacao || ''}" data-data="${b.data_levantamento || ''}"
+                               data-observacao="${(b.observacao || '').replace(/"/g, '&quot;')}"></i>
+                            <i class="bi bi-trash cursor--pointer remover-bem font--size--18" title="Remover" data-id="${b.id_bem}" style="color:#c92a2a"></i>
+                        </div>
+                        <div style="font-size:11px;color:#888;padding-left:2px">
+                            ${b.created_by_nome ? "cadastrado por " + b.created_by_nome : ""}${b.data_levantamento ? `${b.created_by_nome ? " · " : ""}levantamento ${fmtBemData(b.data_levantamento)}` : ""}
+                        </div>
+                        <div class="bem-historico" data-id="${b.id_bem}" style="display:none;margin:4px 0 2px;padding:6px 8px;background:#f6f6f6;border-radius:6px;font-size:12px"></div>
                     </div>`).join("");
             } catch (e) { console.error("Erro ao listar bens:", e); }
+        }
+
+        // Renderiza a linha do tempo de um bem dentro do seu bloco (accordion)
+        async function toggleHistorico(bemId, box) {
+            if (box.style.display === "block") { box.style.display = "none"; return; }
+            box.style.display = "block";
+            box.innerHTML = "carregando histórico…";
+            try {
+                const eventos = (await (await fetch(`${apiUrl}/patrimonio/${bemId}/historico`)).json()).data || [];
+                if (eventos.length === 0) { box.innerHTML = "Sem histórico."; return; }
+                box.innerHTML = eventos.map(ev => {
+                    const quem = ev.usuario_nome ? ` por <strong>${ev.usuario_nome}</strong>` : "";
+                    let extra = ev.detalhe || "";
+                    if (ev.acao === "movimentacao") {
+                        extra = `${ev.sala_anterior_nome || "?"} → ${ev.sala_nome || "?"}`;
+                    }
+                    return `<div style="padding:2px 0;border-bottom:1px dashed #ddd">
+                        <span style="color:#009536;font-weight:600">${ROTULO_ACAO[ev.acao] || ev.acao}</span>${quem}
+                        <span style="color:#999"> · ${fmtDataHora(ev.createdat)}</span>
+                        ${extra ? `<div style="color:#555">${extra}</div>` : ""}
+                    </div>`;
+                }).join("");
+            } catch (e) { box.innerHTML = "Erro ao carregar histórico."; console.error(e); }
         }
 
         function sairEdicaoBem() {
@@ -1050,6 +1094,12 @@ document.addEventListener("DOMContentLoaded", function() {
         });
 
         listaBens.addEventListener("click", async (e) => {
+            const hist = e.target.closest(".historico-bem");
+            if (hist) {
+                const box = hist.closest(".bem-item").querySelector(".bem-historico");
+                toggleHistorico(hist.dataset.id, box);
+                return;
+            }
             const edit = e.target.closest(".editar-bem");
             if (edit) { entrarEdicaoBem(edit.dataset); return; }
             const rem = e.target.closest(".remover-bem");

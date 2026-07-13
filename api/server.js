@@ -214,8 +214,9 @@ app.use("/api/disciplinas",          autenticar, autorizar("chefe"),        disc
 app.use("/api/turmas",               autenticar, autorizar("chefe"),        turmas);
 app.use("/api/cursos",               autenticar, autorizar("chefe"),        cursos);
 
-// Patrimônio: levantamento de bens permanentes por sala (chefe+)
-app.use("/api/patrimonio",           autenticar, autorizar("chefe"),        patrimonio);
+// Patrimônio: levantamento de bens por sala — chefe+ sempre; servidor só com a
+// funcionalidade 'fazer_levantamento' concedida (nível mínimo chefe + fallback por funcionalidade)
+app.use("/api/patrimonio",           autenticar, autorizar("chefe", "fazer_levantamento"), patrimonio);
 
 // Importação de dados em massa (planilhas) — restrito ao super_admin
 app.use("/api/importacao",           autenticar, autorizar("super_admin"),  importacao);

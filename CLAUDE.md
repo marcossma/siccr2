@@ -131,7 +131,8 @@ servidor     (1) → + funcionalidades específicas concedidas pelo chefe
 // middlewares/autorizar.js
 autorizar("chefe")            // nível mínimo: chefe ou superior
 autorizar("diretor")          // nível mínimo: diretor ou superior
-autorizar("servidor", "criar_despesa")  // servidor com permissão específica OU superior
+autorizar("chefe", "fazer_levantamento") // chefe+ OU servidor com a funcionalidade concedida
+// (o fallback por funcionalidade só vale p/ "servidor"; use mínimo "chefe", não "servidor")
 
 getNivelAcesso(req.usuario)   // retorna "super_admin" | "diretor" | "chefe" | "servidor"
 getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
@@ -159,12 +160,15 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 - **salas_tipo** — `sala_tipo_id`, `sala_tipo_nome`
 
 ### Patrimônio
-- **bens_permanentes** — `id_bem`, `numero_registro`(unique — código da etiqueta patrimonial), `descricao`, `sala_id`(FK SET NULL), `subunidade_id`(FK SET NULL — derivada da sala no cadastro), `estado_conservacao`(`novo`/`bom`/`regular`/`ruim`/`inservivel`), `observacao`, `data_levantamento`, `createdat`
+- **bens_permanentes** — `id_bem`, `numero_registro`(unique — código da etiqueta patrimonial), `descricao`, `sala_id`(FK SET NULL), `subunidade_id`(FK SET NULL — derivada da sala no cadastro), `estado_conservacao`(`novo`/`bom`/`regular`/`ruim`/`inservivel`), `observacao`, `data_levantamento`, `created_by_user_id`(FK users SET NULL — quem cadastrou), `createdat`
   - Levantamento por sala: dialog na tela `/adm/salas` (ícone de patrimônio por sala). `numero_registro` preenchível manualmente **ou** por leitura de código de barras (`BarcodeDetector` nativo — só em contexto seguro/HTTPS; degrada para manual).
+  - **RBAC:** rota `chefe+` sempre; **servidor** com a funcionalidade `fazer_levantamento` concedida pelo chefe (`autorizar("chefe", "fazer_levantamento")`).
+- **patrimonio_historico** — `id_historico`, `bem_id`(FK SET NULL — vira NULL ao excluir o bem), `numero_registro`(snapshot, sobrevive à exclusão), `acao`(`cadastro`/`edicao`/`movimentacao`/`exclusao`), `user_id`(FK users SET NULL — quem fez), `sala_id`(destino/atual), `sala_anterior_id`(origem, em movimentação), `detalhe`(o que mudou), `createdat`
+  - Log de auditoria: cada POST/PUT/PATCH-mover/DELETE grava um evento **na mesma transação** da mudança. Consultável em `GET /patrimonio/:id/historico`.
 
 ### Usuários
 - **users** — `user_id`, `nome`, `siape`, `email`, `senha`(bcrypt), `whatsapp`, `data_nascimento`, `permissao`, `subunidade_id`, `unidade_id`
-- **funcionalidades** — `id`, `nome`, `descricao`, `modulo` (ex: `"criar_despesa"`, `"aprovar_agendamento"`, `"ver_agenda_portaria"`, `"atender_pedido_almoxarifado"`)
+- **funcionalidades** — `id`, `nome`, `descricao`, `modulo` (ex: `"criar_despesa"`, `"aprovar_agendamento"`, `"ver_agenda_portaria"`, `"atender_pedido_almoxarifado"`, `"fazer_levantamento"`)
 - **permissoes_usuario** — `id`, `user_id`, `funcionalidade_id`
 - **api_keys** — chaves p/ rotas RPA (validadas via `X-Api-Key`)
 
@@ -217,7 +221,7 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 | `/api/subunidades` | chefe | routes/subunidades.js |
 | `/api/salas` | chefe | routes/salas.js |
 | `/api/salas-tipo` | chefe | routes/salas-tipo.js |
-| `/api/patrimonio` | chefe | routes/patrimonio.js |
+| `/api/patrimonio` | chefe / servidor c/ `fazer_levantamento` | routes/patrimonio.js |
 | `/api/tipos-recursos` | chefe | routes/tipos-recursos.js |
 | `/api/tipos-despesas` | chefe | routes/tipos-despesas.js |
 | `/api/despesas` | chefe | routes/despesas.js |
@@ -258,7 +262,7 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 
 `/api/cursos`: `GET /` (lista p/ filtro; pós excluída salvo `?incluir_pos=1`), `PATCH /:id` (ajuste manual do `nivel`).
 
-`/api/patrimonio`: `GET /?sala_id=` (bens da sala), `POST /` (cadastra; `subunidade_id` derivada da sala; 409 se `numero_registro` duplicado — o 409 traz `data.bem_existente` com a sala atual), `PUT /:id`, `PATCH /:id/mover` (transfere o bem p/ outra sala + atualiza `data_levantamento`; usado no botão "Mover para esta sala" quando o tombo já existe noutra sala), `DELETE /:id`.
+`/api/patrimonio`: `GET /?sala_id=` (bens da sala + quem cadastrou), `GET /:id/historico` (linha do tempo de auditoria), `POST /` (cadastra; `subunidade_id` derivada da sala; 409 se `numero_registro` duplicado — o 409 traz `data.bem_existente` com a sala atual), `PUT /:id`, `PATCH /:id/mover` (transfere o bem p/ outra sala + atualiza `data_levantamento`; usado no botão "Mover para esta sala" quando o tombo já existe noutra sala), `DELETE /:id`. Toda mutação grava um evento em `patrimonio_historico`.
 
 "Direção" = `super_admin`/`diretor`/`vice_diretor`, ou `is_direcao_centro=true`, ou funcionalidade `aprovar_agendamento`/`ver_todos_agendamentos`.
 

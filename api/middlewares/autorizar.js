@@ -23,10 +23,15 @@ function getNivelAcesso(usuario) {
  * Uso: autorizar("super_admin")          — só super admin
  *      autorizar("diretor")              — diretor ou superior
  *      autorizar("chefe")                — chefe ou superior
- *      autorizar("servidor", "criar_despesa") — servidor com funcionalidade específica OU superior
+ *      autorizar("chefe", "fazer_levantamento") — chefe+ OU servidor com a funcionalidade concedida
  *
- * @param {string} nivelMinimo - Nível mínimo exigido
- * @param {string} [funcionalidade] - Nome da funcionalidade (apenas para nível "servidor")
+ * IMPORTANTE: o fallback por funcionalidade só é avaliado quando o nível efetivo é MENOR
+ * que o mínimo E o usuário é "servidor". Por isso, para "servidor com funcionalidade ou
+ * superior", passe o mínimo como "chefe" (não "servidor" — servidor já satisfaz o mínimo
+ * "servidor" e o fallback nunca seria checado).
+ *
+ * @param {string} nivelMinimo - Nível mínimo exigido (para o fallback funcionar, use "chefe"+)
+ * @param {string} [funcionalidade] - Funcionalidade que promove um "servidor" ao acesso
  */
 function autorizar(nivelMinimo, funcionalidade = null) {
     const HIERARQUIA = { super_admin: 4, diretor: 3, chefe: 2, servidor: 1 };

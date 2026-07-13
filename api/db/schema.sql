@@ -1,12 +1,12 @@
 -- Schema dump gerado automaticamente. NÃO editar manualmente.
--- Origem: docker compose db (siccr) — 2026-07-10T17:20:41.538Z
+-- Origem: docker compose db (siccr) — 2026-07-13T14:04:26.422Z
 -- Regenere com: npm run db:dump
 
 --
 -- PostgreSQL database dump
 --
 
-\restrict epAnok3PLu7GURbWBCQbbhlbIqJYpxrSr9vHay585YiRc5megBGH8iloDlm88qa
+\restrict W2RmsN4v8WhJzgjgeCaWrAeKnmEyYdbfkl7jhULazAQ7u287a3eqkkoQLGGgTdp
 
 -- Dumped from database version 16.13
 -- Dumped by pg_dump version 16.13
@@ -198,7 +198,8 @@ CREATE TABLE public.bens_permanentes (
     estado_conservacao character varying(20),
     observacao character varying(255),
     data_levantamento date,
-    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_by_user_id integer
 );
 
 
@@ -388,6 +389,43 @@ CREATE SEQUENCE public.itens_pedido_almoxarifado_id_item_seq
 --
 
 ALTER SEQUENCE public.itens_pedido_almoxarifado_id_item_seq OWNED BY public.itens_pedido_almoxarifado.id_item;
+
+
+--
+-- Name: patrimonio_historico; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.patrimonio_historico (
+    id_historico integer NOT NULL,
+    bem_id integer,
+    numero_registro character varying(60),
+    acao character varying(20) NOT NULL,
+    user_id integer,
+    sala_id integer,
+    sala_anterior_id integer,
+    detalhe character varying(500),
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: patrimonio_historico_id_historico_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.patrimonio_historico_id_historico_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: patrimonio_historico_id_historico_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.patrimonio_historico_id_historico_seq OWNED BY public.patrimonio_historico.id_historico;
 
 
 --
@@ -1050,6 +1088,13 @@ ALTER TABLE ONLY public.itens_pedido_almoxarifado ALTER COLUMN id_item SET DEFAU
 
 
 --
+-- Name: patrimonio_historico id_historico; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.patrimonio_historico ALTER COLUMN id_historico SET DEFAULT nextval('public.patrimonio_historico_id_historico_seq'::regclass);
+
+
+--
 -- Name: pedidos_almoxarifado id_pedido; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1286,6 +1331,14 @@ ALTER TABLE ONLY public.funcionalidades
 
 ALTER TABLE ONLY public.itens_pedido_almoxarifado
     ADD CONSTRAINT itens_pedido_almoxarifado_pkey PRIMARY KEY (id_item);
+
+
+--
+-- Name: patrimonio_historico patrimonio_historico_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.patrimonio_historico
+    ADD CONSTRAINT patrimonio_historico_pkey PRIMARY KEY (id_historico);
 
 
 --
@@ -1527,6 +1580,20 @@ CREATE INDEX disciplinas_subunidade_id ON public.disciplinas USING btree (subuni
 
 
 --
+-- Name: patrimonio_historico_bem_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX patrimonio_historico_bem_id ON public.patrimonio_historico USING btree (bem_id);
+
+
+--
+-- Name: patrimonio_historico_numero_registro; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX patrimonio_historico_numero_registro ON public.patrimonio_historico USING btree (numero_registro);
+
+
+--
 -- Name: permissoes_usuario_unique; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1618,6 +1685,14 @@ ALTER TABLE ONLY public.api_keys
 
 
 --
+-- Name: bens_permanentes bens_permanentes_created_by_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.bens_permanentes
+    ADD CONSTRAINT bens_permanentes_created_by_user_id_fkey FOREIGN KEY (created_by_user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
 -- Name: bens_permanentes bens_permanentes_sala_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1655,6 +1730,38 @@ ALTER TABLE ONLY public.funcionalidades
 
 ALTER TABLE ONLY public.itens_pedido_almoxarifado
     ADD CONSTRAINT itens_pedido_almoxarifado_pedido_id_fkey FOREIGN KEY (pedido_id) REFERENCES public.pedidos_almoxarifado(id_pedido) ON DELETE CASCADE;
+
+
+--
+-- Name: patrimonio_historico patrimonio_historico_bem_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.patrimonio_historico
+    ADD CONSTRAINT patrimonio_historico_bem_id_fkey FOREIGN KEY (bem_id) REFERENCES public.bens_permanentes(id_bem) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: patrimonio_historico patrimonio_historico_sala_anterior_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.patrimonio_historico
+    ADD CONSTRAINT patrimonio_historico_sala_anterior_id_fkey FOREIGN KEY (sala_anterior_id) REFERENCES public.salas(sala_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: patrimonio_historico patrimonio_historico_sala_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.patrimonio_historico
+    ADD CONSTRAINT patrimonio_historico_sala_id_fkey FOREIGN KEY (sala_id) REFERENCES public.salas(sala_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: patrimonio_historico patrimonio_historico_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.patrimonio_historico
+    ADD CONSTRAINT patrimonio_historico_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE SET NULL;
 
 
 --
@@ -1797,5 +1904,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict epAnok3PLu7GURbWBCQbbhlbIqJYpxrSr9vHay585YiRc5megBGH8iloDlm88qa
+\unrestrict W2RmsN4v8WhJzgjgeCaWrAeKnmEyYdbfkl7jhULazAQ7u287a3eqkkoQLGGgTdp
 
