@@ -36,6 +36,12 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       WHATSAPP_API_URL: ${WHATSAPP_API_URL:-https://poolzap-api.infai.com.br}
       WHATSAPP_API_KEY: ${WHATSAPP_API_KEY:-}
+      GMAIL_USER: ${GMAIL_USER:-}
+      GMAIL_OAUTH_CLIENT_ID: ${GMAIL_OAUTH_CLIENT_ID:-}
+      GMAIL_OAUTH_CLIENT_SECRET: ${GMAIL_OAUTH_CLIENT_SECRET:-}
+      GMAIL_OAUTH_REFRESH_TOKEN: ${GMAIL_OAUTH_REFRESH_TOKEN:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      EMAIL_OAUTH_REDIRECT: ${EMAIL_OAUTH_REDIRECT:-}
     depends_on:
       db:
         condition: service_healthy
