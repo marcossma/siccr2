@@ -1,42 +1,48 @@
 "use strict";
 
 /**
- * Envio de e-mail via Gmail (OAuth2), usando nodemailer.
+ * Envio de e-mail via Gmail API (OAuth2), escopo mínimo `gmail.send`.
  *
- * Fire-and-forget no mesmo espírito do lib/whatsapp.js: erros são logados,
- * nunca propagados — um e-mail que falha não pode derrubar a request.
+ * Usa a Gmail API (users.messages.send) em vez de SMTP — o SMTP do Gmail
+ * exigiria o escopo amplo `https://mail.google.com/`; a API envia com o
+ * escopo restrito `gmail.send`, mais seguro (só envio, sem ler a caixa).
+ *
+ * Fire-and-forget como o lib/whatsapp.js: erros são logados, nunca propagados.
  *
  * Configuração por ambiente (.env):
- *   GMAIL_USER                  conta que envia (ex.: siccr@ufsm.br)
+ *   GMAIL_USER                  conta que envia (a MESMA que autorizou o token)
  *   GMAIL_OAUTH_CLIENT_ID       Client ID do OAuth (Google Cloud Console)
  *   GMAIL_OAUTH_CLIENT_SECRET   Client Secret
- *   GMAIL_OAUTH_REFRESH_TOKEN   refresh token (use scripts/get-gmail-token.js)
- *   EMAIL_FROM                  (opcional) remetente exibido, ex.: "SICCR <siccr@ufsm.br>"
+ *   GMAIL_OAUTH_REFRESH_TOKEN   refresh token (escopo gmail.send)
+ *   EMAIL_FROM                  (opcional) remetente exibido; default = GMAIL_USER
  *
  * Sem essas variáveis, o envio fica desabilitado silenciosamente.
  */
 
-const nodemailer = require("nodemailer");
+const MailComposer = require("nodemailer/lib/mail-composer");
 const logger = require("./logger.js");
 
-let transporter = null;
+const TOKEN_URL = "https://oauth2.googleapis.com/token";
+const SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send";
 
-function getTransporter() {
-    if (transporter) return transporter;
-    const user = process.env.GMAIL_USER;
-    const clientId = process.env.GMAIL_OAUTH_CLIENT_ID;
-    const clientSecret = process.env.GMAIL_OAUTH_CLIENT_SECRET;
-    const refreshToken = process.env.GMAIL_OAUTH_REFRESH_TOKEN;
-    if (!user || !clientId || !clientSecret || !refreshToken) return null;
+let tokenCache = null; // { accessToken, exp (ms epoch) }
 
-    transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: { type: "OAuth2", user, clientId, clientSecret, refreshToken },
-    });
-    return transporter;
+function credenciais() {
+    return {
+        user: process.env.GMAIL_USER,
+        clientId: process.env.GMAIL_OAUTH_CLIENT_ID,
+        clientSecret: process.env.GMAIL_OAUTH_CLIENT_SECRET,
+        refreshToken: process.env.GMAIL_OAUTH_REFRESH_TOKEN,
+    };
 }
 
-/** Redige o e-mail no log (ex.: "ma***@ufsm.br"). */
+/** true se as credenciais estão presentes (para o painel/health-check). */
+function estaConfigurado() {
+    const c = credenciais();
+    return !!(c.user && c.clientId && c.clientSecret && c.refreshToken);
+}
+
+/** Redige o e-mail no log (ex.: "ma***@gmail.com"). */
 function mascararEmail(to) {
     const e = Array.isArray(to) ? to[0] : String(to || "");
     const [nome, dom] = e.split("@");
@@ -44,9 +50,26 @@ function mascararEmail(to) {
     return `${nome.slice(0, 2)}***@${dom}`;
 }
 
-/** true se as credenciais estão presentes (para o painel/health-check). */
-function estaConfigurado() {
-    return getTransporter() !== null;
+/** Obtém (e cacheia) um access token a partir do refresh token. Lança em falha. */
+async function getAccessToken() {
+    if (tokenCache && tokenCache.exp > Date.now() + 60000) return tokenCache.accessToken;
+    const c = credenciais();
+    const resp = await fetch(TOKEN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+            client_id: c.clientId,
+            client_secret: c.clientSecret,
+            refresh_token: c.refreshToken,
+            grant_type: "refresh_token",
+        }),
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok || !data.access_token) {
+        throw new Error(data.error_description || data.error || `http_${resp.status}`);
+    }
+    tokenCache = { accessToken: data.access_token, exp: Date.now() + (data.expires_in || 3600) * 1000 };
+    return tokenCache.accessToken;
 }
 
 /**
@@ -54,8 +77,7 @@ function estaConfigurado() {
  * @param {{to:string|string[], subject:string, html?:string, text?:string, from?:string, replyTo?:string}} msg
  */
 async function enviarEmail({ to, subject, html, text, from, replyTo } = {}) {
-    const t = getTransporter();
-    if (!t) {
+    if (!estaConfigurado()) {
         logger.debug("E-mail desabilitado (credenciais OAuth ausentes)");
         return { ok: false, motivo: "sem_credenciais" };
     }
@@ -64,7 +86,8 @@ async function enviarEmail({ to, subject, html, text, from, replyTo } = {}) {
         return { ok: false, motivo: "invalido" };
     }
     try {
-        const info = await t.sendMail({
+        const accessToken = await getAccessToken();
+        const mail = new MailComposer({
             from: from || process.env.EMAIL_FROM || process.env.GMAIL_USER,
             to,
             subject,
@@ -72,20 +95,33 @@ async function enviarEmail({ to, subject, html, text, from, replyTo } = {}) {
             html: html || undefined,
             replyTo: replyTo || undefined,
         });
-        logger.info({ messageId: info.messageId, to: mascararEmail(to) }, "E-mail enviado");
-        return { ok: true, messageId: info.messageId };
+        const raw = await mail.compile().build();
+        const encoded = raw.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+        const resp = await fetch(SEND_URL, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ raw: encoded }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+            const motivo = (data.error && data.error.message) || `http_${resp.status}`;
+            logger.error({ err: motivo, to: mascararEmail(to) }, "Falha ao enviar e-mail (Gmail API)");
+            return { ok: false, motivo };
+        }
+        logger.info({ messageId: data.id, to: mascararEmail(to) }, "E-mail enviado");
+        return { ok: true, messageId: data.id };
     } catch (err) {
         logger.error({ err: err.message, to: mascararEmail(to) }, "Falha ao enviar e-mail");
         return { ok: false, motivo: err.message };
     }
 }
 
-/** Testa as credenciais/conexão SMTP (para o painel). Nunca lança. */
+/** Testa as credenciais (consegue um access token). Nunca lança. */
 async function verificar() {
-    const t = getTransporter();
-    if (!t) return { ok: false, motivo: "sem_credenciais" };
+    if (!estaConfigurado()) return { ok: false, motivo: "sem_credenciais" };
     try {
-        await t.verify();
+        await getAccessToken();
         return { ok: true };
     } catch (err) {
         return { ok: false, motivo: err.message };
