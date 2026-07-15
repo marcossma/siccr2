@@ -1,12 +1,12 @@
 -- Schema dump gerado automaticamente. NÃO editar manualmente.
--- Origem: docker compose db (siccr) — 2026-07-15T13:21:03.664Z
+-- Origem: docker compose db (siccr) — 2026-07-15T14:37:32.466Z
 -- Regenere com: npm run db:dump
 
 --
 -- PostgreSQL database dump
 --
 
-\restrict AaRL28XqhZQJxk3eZeJ1QLYCUO9Z16oidtN79dWlupZacGYYAWcAGJO7bgt08k8
+\restrict aBmbwt40UlGL9nHATjfLdkyaisrL5yHGwvmP4bzkdn3IQZb2cOwQWTxU7vZyb8v
 
 -- Dumped from database version 16.13
 -- Dumped by pg_dump version 16.13
@@ -258,6 +258,17 @@ CREATE SEQUENCE public.comunicados_id_comunicado_seq
 --
 
 ALTER SEQUENCE public.comunicados_id_comunicado_seq OWNED BY public.comunicados.id_comunicado;
+
+
+--
+-- Name: configuracoes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.configuracoes (
+    chave character varying(80) NOT NULL,
+    valor text,
+    updatedat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
 
 
 --
@@ -1330,6 +1341,14 @@ ALTER TABLE ONLY public.comunicados
 
 
 --
+-- Name: configuracoes configuracoes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.configuracoes
+    ADD CONSTRAINT configuracoes_pkey PRIMARY KEY (chave);
+
+
+--
 -- Name: cursos cursos_cod_curso_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1964,5 +1983,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict AaRL28XqhZQJxk3eZeJ1QLYCUO9Z16oidtN79dWlupZacGYYAWcAGJO7bgt08k8
+\unrestrict aBmbwt40UlGL9nHATjfLdkyaisrL5yHGwvmP4bzkdn3IQZb2cOwQWTxU7vZyb8v
 

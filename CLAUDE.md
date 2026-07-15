@@ -237,6 +237,7 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 | `/api/salas-tipo` | chefe | routes/salas-tipo.js |
 | `/api/patrimonio` | chefe / servidor c/ `fazer_levantamento` | routes/patrimonio.js |
 | `/api/aniversariantes` | servidor (logado) | routes/aniversariantes.js |
+| `/api/aniversariantes/parabenizar` `/config` | diretor | routes/aniversariantes.js |
 | `/api/comunicados` | diretor | routes/comunicados.js |
 | `/api/tipos-recursos` | chefe | routes/tipos-recursos.js |
 | `/api/tipos-despesas` | chefe | routes/tipos-despesas.js |
@@ -277,6 +278,8 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 `/api/turmas` sub-rotas: `GET /` (lista; filtros `?periodo_letivo_id=&curso_id=&disciplina_id=`, pós excluída salvo `?incluir_pos=1`; devolve `horarios_com_sala`/`total_horarios` e `total_professores`), `POST/PUT/DELETE /` (CRUD turma), `GET /:id` (detalhe + horários com tipo/bloco modular + professores de co-docência), `POST /:id/horarios` (aloca + materializa aula; 409 com datas em conflito), `PUT /:id/horarios/:horarioId` (edição in-place — re-materializa preservando tipo/bloco; sala vazia = desaloca), `DELETE /:id/horarios/:horarioId`.
 
 `/api/cursos`: `GET /` (lista p/ filtro; pós excluída salvo `?incluir_pos=1`), `PATCH /:id` (ajuste manual do `nivel`).
+
+`/api/aniversariantes`: `GET /?mes=` (mural do mês, logado), `GET /hoje` (aniversariantes de hoje, logado), e — **só direção** — `POST /parabenizar` (envia parabéns por e-mail aos de hoje, agora), `GET/PATCH /config` (liga/desliga o **envio automático diário**). Lógica em `lib/aniversarios.js`; agendador (setInterval) iniciado no `server.js` roda ~08:00 BRT se o automático estiver ligado (guard por data em `configuracoes`). Painel de disparo/toggle no topo de `/aniversariantes` (visível só p/ direção). Tabela **configuracoes** (chave/valor) guarda o flag e o "último envio".
 
 `/api/comunicados` (diretor): `GET /destinatarios` (servidores c/ email, subunidades c/ contagem, totais chefes/todos), `POST /preview` (resolve destinatários e conta, sem enviar), `POST /` (envia comunicado em **BCC por lote** de 45 via `lib/email.js` e registra em `comunicados`), `GET /` (histórico). Painel em `/comunicados` (direção; link no menu Administrativo). Destinatários: individuais (lista/e-mail avulso) + grupos (subunidades, chefes, todos), com dedup. **Corpo com formatação** (editor contenteditable: negrito/itálico/listas/link) — o backend **linkifica URLs soltas** e **sanitiza** o HTML (`sanitize-html`, allowlist); logo do SICCR embutido por CID. Envia HTML + fallback texto.
 

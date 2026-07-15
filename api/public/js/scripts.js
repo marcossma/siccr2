@@ -3410,6 +3410,41 @@ document.addEventListener("DOMContentLoaded", function() {
 
         selMes.addEventListener("change", carregar);
         carregar();
+
+        // Painel da direção: enviar parabéns de hoje + toggle automático diário
+        const siccrU = JSON.parse(localStorage.getItem("siccr") || "null");
+        const ehDirecao = siccrU && (["diretor", "vice_diretor", "super_admin"].includes(siccrU.permissao) || siccrU.is_direcao_centro === true);
+        if (ehDirecao) {
+            const painel = document.getElementById("anivDirecao");
+            const elHoje = document.getElementById("anivHoje");
+            const btnEnviar = document.getElementById("anivEnviar");
+            const chkAuto = document.getElementById("anivAuto");
+            const fb = document.getElementById("anivFeedback");
+            painel.style.display = "block";
+            (async () => {
+                try {
+                    const h = (await (await fetch(`${apiUrl}/aniversariantes/hoje`)).json()).data || { total: 0 };
+                    elHoje.textContent = h.total > 0 ? `Hoje: ${h.total} aniversariante(s) 🎂` : "Nenhum aniversariante hoje.";
+                    btnEnviar.disabled = h.total === 0;
+                    const cfg = (await (await fetch(`${apiUrl}/aniversariantes/config`)).json()).data || {};
+                    chkAuto.checked = !!cfg.automatico;
+                } catch (e) { console.error(e); }
+            })();
+            chkAuto.addEventListener("change", async () => {
+                const r = await fetch(`${apiUrl}/aniversariantes/config`, { method: "PATCH", body: JSON.stringify({ automatico: chkAuto.checked }) });
+                const resp = await r.json();
+                if (!r.ok) { chkAuto.checked = !chkAuto.checked; fb.innerHTML = `<span style="color:#c92a2a">${resp.message}</span>`; return; }
+                fb.innerHTML = `<span style="color:#009536">${chkAuto.checked ? "Envio automático diário ativado." : "Envio automático desativado."}</span>`;
+            });
+            btnEnviar.addEventListener("click", async () => {
+                if (!confirm("Enviar parabéns por e-mail aos aniversariantes de hoje?")) return;
+                btnEnviar.disabled = true; fb.innerHTML = "Enviando…";
+                const r = await fetch(`${apiUrl}/aniversariantes/parabenizar`, { method: "POST" });
+                const resp = await r.json();
+                btnEnviar.disabled = false;
+                fb.innerHTML = r.ok ? `<span style="color:#009536">✓ ${resp.message}</span>` : `<span style="color:#c92a2a">${resp.message}</span>`;
+            });
+        }
     }
 
     // =========================================================================

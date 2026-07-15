@@ -295,6 +295,10 @@ process.on("uncaughtException", (err) => {
     process.exit(1);
 });
 
+const aniversarios = require("./lib/aniversarios.js");
+
 server.listen(PORT, () => {
     logger.info({ port: PORT }, `Servidor rodando na porta http://localhost:${PORT}`);
+    // Agendador de parabéns de aniversário (só age se o automático estiver ligado)
+    aniversarios.iniciarAgendador();
 });

@@ -93,4 +93,20 @@ function agendamentoRejeitado(ag) {
     return { subject: `SICCR — Agendamento não aprovado: ${ag.sala_nome}`, html: layout(corpo), text };
 }
 
-module.exports = { layout, logoInfo, agendamentoAprovado, agendamentoRejeitado };
+// ── Template de aniversário ──────────────────────────────────────────
+function aniversarioParabens(nome) {
+    const primeiro = primeiroNome(nome);
+    const corpo = `<div style="text-align:center">
+        <div style="font-size:40px">🎉🎂</div>
+        <h2 style="color:#009536;margin:8px 0">Feliz aniversário, ${escapeHtml(primeiro)}!</h2>
+        <p>O Centro de Ciências Rurais deseja a você um dia especial e um novo ano repleto de saúde, alegria e realizações.</p>
+        <p style="color:#555">Com carinho,<br>Direção do CCR</p>
+    </div>`;
+    return {
+        subject: `Feliz aniversário, ${primeiro}! 🎉`,
+        html: layout(corpo),
+        text: `Feliz aniversário, ${primeiro}!\n\nO Centro de Ciências Rurais deseja a você um dia especial e um novo ano repleto de saúde, alegria e realizações.\n\nCom carinho,\nDireção do CCR`,
+    };
+}
+
+module.exports = { layout, logoInfo, agendamentoAprovado, agendamentoRejeitado, aniversarioParabens };
