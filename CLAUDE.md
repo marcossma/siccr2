@@ -56,7 +56,17 @@ CORS_ORIGIN=http://localhost:15000
 LOG_LEVEL=info          # pino (debug em dev, info em prod)
 WHATSAPP_API_KEY=...     # PoolZap; se vazio, notificação WhatsApp fica desabilitada
 # WHATSAPP_API_URL tem default https://poolzap-api.infai.com.br
+# E-mail (Gmail OAuth2) — se vazio, envio de e-mail fica desabilitado
+GMAIL_USER=siccr@ufsm.br
+GMAIL_OAUTH_CLIENT_ID=...
+GMAIL_OAUTH_CLIENT_SECRET=...
+GMAIL_OAUTH_REFRESH_TOKEN=...   # gerar com: npm run email:token -- <client_id> <client_secret>
+# EMAIL_FROM tem default = GMAIL_USER (ex.: "SICCR <siccr@ufsm.br>")
 ```
+
+### E-mail (`lib/email.js`, Gmail OAuth2 via nodemailer)
+- Fire-and-forget como o WhatsApp: nunca derruba a request; desabilitado sem credenciais.
+- Setup: no Google Cloud Console — ativar a **Gmail API**, criar credencial **OAuth client ID** (tipo *Web application*) com redirect URI `http://localhost:5555/oauth2callback`; rodar `npm run email:token -- <id> <secret>` (na máquina local, com navegador) para obter o `GMAIL_OAUTH_REFRESH_TOKEN`; testar com `npm run email:test -- destino@email`.
 
 ---
 

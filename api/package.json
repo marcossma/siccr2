@@ -12,6 +12,8 @@
     "db:dump": "node scripts/dump-schema.js",
     "db:migrate": "sequelize-cli db:migrate",
     "seed:superadmin": "node scripts/seed-superadmin.js",
+    "email:token": "node scripts/get-gmail-token.js",
+    "email:test": "node scripts/send-test-email.js",
     "prepare": "node scripts/install-husky.js"
   },
   "lint-staged": {
@@ -27,6 +29,7 @@
     "express": "^4.21.1",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^9.0.3",
     "pg": "^8.13.1",
     "pino": "^9.14.0",
     "pino-http": "^10.5.0",
