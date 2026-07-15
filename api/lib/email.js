@@ -74,9 +74,9 @@ async function getAccessToken() {
 
 /**
  * Envia um e-mail. Nunca lança — falhas viram { ok: false, motivo }.
- * @param {{to?:string|string[], bcc?:string|string[], cc?:string|string[], subject:string, html?:string, text?:string, from?:string, replyTo?:string}} msg
+ * @param {{to?:string|string[], bcc?:string|string[], cc?:string|string[], subject:string, html?:string, text?:string, from?:string, replyTo?:string, attachments?:Array}} msg
  */
-async function enviarEmail({ to, bcc, cc, subject, html, text, from, replyTo } = {}) {
+async function enviarEmail({ to, bcc, cc, subject, html, text, from, replyTo, attachments } = {}) {
     if (!estaConfigurado()) {
         logger.debug("E-mail desabilitado (credenciais OAuth ausentes)");
         return { ok: false, motivo: "sem_credenciais" };
@@ -99,6 +99,7 @@ async function enviarEmail({ to, bcc, cc, subject, html, text, from, replyTo } =
             text: text || undefined,
             html: html || undefined,
             replyTo: replyTo || undefined,
+            attachments: attachments || undefined, // suporta imagens embutidas via cid
         });
         // MANTÉM o cabeçalho Bcc no MIME (keepBcc no MimeNode, não na opção do
         // MailComposer): a Gmail API entrega pelos CABEÇALHOS (não há envelope

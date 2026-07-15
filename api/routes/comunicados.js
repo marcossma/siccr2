@@ -1,9 +1,23 @@
 const express = require("express");
+const path = require("path");
+const fs = require("fs");
 const pool = require("../config/database.js");
 const logger = require("../lib/logger.js");
 const { enviarEmail, estaConfigurado } = require("../lib/email.js");
 
 const router = express.Router();
+
+// Logo embutido no e-mail via CID (carregado uma vez). false = arquivo ausente.
+let logoBuffer = null;
+function getLogo() {
+    if (logoBuffer !== null) return logoBuffer;
+    try {
+        logoBuffer = fs.readFileSync(path.join(__dirname, "../public/img/logo.png"));
+    } catch {
+        logoBuffer = false;
+    }
+    return logoBuffer;
+}
 
 const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const LOTE_BCC = 45; // destinatários por mensagem (BCC), pra não expor endereços nem estourar limites
@@ -12,13 +26,17 @@ function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
-// Envolve o corpo (texto simples) num template com a identidade do SICCR
-function montarHtml(corpo) {
+// Envolve o corpo (texto simples) num template com a identidade do SICCR.
+// Cabeçalho branco com o logo (verde) via CID; traço verde por baixo — como o site.
+function montarHtml(corpo, comLogo) {
     const corpoHtml = escapeHtml(corpo).replace(/\r?\n/g, "<br>");
+    const header = comLogo
+        ? `<img src="cid:siccr-logo" alt="SICCR — Centro de Ciências Rurais" style="max-height:52px;max-width:80%">`
+        : `<span style="font-size:20px;font-weight:bold;color:#009536">SICCR</span> <span style="color:#555">— Centro de Ciências Rurais</span>`;
     return `<div style="font-family:Verdana,Arial,sans-serif;max-width:640px;margin:auto;color:#222">
-        <div style="background:#009536;color:#fff;padding:16px 20px;border-radius:8px 8px 0 0"><strong>SICCR</strong> — Centro de Ciências Rurais</div>
+        <div style="text-align:center;padding:16px;background:#fff;border:1px solid #e0e0e0;border-bottom:3px solid #009536;border-radius:8px 8px 0 0">${header}</div>
         <div style="padding:20px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;line-height:1.5">${corpoHtml}</div>
-        <p style="color:#999;font-size:11px;margin-top:12px">Mensagem enviada pelo SICCR — Centro de Ciências Rurais.</p>
+        <p style="color:#999;font-size:11px;margin-top:12px;text-align:center">Mensagem enviada pelo SICCR — Centro de Ciências Rurais.</p>
     </div>`;
 }
 
@@ -120,11 +138,13 @@ router.post("/", async (req, res) => {
             return res.status(400).json({ status: "error", message: "Nenhum destinatário válido selecionado.", data: null });
         }
 
-        const html = montarHtml(corpo);
+        const logo = getLogo();
+        const anexos = logo ? [{ filename: "logo.png", content: logo, cid: "siccr-logo" }] : undefined;
+        const html = montarHtml(corpo, !!logo);
         let enviados = 0, falhas = 0;
         for (let i = 0; i < emails.length; i += LOTE_BCC) {
             const lote = emails.slice(i, i + LOTE_BCC);
-            const r = await enviarEmail({ bcc: lote, subject: assunto, html, text: corpo });
+            const r = await enviarEmail({ bcc: lote, subject: assunto, html, text: corpo, attachments: anexos });
             if (r.ok) enviados += lote.length; else falhas += lote.length;
         }
 
