@@ -18,7 +18,7 @@ function montarHtml(corpo) {
     return `<div style="font-family:Verdana,Arial,sans-serif;max-width:640px;margin:auto;color:#222">
         <div style="background:#009536;color:#fff;padding:16px 20px;border-radius:8px 8px 0 0"><strong>SICCR</strong> — Centro de Ciências Rurais</div>
         <div style="padding:20px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;line-height:1.5">${corpoHtml}</div>
-        <p style="color:#999;font-size:11px;margin-top:12px">Mensagem enviada pelo SICCR. Por favor, não responda este e-mail.</p>
+        <p style="color:#999;font-size:11px;margin-top:12px">Mensagem enviada pelo SICCR — Centro de Ciências Rurais.</p>
     </div>`;
 }
 
