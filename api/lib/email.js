@@ -100,7 +100,13 @@ async function enviarEmail({ to, bcc, cc, subject, html, text, from, replyTo } =
             html: html || undefined,
             replyTo: replyTo || undefined,
         });
-        const raw = await mail.compile().build();
+        // MANTÉM o cabeçalho Bcc no MIME (keepBcc no MimeNode, não na opção do
+        // MailComposer): a Gmail API entrega pelos CABEÇALHOS (não há envelope
+        // SMTP). Sem isto, quem está em BCC não recebe — o Gmail remove o Bcc do
+        // e-mail entregue, então os destinatários seguem ocultos.
+        const node = mail.compile();
+        node.keepBcc = true;
+        const raw = await node.build();
         const encoded = raw.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
         const resp = await fetch(SEND_URL, {
