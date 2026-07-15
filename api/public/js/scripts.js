@@ -3427,6 +3427,12 @@ document.addEventListener("DOMContentLoaded", function() {
         const subsSel = new Set(), usersSel = new Set(), avulsos = [];
         let servidoresCache = [];
         const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const fmtDataHora = (v) => {
+            const d = new Date(v);
+            if (Number.isNaN(d.getTime())) return "";
+            const z = (n) => String(n).padStart(2, "0");
+            return `${z(d.getDate())}/${z(d.getMonth() + 1)}/${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}`;
+        };
 
         function coletarSpec() {
             const grupos = [];
@@ -3486,7 +3492,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         <span class="flex--1"><strong>${c.assunto}</strong><br><span style="font-size:12px;color:#888">${c.criterio || ""}</span></span>
                         <span style="text-align:right;font-size:12px">
                             <span class="badge ${c.falhas > 0 ? "badge--parcial" : "badge--atendido"}">${c.enviados}/${c.total_destinatarios}</span><br>
-                            <span style="color:#999">${formatarData(c.createdat)} · ${(c.enviado_por_nome || "").split(" ")[0]}</span>
+                            <span style="color:#999">${fmtDataHora(c.createdat)} · ${(c.enviado_por_nome || "").split(" ")[0]}</span>
                         </span>
                     </div>`).join("");
             } catch (e) { console.error("Erro ao carregar histórico:", e); }
