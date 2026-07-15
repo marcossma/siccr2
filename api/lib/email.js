@@ -74,22 +74,27 @@ async function getAccessToken() {
 
 /**
  * Envia um e-mail. Nunca lança — falhas viram { ok: false, motivo }.
- * @param {{to:string|string[], subject:string, html?:string, text?:string, from?:string, replyTo?:string}} msg
+ * @param {{to?:string|string[], bcc?:string|string[], cc?:string|string[], subject:string, html?:string, text?:string, from?:string, replyTo?:string}} msg
  */
-async function enviarEmail({ to, subject, html, text, from, replyTo } = {}) {
+async function enviarEmail({ to, bcc, cc, subject, html, text, from, replyTo } = {}) {
     if (!estaConfigurado()) {
         logger.debug("E-mail desabilitado (credenciais OAuth ausentes)");
         return { ok: false, motivo: "sem_credenciais" };
     }
-    if (!to || !subject) {
+    // Precisa de pelo menos um destinatário (to/cc/bcc) e um assunto
+    const temDestino = [to, cc, bcc].some((v) => (Array.isArray(v) ? v.length : v));
+    if (!temDestino || !subject) {
         logger.warn("E-mail sem destinatário ou assunto — envio ignorado");
         return { ok: false, motivo: "invalido" };
     }
     try {
         const accessToken = await getAccessToken();
+        const remetente = from || process.env.EMAIL_FROM || process.env.GMAIL_USER;
         const mail = new MailComposer({
-            from: from || process.env.EMAIL_FROM || process.env.GMAIL_USER,
-            to,
+            from: remetente,
+            to: to || remetente, // em envio só-BCC, To = próprio remetente
+            bcc: bcc || undefined,
+            cc: cc || undefined,
             subject,
             text: text || undefined,
             html: html || undefined,

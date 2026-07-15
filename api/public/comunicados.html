@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICCR - Comunicados por E-mail</title>
+    <link rel="shortcut icon" href="./img/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/dialogs.css">
+    <link rel="stylesheet" href="./adm/css/style.css">
+    <link rel="stylesheet" href="./adm/css/dialogs.css">
+    <link rel="stylesheet" href="./css/ui-kit.css">
+    <script type="module" src="./js/scripts.js"></script>
+</head>
+<body>
+    <!-- Formulário de Login DIALOG -->
+    <dialog id="dialogLogin">
+        <fieldset>
+            <legend>Login</legend>
+            <form id="frmLogin">
+                <div class="row"><input type="text" name="txtLogin" id="txtLogin" class="formInput" placeholder="Digite o seu login"></div>
+                <div class="row"><input type="password" name="txtSenha" id="txtSenha" class="formInput" placeholder="Digite a sua senha"></div>
+                <p id="loginErro" class="login-erro" hidden></p>
+                <div class="row">
+                    <button id="btnLogin" type="button">Entrar</button>
+                    <button id="btnCancelarLogin" type="button">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+
+    <div class="container">
+        <header>
+            <a href="/"><img src="./img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo"></a>
+            <div class="acesso"><a href="#" id="btnEntrar" class="">Entrar</a></div>
+        </header>
+        <div><responsive-menu></responsive-menu></div>
+
+        <main class="flex flex--column">
+            <section class="titulo_secao flex align--items--center gap--10" style="flex-wrap:wrap">
+                <h1 class="flex align--items--center gap--10"><i class="bi bi-envelope-paper"></i> Comunicados por E-mail</h1>
+            </section>
+
+            <p id="cmAvisoEmail" style="display:none;padding:10px 12px;background:#fff3cd;color:#856404;border-radius:8px;margin:8px 0">
+                ⚠️ O envio de e-mail não está configurado no servidor. Você pode montar o comunicado, mas o envio ficará indisponível.
+            </p>
+
+            <section class="informacoes_painel" style="margin-bottom:16px">
+                <div class="flex flex--column gap--12">
+                    <div class="flex flex--column gap--5">
+                        <label class="painelLabel" for="cmAssunto">Assunto</label>
+                        <input type="text" id="cmAssunto" class="formInput width--100" placeholder="Assunto do comunicado">
+                    </div>
+                    <div class="flex flex--column gap--5">
+                        <label class="painelLabel" for="cmCorpo">Mensagem</label>
+                        <textarea id="cmCorpo" class="formInput width--100" rows="7" placeholder="Escreva a mensagem…"></textarea>
+                    </div>
+
+                    <div class="pedido-secao-titulo" style="font-weight:600;margin-top:6px">Destinatários</div>
+
+                    <!-- Grupos -->
+                    <div class="flex flex--column gap--5" style="border:1px solid #e0e0e0;border-radius:8px;padding:10px">
+                        <strong style="font-size:13px">Grupos</strong>
+                        <label class="flex align--items--center gap--5 cursor--pointer"><input type="checkbox" id="cmTodos"> Todos os servidores <span id="cmTodosN" style="color:#888"></span></label>
+                        <label class="flex align--items--center gap--5 cursor--pointer"><input type="checkbox" id="cmChefes"> Chefes de setor <span id="cmChefesN" style="color:#888"></span></label>
+                        <div style="font-size:12px;color:#888;margin-top:4px">Por subunidade (departamentos/secretarias):</div>
+                        <div id="cmSubs" class="flex flex--column gap--5" style="max-height:180px;overflow:auto;padding-left:4px"></div>
+                    </div>
+
+                    <!-- Individuais -->
+                    <div class="flex flex--column gap--5" style="border:1px solid #e0e0e0;border-radius:8px;padding:10px">
+                        <strong style="font-size:13px">Servidores (individual)</strong>
+                        <input type="text" id="cmBuscaServidor" class="formInput width--100" placeholder="Buscar servidor pelo nome…">
+                        <div id="cmServidores" class="flex flex--column gap--5" style="max-height:200px;overflow:auto;padding-left:4px"></div>
+                    </div>
+
+                    <!-- Avulsos -->
+                    <div class="flex flex--column gap--5" style="border:1px solid #e0e0e0;border-radius:8px;padding:10px">
+                        <strong style="font-size:13px">E-mails avulsos</strong>
+                        <div class="flex gap--10 align--items--center flex--wrap">
+                            <input type="email" id="cmAvulsoInput" class="formInput flex--1" placeholder="email@exemplo.com" style="min-width:180px">
+                            <button type="button" id="cmAvulsoAdd" class="btnPainelFormulario" style="height:38px">Adicionar</button>
+                        </div>
+                        <div id="cmAvulsoChips" class="flex gap--5 flex--wrap"></div>
+                    </div>
+
+                    <div class="flex align--items--center gap--15 flex--wrap" style="margin-top:6px">
+                        <span class="badge badge--info" id="cmContagem" title="Total de destinatários (dedup)">0 destinatários</span>
+                        <button type="button" id="cmEnviar" class="btnPainelFormulario">Enviar comunicado</button>
+                        <span id="cmFeedback"></span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="informacoes_painel">
+                <div class="pedido-secao-titulo" style="font-weight:600;margin-bottom:8px">Histórico de envios</div>
+                <div id="cmHistorico"></div>
+            </section>
+        </main>
+        <footer>Rodapé</footer>
+    </div>
+
+    <script type="module" src="./js/components/index.js"></script>
+</body>
+</html>

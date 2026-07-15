@@ -3412,4 +3412,122 @@ document.addEventListener("DOMContentLoaded", function() {
         carregar();
     }
 
+    // =========================================================================
+    // COMUNICADOS POR E-MAIL — /comunicados (direção)
+    // =========================================================================
+    if (urlParam === "/comunicados") {
+        const $ = (id) => document.getElementById(id);
+        const chkTodos = $("cmTodos"), chkChefes = $("cmChefes");
+        const elSubs = $("cmSubs"), elServidores = $("cmServidores"), elBusca = $("cmBuscaServidor");
+        const elChips = $("cmAvulsoChips"), inpAvulso = $("cmAvulsoInput"), btnAvulsoAdd = $("cmAvulsoAdd");
+        const elContagem = $("cmContagem"), btnEnviar = $("cmEnviar"), feedback = $("cmFeedback");
+        const elHistorico = $("cmHistorico"), avisoEmail = $("cmAvisoEmail");
+        const inpAssunto = $("cmAssunto"), inpCorpo = $("cmCorpo");
+
+        const subsSel = new Set(), usersSel = new Set(), avulsos = [];
+        let servidoresCache = [];
+        const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        function coletarSpec() {
+            const grupos = [];
+            if (chkTodos.checked) grupos.push("todos");
+            if (chkChefes.checked) grupos.push("chefes");
+            return { grupos, subunidadeIds: [...subsSel].map(Number), userIds: [...usersSel].map(Number), emails: [...avulsos] };
+        }
+
+        let debTimer = null;
+        function agendarContagem() {
+            clearTimeout(debTimer);
+            debTimer = setTimeout(atualizarContagem, 350);
+        }
+        async function atualizarContagem() {
+            try {
+                const r = await fetch(`${apiUrl}/comunicados/preview`, { method: "POST", body: JSON.stringify(coletarSpec()) });
+                const d = (await r.json()).data || { total: 0 };
+                elContagem.textContent = `${d.total} destinatário(s)`;
+            } catch { elContagem.textContent = "—"; }
+        }
+
+        function renderServidores() {
+            const q = (elBusca.value || "").trim().toLowerCase();
+            const lista = q ? servidoresCache.filter(s => (s.nome || "").toLowerCase().includes(q)) : servidoresCache;
+            elServidores.innerHTML = lista.slice(0, 300).map(s => `
+                <label class="flex align--items--center gap--5 cursor--pointer" style="font-size:13px">
+                    <input type="checkbox" class="cm-serv" value="${s.user_id}" ${usersSel.has(String(s.user_id)) ? "checked" : ""}>
+                    ${s.nome} <span style="color:#999">${s.subunidade_sigla || ""}</span>
+                </label>`).join("") || '<span style="color:#888;font-size:12px">Nenhum servidor encontrado.</span>';
+        }
+
+        function renderChips() {
+            elChips.innerHTML = avulsos.map((e, i) => `<span class="badge badge--info" style="display:inline-flex;align-items:center;gap:6px">${e}<i class="bi bi-x-circle cursor--pointer cm-chip-x" data-i="${i}"></i></span>`).join("");
+        }
+
+        async function carregarOpcoes() {
+            try {
+                const d = (await (await fetch(`${apiUrl}/comunicados/destinatarios`)).json()).data;
+                servidoresCache = d.servidores || [];
+                $("cmTodosN").textContent = `(${d.total_todos})`;
+                $("cmChefesN").textContent = `(${d.total_chefes})`;
+                elSubs.innerHTML = (d.subunidades || []).map(s => `
+                    <label class="flex align--items--center gap--5 cursor--pointer" style="font-size:13px">
+                        <input type="checkbox" class="cm-sub" value="${s.subunidade_id}"> ${s.subunidade_nome} <span style="color:#999">(${s.total})</span>
+                    </label>`).join("");
+                renderServidores();
+                if (!d.email_configurado) { avisoEmail.style.display = "block"; btnEnviar.disabled = true; }
+            } catch (e) { console.error("Erro ao carregar opções:", e); }
+        }
+
+        async function carregarHistorico() {
+            try {
+                const arr = (await (await fetch(`${apiUrl}/comunicados`)).json()).data || [];
+                if (arr.length === 0) { elHistorico.innerHTML = '<p class="pedido-lista-vazia" style="padding:10px">Nenhum comunicado enviado ainda.</p>'; return; }
+                elHistorico.innerHTML = arr.map(c => `
+                    <div class="horario-item">
+                        <span class="flex--1"><strong>${c.assunto}</strong><br><span style="font-size:12px;color:#888">${c.criterio || ""}</span></span>
+                        <span style="text-align:right;font-size:12px">
+                            <span class="badge ${c.falhas > 0 ? "badge--parcial" : "badge--atendido"}">${c.enviados}/${c.total_destinatarios}</span><br>
+                            <span style="color:#999">${formatarData(c.createdat)} · ${(c.enviado_por_nome || "").split(" ")[0]}</span>
+                        </span>
+                    </div>`).join("");
+            } catch (e) { console.error("Erro ao carregar histórico:", e); }
+        }
+
+        // Eventos
+        [chkTodos, chkChefes].forEach(c => c.addEventListener("change", agendarContagem));
+        elSubs.addEventListener("change", (e) => { const c = e.target.closest(".cm-sub"); if (!c) return; c.checked ? subsSel.add(c.value) : subsSel.delete(c.value); agendarContagem(); });
+        elServidores.addEventListener("change", (e) => { const c = e.target.closest(".cm-serv"); if (!c) return; c.checked ? usersSel.add(c.value) : usersSel.delete(c.value); agendarContagem(); });
+        elBusca.addEventListener("input", renderServidores);
+        function addAvulso() {
+            const e = (inpAvulso.value || "").trim().toLowerCase();
+            if (!RE_EMAIL.test(e)) { inpAvulso.style.borderColor = "#c92a2a"; return; }
+            inpAvulso.style.borderColor = "";
+            if (!avulsos.includes(e)) avulsos.push(e);
+            inpAvulso.value = ""; renderChips(); agendarContagem();
+        }
+        btnAvulsoAdd.addEventListener("click", addAvulso);
+        inpAvulso.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addAvulso(); } });
+        elChips.addEventListener("click", (e) => { const x = e.target.closest(".cm-chip-x"); if (!x) return; avulsos.splice(Number(x.dataset.i), 1); renderChips(); agendarContagem(); });
+
+        btnEnviar.addEventListener("click", async () => {
+            feedback.innerHTML = "";
+            const assunto = inpAssunto.value.trim(), corpo = inpCorpo.value.trim();
+            if (!assunto || !corpo) { feedback.innerHTML = '<span style="color:#c92a2a">Preencha assunto e mensagem.</span>'; return; }
+            const spec = coletarSpec();
+            const prev = (await (await fetch(`${apiUrl}/comunicados/preview`, { method: "POST", body: JSON.stringify(spec) })).json()).data || { total: 0 };
+            if (prev.total === 0) { feedback.innerHTML = '<span style="color:#c92a2a">Selecione ao menos um destinatário.</span>'; return; }
+            if (!confirm(`Enviar "${assunto}" para ${prev.total} destinatário(s)?`)) return;
+            btnEnviar.disabled = true; feedback.innerHTML = "Enviando…";
+            const r = await fetch(`${apiUrl}/comunicados`, { method: "POST", body: JSON.stringify({ assunto, corpo, ...spec }) });
+            const resp = await r.json();
+            btnEnviar.disabled = false;
+            if (!r.ok) { feedback.innerHTML = `<span style="color:#c92a2a">${resp.message}</span>`; return; }
+            feedback.innerHTML = `<span style="color:#009536">✓ ${resp.message}</span>`;
+            inpAssunto.value = ""; inpCorpo.value = "";
+            carregarHistorico();
+        });
+
+        carregarOpcoes();
+        carregarHistorico();
+    }
+
 });

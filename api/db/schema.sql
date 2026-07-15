@@ -1,12 +1,12 @@
 -- Schema dump gerado automaticamente. NÃO editar manualmente.
--- Origem: docker compose db (siccr) — 2026-07-13T14:04:26.422Z
+-- Origem: docker compose db (siccr) — 2026-07-15T13:21:03.664Z
 -- Regenere com: npm run db:dump
 
 --
 -- PostgreSQL database dump
 --
 
-\restrict W2RmsN4v8WhJzgjgeCaWrAeKnmEyYdbfkl7jhULazAQ7u287a3eqkkoQLGGgTdp
+\restrict AaRL28XqhZQJxk3eZeJ1QLYCUO9Z16oidtN79dWlupZacGYYAWcAGJO7bgt08k8
 
 -- Dumped from database version 16.13
 -- Dumped by pg_dump version 16.13
@@ -221,6 +221,43 @@ CREATE SEQUENCE public.bens_permanentes_id_bem_seq
 --
 
 ALTER SEQUENCE public.bens_permanentes_id_bem_seq OWNED BY public.bens_permanentes.id_bem;
+
+
+--
+-- Name: comunicados; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.comunicados (
+    id_comunicado integer NOT NULL,
+    assunto character varying(255) NOT NULL,
+    corpo text NOT NULL,
+    criterio character varying(500),
+    total_destinatarios integer DEFAULT 0 NOT NULL,
+    enviados integer DEFAULT 0 NOT NULL,
+    falhas integer DEFAULT 0 NOT NULL,
+    enviado_por_user_id integer,
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: comunicados_id_comunicado_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.comunicados_id_comunicado_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: comunicados_id_comunicado_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.comunicados_id_comunicado_seq OWNED BY public.comunicados.id_comunicado;
 
 
 --
@@ -1053,6 +1090,13 @@ ALTER TABLE ONLY public.bens_permanentes ALTER COLUMN id_bem SET DEFAULT nextval
 
 
 --
+-- Name: comunicados id_comunicado; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.comunicados ALTER COLUMN id_comunicado SET DEFAULT nextval('public.comunicados_id_comunicado_seq'::regclass);
+
+
+--
 -- Name: cursos id_curso; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1275,6 +1319,14 @@ ALTER TABLE ONLY public.bens_permanentes
 
 ALTER TABLE ONLY public.bens_permanentes
     ADD CONSTRAINT bens_permanentes_pkey PRIMARY KEY (id_bem);
+
+
+--
+-- Name: comunicados comunicados_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.comunicados
+    ADD CONSTRAINT comunicados_pkey PRIMARY KEY (id_comunicado);
 
 
 --
@@ -1709,6 +1761,14 @@ ALTER TABLE ONLY public.bens_permanentes
 
 
 --
+-- Name: comunicados comunicados_enviado_por_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.comunicados
+    ADD CONSTRAINT comunicados_enviado_por_user_id_fkey FOREIGN KEY (enviado_por_user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
 -- Name: disciplinas disciplinas_subunidade_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1904,5 +1964,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict W2RmsN4v8WhJzgjgeCaWrAeKnmEyYdbfkl7jhULazAQ7u287a3eqkkoQLGGgTdp
+\unrestrict AaRL28XqhZQJxk3eZeJ1QLYCUO9Z16oidtN79dWlupZacGYYAWcAGJO7bgt08k8
 

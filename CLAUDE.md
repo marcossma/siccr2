@@ -237,6 +237,7 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 | `/api/salas-tipo` | chefe | routes/salas-tipo.js |
 | `/api/patrimonio` | chefe / servidor c/ `fazer_levantamento` | routes/patrimonio.js |
 | `/api/aniversariantes` | servidor (logado) | routes/aniversariantes.js |
+| `/api/comunicados` | diretor | routes/comunicados.js |
 | `/api/tipos-recursos` | chefe | routes/tipos-recursos.js |
 | `/api/tipos-despesas` | chefe | routes/tipos-despesas.js |
 | `/api/despesas` | chefe | routes/despesas.js |
@@ -276,6 +277,8 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 `/api/turmas` sub-rotas: `GET /` (lista; filtros `?periodo_letivo_id=&curso_id=&disciplina_id=`, pós excluída salvo `?incluir_pos=1`; devolve `horarios_com_sala`/`total_horarios` e `total_professores`), `POST/PUT/DELETE /` (CRUD turma), `GET /:id` (detalhe + horários com tipo/bloco modular + professores de co-docência), `POST /:id/horarios` (aloca + materializa aula; 409 com datas em conflito), `PUT /:id/horarios/:horarioId` (edição in-place — re-materializa preservando tipo/bloco; sala vazia = desaloca), `DELETE /:id/horarios/:horarioId`.
 
 `/api/cursos`: `GET /` (lista p/ filtro; pós excluída salvo `?incluir_pos=1`), `PATCH /:id` (ajuste manual do `nivel`).
+
+`/api/comunicados` (diretor): `GET /destinatarios` (servidores c/ email, subunidades c/ contagem, totais chefes/todos), `POST /preview` (resolve destinatários e conta, sem enviar), `POST /` (envia comunicado em **BCC por lote** de 45 via `lib/email.js` e registra em `comunicados`), `GET /` (histórico). Painel em `/comunicados` (direção; link no menu Administrativo). Destinatários: individuais (lista/e-mail avulso) + grupos (subunidades, chefes, todos), com dedup.
 
 `/api/patrimonio`: `GET /salas` (salas p/ o seletor do levantamento, com total de bens), `GET /?sala_id=` (bens da sala + quem cadastrou), `GET /:id/historico` (linha do tempo de auditoria), `POST /` (cadastra; `subunidade_id` derivada da sala; 409 se `numero_registro` duplicado — o 409 traz `data.bem_existente` com a sala atual), `PUT /:id`, `PATCH /:id/mover` (transfere o bem p/ outra sala + atualiza `data_levantamento`; usado no botão "Mover para esta sala" quando o tombo já existe noutra sala), `DELETE /:id`. Toda mutação grava um evento em `patrimonio_historico`.
 
