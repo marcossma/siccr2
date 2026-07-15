@@ -50,6 +50,8 @@ const turmas = require("./routes/turmas.js");
 const cursos = require("./routes/cursos.js");
 const patrimonio = require("./routes/patrimonio.js");
 const aniversariantes = require("./routes/aniversariantes.js");
+// Rota de setup do OAuth do Gmail (pública — retorno do Google, sem JWT)
+const emailOauth = require("./routes/email-oauth.js");
 // Importar rota de importação de dados (super_admin)
 const importacao = require("./routes/importacao.js");
 // Importar rota pública do painel de TV (hall dos prédios)
@@ -183,6 +185,9 @@ app.use("/api/eventos", eventos);
 // Painel de TV nos halls (pública - read-only, sem dados internos sensíveis)
 // ##########################################################################
 app.use("/api/painel-tv", painelTv);
+
+// Callback do OAuth do Gmail (setup único; público pois é redirect do Google)
+app.use("/", emailOauth);
 
 // Rotas protegidas com autenticação + autorização RBAC
 // ######################################################

@@ -62,11 +62,15 @@ GMAIL_OAUTH_CLIENT_ID=...
 GMAIL_OAUTH_CLIENT_SECRET=...
 GMAIL_OAUTH_REFRESH_TOKEN=...   # gerar com: npm run email:token -- <client_id> <client_secret>
 # EMAIL_FROM tem default = GMAIL_USER (ex.: "SICCR <siccr@ufsm.br>")
+# EMAIL_OAUTH_REDIRECT=...      # só p/ o fluxo por domínio (ex.: https://siccrt.infai.com.br/oauth2callback)
 ```
 
 ### E-mail (`lib/email.js`, Gmail OAuth2 via nodemailer)
 - Fire-and-forget como o WhatsApp: nunca derruba a request; desabilitado sem credenciais.
-- Setup: no Google Cloud Console — ativar a **Gmail API**, criar credencial **OAuth client ID** (tipo *Web application*) com redirect URI `http://localhost:5555/oauth2callback`; rodar `npm run email:token -- <id> <secret>` (na máquina local, com navegador) para obter o `GMAIL_OAUTH_REFRESH_TOKEN`; testar com `npm run email:test -- destino@email`.
+- Setup no Google Cloud Console: ativar a **Gmail API**, criar credencial **OAuth client ID** (tipo *Web application*), registrar o redirect URI e gerar o refresh token. Dois modos:
+  - **Local:** redirect `http://localhost:5555/oauth2callback`; `npm run email:token -- <id> <secret>` (na sua máquina) captura e imprime o token.
+  - **Domínio (VPS):** redirect `https://SEU_DOMINIO/oauth2callback` (registre e ponha em `EMAIL_OAUTH_REDIRECT`); `npm run email:token -- <id> <secret> https://SEU_DOMINIO/oauth2callback` imprime o link, e a rota pública `GET /oauth2callback` (routes/email-oauth.js) troca o code e mostra o `GMAIL_OAUTH_REFRESH_TOKEN`.
+- Testar: `npm run email:test -- destino@email`. O refresh token é portátil entre os dois modos.
 
 ---
 

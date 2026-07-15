@@ -1,18 +1,22 @@
 "use strict";
 
 /**
- * Obtém o GMAIL_OAUTH_REFRESH_TOKEN via OAuth2 (fluxo loopback — sem OOB).
+ * Obtém o GMAIL_OAUTH_REFRESH_TOKEN via OAuth2.
  *
- * Rode NA SUA MÁQUINA (precisa de um navegador). Uso:
- *   node scripts/get-gmail-token.js <client_id> <client_secret> [porta]
- * ou com variáveis de ambiente:
- *   GMAIL_OAUTH_CLIENT_ID=... GMAIL_OAUTH_CLIENT_SECRET=... node scripts/get-gmail-token.js
+ * DOIS MODOS de redirect:
  *
- * Pré-requisito no Google Cloud Console (credencial "OAuth client ID", tipo
- * "Web application"): registrar o Authorized redirect URI:
- *   http://localhost:5555/oauth2callback   (ou a porta que você passar)
+ *  A) Loopback (rode NA SUA MÁQUINA, com navegador) — padrão:
+ *       node scripts/get-gmail-token.js <client_id> <client_secret> [porta]
+ *     Redirect: http://localhost:5555/oauth2callback (registre no OAuth client).
+ *     O próprio script captura o code e imprime o refresh token.
  *
- * O script imprime a linha GMAIL_OAUTH_REFRESH_TOKEN=... para colar no .env.
+ *  B) Domínio (usar o deploy, ex.: https://siccrt.infai.com.br) — passe a URL
+ *     completa como 4º argumento OU defina EMAIL_OAUTH_REDIRECT no ambiente:
+ *       node scripts/get-gmail-token.js <client_id> <client_secret> https://siccrt.infai.com.br/oauth2callback
+ *     Registre esse redirect no OAuth client. Aqui o script só imprime o LINK;
+ *     quem captura o code e mostra o refresh token é o app (rota GET /oauth2callback).
+ *
+ * O refresh token é portátil: obtido em qualquer modo, funciona no servidor.
  */
 
 const http = require("http");
@@ -20,14 +24,24 @@ const { URL } = require("url");
 
 const clientId = process.argv[2] || process.env.GMAIL_OAUTH_CLIENT_ID;
 const clientSecret = process.argv[3] || process.env.GMAIL_OAUTH_CLIENT_SECRET;
-const port = parseInt(process.argv[4] || process.env.OAUTH_PORT || "5555", 10);
-const redirectUri = `http://localhost:${port}/oauth2callback`;
 const SCOPE = "https://www.googleapis.com/auth/gmail.send";
 
 if (!clientId || !clientSecret) {
     console.error("ERRO: informe o Client ID e o Client Secret.");
-    console.error("  node scripts/get-gmail-token.js <client_id> <client_secret> [porta]");
+    console.error("  node scripts/get-gmail-token.js <client_id> <client_secret> [porta | url-de-redirect]");
     process.exit(1);
+}
+
+// 4º argumento: número → porta (loopback); URL http(s) → redirect no domínio
+const arg4 = process.argv[4];
+const redirectEnv = process.env.EMAIL_OAUTH_REDIRECT;
+const remoto = !!(redirectEnv || (arg4 && /^https?:\/\//i.test(arg4)));
+let redirectUri, port;
+if (remoto) {
+    redirectUri = redirectEnv || arg4;
+} else {
+    port = parseInt(arg4 || process.env.OAUTH_PORT || "5555", 10);
+    redirectUri = `http://localhost:${port}/oauth2callback`;
 }
 
 const authUrl = "https://accounts.google.com/o/oauth2/v2/auth?" + new URLSearchParams({
@@ -38,6 +52,17 @@ const authUrl = "https://accounts.google.com/o/oauth2/v2/auth?" + new URLSearchP
     access_type: "offline",
     prompt: "consent",
 }).toString();
+
+// Modo B (domínio): o app captura o retorno; aqui só mostramos o link.
+if (remoto) {
+    console.log("\nModo DOMÍNIO. Garanta que este redirect está registrado no OAuth client:");
+    console.log("  " + redirectUri);
+    console.log("\ne que o .env do app tem EMAIL_OAUTH_REDIRECT=" + redirectUri + " (mesmo valor).\n");
+    console.log("1) Abra este link (logado na conta que vai ENVIAR os e-mails):\n");
+    console.log(authUrl + "\n");
+    console.log("2) Autorize — a página do app (" + redirectUri + ") mostrará o GMAIL_OAUTH_REFRESH_TOKEN.");
+    process.exit(0);
+}
 
 const server = http.createServer(async (req, res) => {
     const u = new URL(req.url, `http://localhost:${port}`);
