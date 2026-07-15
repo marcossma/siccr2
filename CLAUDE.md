@@ -368,6 +368,7 @@ Impressão/PDF: páginas usam `@media print` p/ esconder menu/toolbar.
 - `lib/whatsapp.js` — `enviarMensagem(numero, msg)` é **fire-and-forget**: nunca lança, só loga via pino. Falha de WhatsApp não bloqueia aprovação/rejeição.
 - Normaliza número p/ formato DDI+DDD (ex: `5555999998888`), redige número no log.
 - Disparado em `PATCH /aprovar` e `/rejeitar`. Sem `WHATSAPP_API_KEY` no `.env`, fica desabilitado silenciosamente.
+- **E-mail transacional** também é disparado em `/aprovar` e `/rejeitar` (fire-and-forget, ao lado do WhatsApp): templates em `lib/email-templates.js` (`agendamentoAprovado`/`agendamentoRejeitado`), layout branded com logo por CID. Enviado só se o solicitante tiver e-mail.
 
 ## Observabilidade & qualidade
 

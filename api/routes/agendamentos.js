@@ -6,6 +6,8 @@ const pool = require("../config/database.js");
 const { expandirRecorrencia, detectarConflitos } = require("../lib/recorrencia.js");
 const logger = require("../lib/logger.js");
 const whatsapp = require("../lib/whatsapp.js");
+const email = require("../lib/email.js");
+const emailTpl = require("../lib/email-templates.js");
 
 module.exports = function (wss) {
     const router = express.Router();
@@ -385,6 +387,7 @@ module.exports = function (wss) {
                  )
                  SELECT a.*, s.sala_nome,
                         u.nome AS solicitante_nome, u.whatsapp AS solicitante_whatsapp,
+                        u.email AS solicitante_email,
                         ap.nome AS aprovador_nome
                  FROM atualizado a
                  JOIN salas s ON s.sala_id = a.sala_id
@@ -405,8 +408,12 @@ module.exports = function (wss) {
                 { agendamento, decisao: "aprovada" },
                 (u) => u.id === agendamento.solicitante_user_id
             );
-            // Notificação WhatsApp em fire-and-forget (não atrasa a resposta nem bloqueia em caso de falha)
+            // Notificações fire-and-forget (não atrasam a resposta nem bloqueiam em caso de falha)
             whatsapp.enviarMensagem(agendamento.solicitante_whatsapp, whatsapp.mensagemAprovacao(agendamento));
+            if (agendamento.solicitante_email) {
+                const t = emailTpl.agendamentoAprovado(agendamento);
+                email.enviarEmail({ to: agendamento.solicitante_email, subject: t.subject, html: t.html, text: t.text, attachments: emailTpl.logoInfo().attachments });
+            }
             return res.status(200).json({ status: "success", message: "Agendamento aprovado.", data: agendamento });
         } catch (error) {
             logger.error({ err: error }, "Erro ao aprovar agendamento");
@@ -439,6 +446,7 @@ module.exports = function (wss) {
                  )
                  SELECT a.*, s.sala_nome,
                         u.nome AS solicitante_nome, u.whatsapp AS solicitante_whatsapp,
+                        u.email AS solicitante_email,
                         ap.nome AS aprovador_nome
                  FROM atualizado a
                  JOIN salas s ON s.sala_id = a.sala_id
@@ -459,8 +467,12 @@ module.exports = function (wss) {
                 { agendamento, decisao: "rejeitada" },
                 (u) => u.id === agendamento.solicitante_user_id
             );
-            // Notificação WhatsApp em fire-and-forget
+            // Notificações fire-and-forget
             whatsapp.enviarMensagem(agendamento.solicitante_whatsapp, whatsapp.mensagemRejeicao(agendamento));
+            if (agendamento.solicitante_email) {
+                const t = emailTpl.agendamentoRejeitado(agendamento);
+                email.enviarEmail({ to: agendamento.solicitante_email, subject: t.subject, html: t.html, text: t.text, attachments: emailTpl.logoInfo().attachments });
+            }
             return res.status(200).json({ status: "success", message: "Agendamento rejeitado.", data: agendamento });
         } catch (error) {
             logger.error({ err: error }, "Erro ao rejeitar agendamento");
