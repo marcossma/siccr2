@@ -1,11 +1,55 @@
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
+const sanitizeHtml = require("sanitize-html");
 const pool = require("../config/database.js");
 const logger = require("../lib/logger.js");
 const { enviarEmail, estaConfigurado } = require("../lib/email.js");
 
 const router = express.Router();
+
+// Allowlist de formatação do corpo (o editor produz HTML; a direção é confiável,
+// mas sanitizamos por segurança e para limpar HTML colado)
+const SANITIZE_OPTS = {
+    allowedTags: ["p", "br", "b", "strong", "i", "em", "u", "s", "ul", "ol", "li", "a", "span", "h3", "h4", "blockquote", "div"],
+    allowedAttributes: { a: ["href", "target", "rel"] },
+    allowedSchemes: ["http", "https", "mailto"],
+    transformTags: {
+        a: (_t, attribs) => ({ tagName: "a", attribs: { href: attribs.href || "#", target: "_blank", rel: "noopener noreferrer" } }),
+    },
+};
+
+// Transforma URLs soltas (fora de <a>) em links clicáveis
+function linkify(html) {
+    let out = "", inA = 0;
+    const re = /(<a\b[^>]*>)|(<\/a\s*>)|(<[^>]+>)|([^<]+)/gi;
+    let m;
+    while ((m = re.exec(html)) !== null) {
+        if (m[1]) { inA++; out += m[1]; }
+        else if (m[2]) { inA = Math.max(0, inA - 1); out += m[2]; }
+        else if (m[3]) { out += m[3]; }
+        else {
+            out += inA > 0 ? m[4] : m[4].replace(/((?:https?:\/\/|www\.)[^\s<]+)/gi, (u) => {
+                const href = u.startsWith("http") ? u : "https://" + u;
+                return `<a href="${href}">${u}</a>`;
+            });
+        }
+    }
+    return out;
+}
+
+// Sanitiza o corpo (linkify → allowlist)
+function sanitizeCorpo(htmlRaw) {
+    return sanitizeHtml(linkify(String(htmlRaw || "")), SANITIZE_OPTS);
+}
+
+// Versão texto puro (fallback text/plain do e-mail)
+function htmlParaTexto(html) {
+    const comQuebras = String(html || "")
+        .replace(/<\/(p|div|li|h3|h4|blockquote)>/gi, "\n")
+        .replace(/<br\s*\/?>/gi, "\n");
+    return sanitizeHtml(comQuebras, { allowedTags: [], allowedAttributes: {} }).replace(/\n{3,}/g, "\n\n").trim();
+}
 
 // Logo embutido no e-mail via CID (carregado uma vez). false = arquivo ausente.
 let logoBuffer = null;
@@ -22,14 +66,9 @@ function getLogo() {
 const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const LOTE_BCC = 45; // destinatários por mensagem (BCC), pra não expor endereços nem estourar limites
 
-function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-}
-
-// Envolve o corpo (texto simples) num template com a identidade do SICCR.
+// Envolve o corpo (HTML já sanitizado) num template com a identidade do SICCR.
 // Cabeçalho branco com o logo (verde) via CID; traço verde por baixo — como o site.
-function montarHtml(corpo, comLogo) {
-    const corpoHtml = escapeHtml(corpo).replace(/\r?\n/g, "<br>");
+function montarHtml(corpoHtml, comLogo) {
     const header = comLogo
         ? `<img src="cid:siccr-logo" alt="SICCR — Centro de Ciências Rurais" style="max-height:52px;max-width:80%">`
         : `<span style="font-size:20px;font-weight:bold;color:#009536">SICCR</span> <span style="color:#555">— Centro de Ciências Rurais</span>`;
@@ -125,8 +164,9 @@ router.post("/preview", async (req, res) => {
 // POST /api/comunicados — envia o comunicado (BCC em lote) e registra
 router.post("/", async (req, res) => {
     const assunto = String(req.body.assunto || "").trim();
-    const corpo = String(req.body.corpo || "").trim();
-    if (!assunto || !corpo) {
+    const corpoHtml = sanitizeCorpo(req.body.corpo);
+    const corpoTexto = htmlParaTexto(corpoHtml);
+    if (!assunto || !corpoTexto) {
         return res.status(400).json({ status: "error", message: "Assunto e mensagem são obrigatórios.", data: null });
     }
     if (!estaConfigurado()) {
@@ -140,18 +180,18 @@ router.post("/", async (req, res) => {
 
         const logo = getLogo();
         const anexos = logo ? [{ filename: "logo.png", content: logo, cid: "siccr-logo" }] : undefined;
-        const html = montarHtml(corpo, !!logo);
+        const html = montarHtml(corpoHtml, !!logo);
         let enviados = 0, falhas = 0;
         for (let i = 0; i < emails.length; i += LOTE_BCC) {
             const lote = emails.slice(i, i + LOTE_BCC);
-            const r = await enviarEmail({ bcc: lote, subject: assunto, html, text: corpo, attachments: anexos });
+            const r = await enviarEmail({ bcc: lote, subject: assunto, html, text: corpoTexto, attachments: anexos });
             if (r.ok) enviados += lote.length; else falhas += lote.length;
         }
 
         await pool.query(
             `INSERT INTO comunicados (assunto, corpo, criterio, total_destinatarios, enviados, falhas, enviado_por_user_id)
              VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [assunto, corpo, criterio, emails.length, enviados, falhas, req.usuario.id]
+            [assunto, corpoHtml, criterio, emails.length, enviados, falhas, req.usuario.id]
         );
 
         return res.status(200).json({

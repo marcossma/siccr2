@@ -3508,10 +3508,27 @@ document.addEventListener("DOMContentLoaded", function() {
         inpAvulso.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addAvulso(); } });
         elChips.addEventListener("click", (e) => { const x = e.target.closest(".cm-chip-x"); if (!x) return; avulsos.splice(Number(x.dataset.i), 1); renderChips(); agendarContagem(); });
 
+        // Barra de formatação (editor contenteditable via execCommand)
+        const toolbar = document.querySelector(".cm-toolbar");
+        toolbar && toolbar.addEventListener("click", (e) => {
+            const btn = e.target.closest("button[data-cmd]");
+            if (!btn) return;
+            e.preventDefault();
+            const cmd = btn.dataset.cmd;
+            inpCorpo.focus();
+            if (cmd === "link") {
+                const url = prompt("Endereço do link (https://...):", "https://");
+                if (url && url !== "https://") document.execCommand("createLink", false, url);
+            } else {
+                document.execCommand(cmd, false, null);
+            }
+        });
+
         btnEnviar.addEventListener("click", async () => {
             feedback.innerHTML = "";
-            const assunto = inpAssunto.value.trim(), corpo = inpCorpo.value.trim();
-            if (!assunto || !corpo) { feedback.innerHTML = '<span style="color:#c92a2a">Preencha assunto e mensagem.</span>'; return; }
+            const assunto = inpAssunto.value.trim();
+            const corpo = inpCorpo.innerHTML;
+            if (!assunto || !inpCorpo.textContent.trim()) { feedback.innerHTML = '<span style="color:#c92a2a">Preencha assunto e mensagem.</span>'; return; }
             const spec = coletarSpec();
             const prev = (await (await fetch(`${apiUrl}/comunicados/preview`, { method: "POST", body: JSON.stringify(spec) })).json()).data || { total: 0 };
             if (prev.total === 0) { feedback.innerHTML = '<span style="color:#c92a2a">Selecione ao menos um destinatário.</span>'; return; }
@@ -3522,7 +3539,7 @@ document.addEventListener("DOMContentLoaded", function() {
             btnEnviar.disabled = false;
             if (!r.ok) { feedback.innerHTML = `<span style="color:#c92a2a">${resp.message}</span>`; return; }
             feedback.innerHTML = `<span style="color:#009536">✓ ${resp.message}</span>`;
-            inpAssunto.value = ""; inpCorpo.value = "";
+            inpAssunto.value = ""; inpCorpo.innerHTML = "";
             carregarHistorico();
         });
 

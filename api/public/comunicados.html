@@ -10,6 +10,22 @@
     <link rel="stylesheet" href="./adm/css/style.css">
     <link rel="stylesheet" href="./adm/css/dialogs.css">
     <link rel="stylesheet" href="./css/ui-kit.css">
+    <style>
+        .cm-toolbar { border:1px solid #ccc; border-bottom:none; border-radius:6px 6px 0 0; background:#f7f7f7; padding:6px }
+        .cm-toolbar button {
+            min-width:34px; height:30px; border:1px solid #ddd; background:#fff; border-radius:4px;
+            cursor:pointer; font-size:13px; padding:0 8px; color:#333;
+        }
+        .cm-toolbar button:hover { background:#e9f7ee; border-color:#009536 }
+        #cmCorpo {
+            min-height:170px; border:1px solid #ccc; border-radius:0 0 6px 6px; padding:10px 12px;
+            outline:none; line-height:1.5; overflow:auto; background:#fff;
+        }
+        #cmCorpo:focus { border-color:#009536 }
+        #cmCorpo:empty:before { content: attr(data-placeholder); color:#999 }
+        #cmCorpo a { color:#009536 }
+        #cmCorpo ul, #cmCorpo ol { padding-left:22px }
+    </style>
     <script type="module" src="./js/scripts.js"></script>
 </head>
 <body>
@@ -52,8 +68,18 @@
                         <input type="text" id="cmAssunto" class="formInput width--100" placeholder="Assunto do comunicado">
                     </div>
                     <div class="flex flex--column gap--5">
-                        <label class="painelLabel" for="cmCorpo">Mensagem</label>
-                        <textarea id="cmCorpo" class="formInput width--100" rows="7" placeholder="Escreva a mensagem…"></textarea>
+                        <label class="painelLabel">Mensagem</label>
+                        <div class="cm-toolbar flex gap--5 flex--wrap">
+                            <button type="button" data-cmd="bold" title="Negrito"><b>N</b></button>
+                            <button type="button" data-cmd="italic" title="Itálico"><i>I</i></button>
+                            <button type="button" data-cmd="underline" title="Sublinhado"><u>S</u></button>
+                            <button type="button" data-cmd="insertUnorderedList" title="Lista com marcadores">• Lista</button>
+                            <button type="button" data-cmd="insertOrderedList" title="Lista numerada">1. Lista</button>
+                            <button type="button" data-cmd="link" title="Inserir link">🔗 Link</button>
+                            <button type="button" data-cmd="unlink" title="Remover link">⛌ Link</button>
+                            <button type="button" data-cmd="removeFormat" title="Limpar formatação">✕ Limpar</button>
+                        </div>
+                        <div id="cmCorpo" contenteditable="true" data-placeholder="Escreva a mensagem… (use os botões acima para formatar)"></div>
                     </div>
 
                     <div class="pedido-secao-titulo" style="font-weight:600;margin-top:6px">Destinatários</div>
