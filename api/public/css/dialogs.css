@@ -1,10 +1,15 @@
 #dialogLogin {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    /* Centralização robusta do modal (inset:0 + margin:auto + fit-content).
+       O hack antigo (position:absolute + translate) descentralizava e cortava
+       o card em telas estreitas. */
+    inset: 0;
+    margin: auto;
+    width: fit-content;
+    height: fit-content;
+    max-width: 95vw;
     border: none;
     background: none;
+    padding: 0;
 }
 
 #dialogLogin::backdrop {
@@ -109,9 +114,9 @@
         width: 92vw !important;
     }
 
-    /* Login se auto-dimensiona pelo fieldset interno (largura própria) */
+    /* Login se dimensiona pelo conteúdo e centraliza (inset+margin auto no base) */
     dialog#dialogLogin {
-        width: auto !important;
+        width: fit-content !important;
     }
 
     dialog fieldset {
