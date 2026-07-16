@@ -41,6 +41,15 @@
                 <menu-navegacao-adm></menu-navegacao-adm>
             </div>
 
+            <section class="flex gap--10 align--items--center flex--wrap" style="margin:8px 0">
+                <input type="text" id="filtroBusca" class="formInput" placeholder="🔎 Buscar em todas as colunas…" style="flex:1;min-width:200px;padding:6px 10px">
+                <select id="filtroPredio" class="formInput" style="padding:6px 10px"></select>
+                <select id="filtroTipo" class="formInput" style="padding:6px 10px"></select>
+                <select id="filtroDepto" class="formInput" style="padding:6px 10px"></select>
+                <button type="button" id="filtroLimpar" class="btnPainelFormulario" style="padding:6px 12px">Limpar</button>
+                <span id="filtroContagem" class="painelLabel" style="white-space:nowrap"></span>
+            </section>
+
             <section class="informacoes_painel">
                 <div class="cabecalho flex">
                     <div class="titulo flex flex--2">Sala</div>

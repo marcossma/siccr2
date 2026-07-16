@@ -733,44 +733,103 @@ document.addEventListener("DOMContentLoaded", function() {
         const selectPredios     = document.querySelector("#predio_id");
         const selectSalasTipo   = document.querySelector("#sala_tipo_id");
 
+        // ── Filtros (prédio, tipo, departamento, busca em todas as colunas) ──
+        const filtroBusca  = document.querySelector("#filtroBusca");
+        const filtroPredio = document.querySelector("#filtroPredio");
+        const filtroTipo   = document.querySelector("#filtroTipo");
+        const filtroDepto  = document.querySelector("#filtroDepto");
+        const filtroLimpar = document.querySelector("#filtroLimpar");
+        const filtroContagem = document.querySelector("#filtroContagem");
+        let salasCache = [];
+
+        function popularFiltro(select, itens, placeholder) {
+            const anterior = select.value;
+            select.innerHTML = `<option value="">${placeholder}</option>` +
+                itens.map(i => `<option value="${i.id}">${i.nome}</option>`).join("");
+            if (itens.some(i => String(i.id) === anterior)) select.value = anterior;
+        }
+        function popularFiltros() {
+            const uniq = (keyId, keyNome) => {
+                const m = new Map();
+                salasCache.forEach(s => { if (s[keyId] !== null && s[keyId] !== undefined && !m.has(s[keyId])) m.set(s[keyId], s[keyNome] || "—"); });
+                return [...m.entries()].map(([id, nome]) => ({ id, nome })).sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
+            };
+            popularFiltro(filtroPredio, uniq("predio_id", "predio"), "Todos os prédios");
+            popularFiltro(filtroTipo, uniq("sala_tipo_id", "sala_tipo_nome"), "Todos os tipos");
+            popularFiltro(filtroDepto, uniq("subunidade_id", "subunidade_nome"), "Todos os departamentos");
+        }
+
+        function renderLista(salas) {
+            listaUnidades.innerHTML = "";
+            salas.forEach(s => {
+                const div = document.createElement("div");
+                div.classList.add("dados", "flex", "align--items--center");
+                div.innerHTML = `
+                    <div class="dado flex flex--2">${s.sala_nome}</div>
+                    <div class="dado flex flex--2">${s.predio || "—"}</div>
+                    <div class="dado flex flex--3">${s.subunidade_nome || "—"}</div>
+                    <div class="dado flex flex--2">${(s.sala_tipo_nome || "—").toUpperCase()}</div>
+                    <div class="dado flex flex--1">${s.sala_capacidade ?? "—"}</div>
+                    <div class="dado flex flex--4">${s.sala_descricao || ""}</div>
+                    <div class="dado flex flex--2">${s.is_agendavel ? "Sim" : "Não"}</div>
+                    <div class="dado flex flex--2 gap--10 font--size--20">
+                        <i class="bi bi-box-seam gerenciar-patrimonio cursor--pointer" title="Patrimônio da sala"
+                           data-sala_id="${s.sala_id}" data-sala_nome="${s.sala_nome}"></i>
+                        ${iconeAcoes(
+                            `data-sala_id="${s.sala_id}"
+                             data-sala_nome="${s.sala_nome}"
+                             data-predio_id="${s.predio_id || ""}"
+                             data-subunidade_id="${s.subunidade_id || ""}"
+                             data-sala_descricao="${s.sala_descricao || ""}"
+                             data-sala_capacidade="${s.sala_capacidade ?? ""}"
+                             data-sala_largura="${s.sala_largura ?? ""}"
+                             data-sala_comprimento="${s.sala_comprimento ?? ""}"
+                             data-sala_altura="${s.sala_altura ?? ""}"
+                             data-is_agendavel="${s.is_agendavel ? 1 : 0}"
+                             data-sala_tipo_id="${s.sala_tipo_id || ""}"
+                             data-presta_servicos_externos="${s.presta_servicos_externos ?? ""}"`,
+                            s.sala_id, "sala"
+                        )}
+                    </div>`;
+                listaUnidades.appendChild(div);
+            });
+        }
+
+        function aplicarFiltros() {
+            const fp = filtroPredio.value, ft = filtroTipo.value, fd = filtroDepto.value;
+            const q = (filtroBusca.value || "").toLowerCase().trim();
+            const filtradas = salasCache.filter(s => {
+                if (fp && String(s.predio_id) !== fp) return false;
+                if (ft && String(s.sala_tipo_id) !== ft) return false;
+                if (fd && String(s.subunidade_id) !== fd) return false;
+                if (q) {
+                    const hay = [
+                        s.sala_nome, s.predio, s.subunidade_nome, s.subunidade_sigla,
+                        s.sala_tipo_nome, s.sala_descricao, s.sala_capacidade,
+                        s.is_agendavel ? "sim agendável" : "não",
+                    ].map(v => String(v ?? "").toLowerCase()).join(" ");
+                    if (!hay.includes(q)) return false;
+                }
+                return true;
+            });
+            renderLista(filtradas);
+            filtroContagem.textContent = `${filtradas.length} de ${salasCache.length} sala(s)`;
+        }
+
         async function renderizarSalas() {
             try {
-                const salas = await carregarSalasTotalInfo();
-                listaUnidades.innerHTML = "";
-                (salas || []).forEach(s => {
-                    const div = document.createElement("div");
-                    div.classList.add("dados", "flex", "align--items--center");
-                    div.innerHTML = `
-                        <div class="dado flex flex--2">${s.sala_nome}</div>
-                        <div class="dado flex flex--2">${s.predio || "—"}</div>
-                        <div class="dado flex flex--3">${s.subunidade_nome || "—"}</div>
-                        <div class="dado flex flex--2">${(s.sala_tipo_nome || "—").toUpperCase()}</div>
-                        <div class="dado flex flex--1">${s.sala_capacidade ?? "—"}</div>
-                        <div class="dado flex flex--4">${s.sala_descricao || ""}</div>
-                        <div class="dado flex flex--2">${s.is_agendavel ? "Sim" : "Não"}</div>
-                        <div class="dado flex flex--2 gap--10 font--size--20">
-                            <i class="bi bi-box-seam gerenciar-patrimonio cursor--pointer" title="Patrimônio da sala"
-                               data-sala_id="${s.sala_id}" data-sala_nome="${s.sala_nome}"></i>
-                            ${iconeAcoes(
-                                `data-sala_id="${s.sala_id}"
-                                 data-sala_nome="${s.sala_nome}"
-                                 data-predio_id="${s.predio_id || ""}"
-                                 data-subunidade_id="${s.subunidade_id || ""}"
-                                 data-sala_descricao="${s.sala_descricao || ""}"
-                                 data-sala_capacidade="${s.sala_capacidade ?? ""}"
-                                 data-sala_largura="${s.sala_largura ?? ""}"
-                                 data-sala_comprimento="${s.sala_comprimento ?? ""}"
-                                 data-sala_altura="${s.sala_altura ?? ""}"
-                                 data-is_agendavel="${s.is_agendavel ? 1 : 0}"
-                                 data-sala_tipo_id="${s.sala_tipo_id || ""}"
-                                 data-presta_servicos_externos="${s.presta_servicos_externos ?? ""}"`,
-                                s.sala_id, "sala"
-                            )}
-                        </div>`;
-                    listaUnidades.appendChild(div);
-                });
+                salasCache = (await carregarSalasTotalInfo()) || [];
+                popularFiltros();
+                aplicarFiltros();
             } catch (e) { console.error("Erro ao renderizar salas:", e); }
         }
+
+        filtroBusca.addEventListener("input", aplicarFiltros);
+        [filtroPredio, filtroTipo, filtroDepto].forEach(el => el.addEventListener("change", aplicarFiltros));
+        filtroLimpar.addEventListener("click", () => {
+            filtroBusca.value = ""; filtroPredio.value = ""; filtroTipo.value = ""; filtroDepto.value = "";
+            aplicarFiltros();
+        });
 
         async function excluirSala(id) {
             if (!confirm("Excluir esta sala?")) return;
