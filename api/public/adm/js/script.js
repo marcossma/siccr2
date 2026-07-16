@@ -795,9 +795,12 @@ document.addEventListener("DOMContentLoaded", function() {
             });
         }
 
+        // normaliza p/ busca: minúsculas + sem acentos (assim "auditorio" acha "Auditório")
+        const normalizarBusca = (s) => String(s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+
         function aplicarFiltros() {
             const fp = filtroPredio.value, ft = filtroTipo.value, fd = filtroDepto.value;
-            const q = (filtroBusca.value || "").toLowerCase().trim();
+            const q = normalizarBusca(filtroBusca.value.trim());
             const filtradas = salasCache.filter(s => {
                 if (fp && String(s.predio_id) !== fp) return false;
                 if (ft && String(s.sala_tipo_id) !== ft) return false;
@@ -806,8 +809,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     const hay = [
                         s.sala_nome, s.predio, s.subunidade_nome, s.subunidade_sigla,
                         s.sala_tipo_nome, s.sala_descricao, s.sala_capacidade,
-                        s.is_agendavel ? "sim agendável" : "não",
-                    ].map(v => String(v ?? "").toLowerCase()).join(" ");
+                        s.is_agendavel ? "sim agendavel" : "nao",
+                    ].map(normalizarBusca).join(" ");
                     if (!hay.includes(q)) return false;
                 }
                 return true;
