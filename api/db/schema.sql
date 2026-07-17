@@ -1,12 +1,12 @@
 -- Schema dump gerado automaticamente. NÃO editar manualmente.
--- Origem: docker compose db (siccr) — 2026-07-15T14:37:32.466Z
+-- Origem: docker compose db (siccr) — 2026-07-17T13:27:19.491Z
 -- Regenere com: npm run db:dump
 
 --
 -- PostgreSQL database dump
 --
 
-\restrict aBmbwt40UlGL9nHATjfLdkyaisrL5yHGwvmP4bzkdn3IQZb2cOwQWTxU7vZyb8v
+\restrict RDXAPAultLfuOPSl2O1mdHV1tmmNwQzPdtL0WTlQlG3qNJZxi0oXPDtyesj7tVk
 
 -- Dumped from database version 16.13
 -- Dumped by pg_dump version 16.13
@@ -1672,6 +1672,13 @@ CREATE UNIQUE INDEX permissoes_usuario_unique ON public.permissoes_usuario USING
 
 
 --
+-- Name: salas_nome_unico; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX salas_nome_unico ON public.salas USING btree (lower(TRIM(BOTH FROM sala_nome)));
+
+
+--
 -- Name: turmas_disciplina_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1983,5 +1990,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict aBmbwt40UlGL9nHATjfLdkyaisrL5yHGwvmP4bzkdn3IQZb2cOwQWTxU7vZyb8v
+\unrestrict RDXAPAultLfuOPSl2O1mdHV1tmmNwQzPdtL0WTlQlG3qNJZxi0oXPDtyesj7tVk
 

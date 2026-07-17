@@ -170,7 +170,7 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 - **unidades** — `unidade_id`, `unidade_nome`
 - **predios** — `predio_id`, `predio` (nome, sem sufixo), `descricao`, `unidade_id`
 - **subunidades** — `subunidade_id`, `subunidade_nome`, `subunidade_sigla`, `is_direcao_centro`
-- **salas** — `sala_id`, `sala_nome`, `predio_id`, `subunidade_id`, `sala_tipo_id`(FK), `sala_descricao`, `is_agendavel`(int 0/1), `sala_capacidade`(int, nullable — lugares; insumo do ensalamento), `presta_servicos_externos`(int, nullable — só p/ laboratórios), `sala_largura`/`sala_comprimento`/`sala_altura`(DECIMAL, metros, nullable)
+- **salas** — `sala_id`, `sala_nome`(identificação — **única** case/espaço-insensível, índice `salas_nome_unico`), `predio_id`, `subunidade_id`, `sala_tipo_id`(FK), `sala_descricao`, `is_agendavel`(int 0/1), `sala_capacidade`(int, nullable — lugares; insumo do ensalamento), `presta_servicos_externos`(int, nullable — só p/ laboratórios), `sala_largura`/`sala_comprimento`/`sala_altura`(DECIMAL, metros, nullable)
 - **salas_tipo** — `sala_tipo_id`, `sala_tipo_nome`
 
 ### Patrimônio

@@ -100,6 +100,13 @@ router.get("/form-opcoes", podeCriar, async (_req, res) => {
     }
 });
 
+// Identificação (sala_nome) é única (case/espaço-insensível). Em edição, ignora a própria sala.
+async function nomeDuplicado(nome, exceptId = null) {
+    const sql = `SELECT 1 FROM salas WHERE LOWER(TRIM(sala_nome)) = LOWER(TRIM($1))${exceptId ? " AND sala_id <> $2" : ""} LIMIT 1`;
+    const { rows } = await pool.query(sql, exceptId ? [nome, exceptId] : [nome]);
+    return rows.length > 0;
+}
+
 // POST /api/salas — cadastra nova sala (chefe+ ou 'cadastrar_salas')
 router.post("/", podeCriar, async (req, res) => {
     const { sala_nome, sala_descricao, sala_capacidade, predio_id, subunidade_id, is_agendavel, sala_tipo_id, presta_servicos_externos, sala_largura, sala_comprimento, sala_altura } = req.body;
@@ -113,6 +120,9 @@ router.post("/", podeCriar, async (req, res) => {
     }
 
     try {
+        if (await nomeDuplicado(sala_nome)) {
+            return res.status(409).json({ status: "error", message: `Já existe uma sala com a identificação "${sala_nome.trim()}".`, data: null });
+        }
         const { rows } = await pool.query(
             `INSERT INTO salas (sala_nome, sala_descricao, sala_capacidade, predio_id, subunidade_id, is_agendavel, sala_tipo_id, presta_servicos_externos, sala_largura, sala_comprimento, sala_altura)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
@@ -122,6 +132,9 @@ router.post("/", podeCriar, async (req, res) => {
         );
         return res.status(201).json({ status: "success", message: "Sala cadastrada com sucesso.", data: rows[0] });
     } catch (error) {
+        if (error.code === "23505") {
+            return res.status(409).json({ status: "error", message: `Já existe uma sala com a identificação "${sala_nome.trim()}".`, data: null });
+        }
         logger.error({ err: error }, "Erro ao cadastrar sala:");
         return res.status(500).json({ status: "error", message: "Erro ao cadastrar sala.", data: null });
     }
@@ -141,6 +154,9 @@ router.put("/:id", soSuperAdmin, async (req, res) => {
     }
 
     try {
+        if (await nomeDuplicado(sala_nome, id)) {
+            return res.status(409).json({ status: "error", message: `Já existe outra sala com a identificação "${sala_nome.trim()}".`, data: null });
+        }
         const { rows, rowCount } = await pool.query(
             `UPDATE salas SET sala_nome=$1, sala_descricao=$2, sala_capacidade=$3, subunidade_id=$4,
                  predio_id=$5, is_agendavel=$6, sala_tipo_id=$7, presta_servicos_externos=$8,
@@ -155,6 +171,9 @@ router.put("/:id", soSuperAdmin, async (req, res) => {
         }
         return res.status(200).json({ status: "success", message: "Sala atualizada com sucesso.", data: rows[0] });
     } catch (error) {
+        if (error.code === "23505") {
+            return res.status(409).json({ status: "error", message: `Já existe outra sala com a identificação "${sala_nome.trim()}".`, data: null });
+        }
         logger.error({ err: error }, "Erro ao atualizar sala:");
         return res.status(500).json({ status: "error", message: "Erro ao atualizar sala.", data: null });
     }
