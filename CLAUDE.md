@@ -170,13 +170,14 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 - **unidades** — `unidade_id`, `unidade_nome`
 - **predios** — `predio_id`, `predio` (nome, sem sufixo), `descricao`, `unidade_id`
 - **subunidades** — `subunidade_id`, `subunidade_nome`, `subunidade_sigla`, `is_direcao_centro`
-- **salas** — `sala_id`, `sala_nome`(identificação — **única** case/espaço-insensível, índice `salas_nome_unico`), `predio_id`, `subunidade_id`, `sala_tipo_id`(FK), `sala_descricao`, `is_agendavel`(int 0/1), `sala_capacidade`(int, nullable — lugares; insumo do ensalamento), `presta_servicos_externos`(int, nullable — só p/ laboratórios), `sala_largura`/`sala_comprimento`/`sala_altura`(DECIMAL, metros, nullable)
+- **salas** — `sala_id`, `sala_nome`(identificação — **única** case/espaço-insensível, índice `salas_nome_unico`), `created_by_user_id`(FK users SET NULL — quem cadastrou), `predio_id`, `subunidade_id`, `sala_tipo_id`(FK), `sala_descricao`, `is_agendavel`(int 0/1), `sala_capacidade`(int, nullable — lugares; insumo do ensalamento), `presta_servicos_externos`(int, nullable — só p/ laboratórios), `sala_largura`/`sala_comprimento`/`sala_altura`(DECIMAL, metros, nullable)
 - **salas_tipo** — `sala_tipo_id`, `sala_tipo_nome`
+- **salas_historico** — `id_historico`, `sala_id`(FK SET NULL), `sala_nome`(snapshot), `acao`(`cadastro`/`edicao`/`exclusao`), `user_id`(FK users SET NULL), `detalhe`(o que mudou), `createdat`. Auditoria das salas: POST/PUT/DELETE gravam evento **na mesma transação**. Consultável em `GET /salas/:id/historico` (ícone de histórico nas telas `/salas` e `/adm/salas`).
 
 ### Patrimônio
 - **bens_permanentes** — `id_bem`, `numero_registro`(unique — código da etiqueta patrimonial), `descricao`, `sala_id`(FK SET NULL), `subunidade_id`(FK SET NULL — derivada da sala no cadastro), `estado_conservacao`(`novo`/`bom`/`regular`/`ruim`/`inservivel`), `observacao`, `data_levantamento`, `created_by_user_id`(FK users SET NULL — quem cadastrou), `createdat`
   - Levantamento por sala: dialog na tela `/adm/salas` (super_admin) **e** página servidor-facing `/levantamento-patrimonial` (menu **Patrimônio**, visível p/ chefe+ ou `fazer_levantamento`) — seletor de sala + lista/cadastro de bens, scan, mover e histórico. `numero_registro` preenchível manualmente **ou** por leitura de código de barras (`BarcodeDetector` nativo — só em contexto seguro/HTTPS; degrada para manual).
-  - **RBAC:** rota `chefe+` sempre; **servidor** com a funcionalidade `fazer_levantamento` concedida pelo chefe (`autorizar("chefe", "fazer_levantamento")`).
+  - **RBAC:** aberto a **qualquer servidor logado** (`autorizar("servidor")`) — criar/editar/mover/excluir; toda ação é auditada em `patrimonio_historico`.
 - **patrimonio_historico** — `id_historico`, `bem_id`(FK SET NULL — vira NULL ao excluir o bem), `numero_registro`(snapshot, sobrevive à exclusão), `acao`(`cadastro`/`edicao`/`movimentacao`/`exclusao`), `user_id`(FK users SET NULL — quem fez), `sala_id`(destino/atual), `sala_anterior_id`(origem, em movimentação), `detalhe`(o que mudou), `createdat`
   - Log de auditoria: cada POST/PUT/PATCH-mover/DELETE grava um evento **na mesma transação** da mudança. Consultável em `GET /patrimonio/:id/historico`.
 
@@ -235,7 +236,7 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 | `/api/subunidades` | chefe | routes/subunidades.js |
 | `/api/salas` | servidor (ler) / chefe+·`cadastrar_salas` (criar) / super_admin (editar·excluir) | routes/salas.js |
 | `/api/salas-tipo` | chefe | routes/salas-tipo.js |
-| `/api/patrimonio` | chefe / servidor c/ `fazer_levantamento` | routes/patrimonio.js |
+| `/api/patrimonio` | servidor (logado; toda ação auditada) | routes/patrimonio.js |
 | `/api/aniversariantes` | servidor (logado) | routes/aniversariantes.js |
 | `/api/aniversariantes/parabenizar` `/config` | diretor | routes/aniversariantes.js |
 | `/api/comunicados` | diretor | routes/comunicados.js |

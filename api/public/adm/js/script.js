@@ -765,7 +765,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 const div = document.createElement("div");
                 div.classList.add("dados", "flex", "align--items--center");
                 div.innerHTML = `
-                    <div class="dado flex flex--2">${s.sala_nome}</div>
+                    <div class="dado flex flex--2" title="${s.created_by_nome ? "Cadastrada por " + s.created_by_nome : ""}">${s.sala_nome}</div>
                     <div class="dado flex flex--2">${s.predio || "—"}</div>
                     <div class="dado flex flex--3">${s.subunidade_nome || "—"}</div>
                     <div class="dado flex flex--2">${(s.sala_tipo_nome || "—").toUpperCase()}</div>
@@ -773,6 +773,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     <div class="dado flex flex--4">${s.sala_descricao || ""}</div>
                     <div class="dado flex flex--2">${s.is_agendavel ? "Sim" : "Não"}</div>
                     <div class="dado flex flex--2 gap--10 font--size--20">
+                        <i class="bi bi-clock-history historico-sala cursor--pointer" title="Histórico da sala"
+                           data-id="${s.sala_id}" data-nome="${s.sala_nome}"></i>
                         <i class="bi bi-box-seam gerenciar-patrimonio cursor--pointer" title="Patrimônio da sala"
                            data-sala_id="${s.sala_id}" data-sala_nome="${s.sala_nome}"></i>
                         ${iconeAcoes(
@@ -943,6 +945,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
         listaUnidades.addEventListener("click", async function(e) {
             const el = e.target;
+            if (el.classList.contains("historico-sala")) {
+                abrirHistoricoSala(el.dataset.id, el.dataset.nome);
+                return;
+            }
             if (el.classList.contains("gerenciar-patrimonio")) {
                 abrirPatrimonio(el.dataset.sala_id, el.dataset.sala_nome);
                 return;
@@ -996,6 +1002,27 @@ document.addEventListener("DOMContentLoaded", function() {
 
         const ROTULO_ESTADO = { novo: "Novo", bom: "Bom", regular: "Regular", ruim: "Ruim", inservivel: "Inservível" };
         let editandoBemId = null;
+
+        // ── Histórico da sala (auditoria) ──────────────────────────────
+        const ROT_ACAO_SALA = { cadastro: "Cadastro", edicao: "Edição", exclusao: "Exclusão" };
+        const fmtDataHoraSala = (v) => { const d = new Date(v); if (Number.isNaN(d.getTime())) return ""; const z = (n) => String(n).padStart(2, "0"); return `${z(d.getDate())}/${z(d.getMonth() + 1)}/${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}`; };
+        async function abrirHistoricoSala(id, nome) {
+            const dlg = document.querySelector("#dialogHistSala");
+            document.querySelector("#histSalaLegend").textContent = `Histórico — ${nome}`;
+            const box = document.querySelector("#histSalaLista");
+            box.innerHTML = "carregando…";
+            dlg.showModal();
+            try {
+                const evs = (await (await fetch(`${apiUrl}/salas/${id}/historico`)).json()).data || [];
+                box.innerHTML = evs.length === 0 ? "Sem histórico." : evs.map(ev => `
+                    <div style="padding:4px 0;border-bottom:1px dashed #ddd">
+                        <span style="color:#009536;font-weight:600">${ROT_ACAO_SALA[ev.acao] || ev.acao}</span>${ev.usuario_nome ? ` por <strong>${ev.usuario_nome}</strong>` : ""}
+                        <span style="color:#999"> · ${fmtDataHoraSala(ev.createdat)}</span>
+                        ${ev.detalhe ? `<div style="color:#555;font-size:13px">${ev.detalhe}</div>` : ""}
+                    </div>`).join("");
+            } catch (e) { box.innerHTML = "Erro ao carregar histórico."; console.error(e); }
+        }
+        document.querySelector("#btnFecharHistSala").addEventListener("click", () => document.querySelector("#dialogHistSala").close());
 
         async function abrirPatrimonio(salaId, salaNome) {
             dialogPatrimonio.dataset.salaId = salaId;

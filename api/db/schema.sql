@@ -1,12 +1,12 @@
 -- Schema dump gerado automaticamente. NÃO editar manualmente.
--- Origem: docker compose db (siccr) — 2026-07-17T13:27:19.491Z
+-- Origem: docker compose db (siccr) — 2026-07-17T13:44:46.387Z
 -- Regenere com: npm run db:dump
 
 --
 -- PostgreSQL database dump
 --
 
-\restrict RDXAPAultLfuOPSl2O1mdHV1tmmNwQzPdtL0WTlQlG3qNJZxi0oXPDtyesj7tVk
+\restrict rjpnsHJt4CGQVcTL6f9MjZf1A2mbhGBxR3jNFJLv6qj5JIgdOMegMYpknKRnXJa
 
 -- Dumped from database version 16.13
 -- Dumped by pg_dump version 16.13
@@ -728,8 +728,44 @@ CREATE TABLE public.salas (
     presta_servicos_externos integer,
     sala_largura numeric(6,2),
     sala_comprimento numeric(6,2),
-    sala_altura numeric(6,2)
+    sala_altura numeric(6,2),
+    created_by_user_id integer
 );
+
+
+--
+-- Name: salas_historico; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.salas_historico (
+    id_historico integer NOT NULL,
+    sala_id integer,
+    sala_nome character varying(255),
+    acao character varying(20) NOT NULL,
+    user_id integer,
+    detalhe character varying(500),
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: salas_historico_id_historico_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.salas_historico_id_historico_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: salas_historico_id_historico_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.salas_historico_id_historico_seq OWNED BY public.salas_historico.id_historico;
 
 
 --
@@ -1206,6 +1242,13 @@ ALTER TABLE ONLY public.salas ALTER COLUMN sala_id SET DEFAULT nextval('public.s
 
 
 --
+-- Name: salas_historico id_historico; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.salas_historico ALTER COLUMN id_historico SET DEFAULT nextval('public.salas_historico_id_historico_seq'::regclass);
+
+
+--
 -- Name: salas_tipo sala_tipo_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1485,6 +1528,14 @@ ALTER TABLE ONLY public.recursos_recebidos
 
 
 --
+-- Name: salas_historico salas_historico_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.salas_historico
+    ADD CONSTRAINT salas_historico_pkey PRIMARY KEY (id_historico);
+
+
+--
 -- Name: salas salas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1669,6 +1720,13 @@ CREATE INDEX patrimonio_historico_numero_registro ON public.patrimonio_historico
 --
 
 CREATE UNIQUE INDEX permissoes_usuario_unique ON public.permissoes_usuario USING btree (user_id, funcionalidade_id);
+
+
+--
+-- Name: salas_historico_sala_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX salas_historico_sala_id ON public.salas_historico USING btree (sala_id);
 
 
 --
@@ -1915,6 +1973,30 @@ ALTER TABLE ONLY public.professores_disciplinas
 
 
 --
+-- Name: salas salas_created_by_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.salas
+    ADD CONSTRAINT salas_created_by_user_id_fkey FOREIGN KEY (created_by_user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: salas_historico salas_historico_sala_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.salas_historico
+    ADD CONSTRAINT salas_historico_sala_id_fkey FOREIGN KEY (sala_id) REFERENCES public.salas(sala_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: salas_historico salas_historico_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.salas_historico
+    ADD CONSTRAINT salas_historico_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
 -- Name: turmas turmas_curso_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1990,5 +2072,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict RDXAPAultLfuOPSl2O1mdHV1tmmNwQzPdtL0WTlQlG3qNJZxi0oXPDtyesj7tVk
+\unrestrict rjpnsHJt4CGQVcTL6f9MjZf1A2mbhGBxR3jNFJLv6qj5JIgdOMegMYpknKRnXJa
 

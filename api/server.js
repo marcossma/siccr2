@@ -223,9 +223,9 @@ app.use("/api/disciplinas",          autenticar, autorizar("chefe"),        disc
 app.use("/api/turmas",               autenticar, autorizar("chefe"),        turmas);
 app.use("/api/cursos",               autenticar, autorizar("chefe"),        cursos);
 
-// Patrimônio: levantamento de bens por sala — chefe+ sempre; servidor só com a
-// funcionalidade 'fazer_levantamento' concedida (nível mínimo chefe + fallback por funcionalidade)
-app.use("/api/patrimonio",           autenticar, autorizar("chefe", "fazer_levantamento"), patrimonio);
+// Patrimônio: levantamento de bens por sala — aberto a qualquer servidor logado
+// (toda ação é auditada em patrimonio_historico)
+app.use("/api/patrimonio",           autenticar, autorizar("servidor"),     patrimonio);
 
 // Aniversariantes do mês: qualquer usuário logado
 app.use("/api/aniversariantes",      autenticar, autorizar("servidor"),     aniversariantes);

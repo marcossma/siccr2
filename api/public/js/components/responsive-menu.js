@@ -26,8 +26,8 @@ class ResponsiveMenu extends HTMLElement {
         // Portaria / quem pode ver a agenda da semana
         const ehPortaria = nivel >= 2 || funcs.includes("ver_agenda_portaria");
 
-        // Levantamento patrimonial: chefe+ ou servidor com a funcionalidade concedida
-        const podeLevantamento = nivel >= 2 || funcs.includes("fazer_levantamento");
+        // Levantamento patrimonial: aberto a qualquer servidor logado (auditado)
+        const podeLevantamento = nivel >= 1;
 
         // Cadastrar salas (menu Infraestrutura): chefe+ ou funcionalidade concedida
         const podeCadastrarSalas = nivel >= 2 || funcs.includes("cadastrar_salas");

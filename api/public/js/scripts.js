@@ -3613,7 +3613,9 @@ document.addEventListener("DOMContentLoaded", function() {
         let salasCache = [], tiposCache = [];
 
         if (podeCriar) btnAdd.style.display = "inline-block";
-        if (ehSuperAdmin) document.querySelector("#slColAcoes").style.display = "";
+        document.querySelector("#slColAcoes").style.display = ""; // sempre visível (histórico p/ todos)
+        const ROT_ACAO_SALA = { cadastro: "Cadastro", edicao: "Edição", exclusao: "Exclusão" };
+        const fmtDataHoraSala = (v) => { const d = new Date(v); if (Number.isNaN(d.getTime())) return ""; const z = (n) => String(n).padStart(2, "0"); return `${z(d.getDate())}/${z(d.getMonth() + 1)}/${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}`; };
 
         const norm = (s) => String(s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
         function popSelect(el, itens, ph) {
@@ -3628,11 +3630,11 @@ document.addEventListener("DOMContentLoaded", function() {
             popSelect(fDepto, uniq("subunidade_id", "subunidade_nome"), "Todos os departamentos");
         }
         function acoesHtml(s) {
-            if (!ehSuperAdmin) return "";
-            return `<div class="dado flex flex--2 gap--10 font--size--20">
-                <i class="bi bi-pencil-square editar-sala cursor--pointer" title="Editar" data-id="${s.sala_id}"></i>
-                <i class="bi bi-trash excluir-sala cursor--pointer" title="Excluir" data-id="${s.sala_id}" style="color:#c92a2a"></i>
-            </div>`;
+            const hist = `<i class="bi bi-clock-history historico-sala cursor--pointer" title="Histórico" data-id="${s.sala_id}" data-nome="${s.sala_nome}"></i>`;
+            const edicao = ehSuperAdmin
+                ? `<i class="bi bi-pencil-square editar-sala cursor--pointer" title="Editar" data-id="${s.sala_id}"></i><i class="bi bi-trash excluir-sala cursor--pointer" title="Excluir" data-id="${s.sala_id}" style="color:#c92a2a"></i>`
+                : "";
+            return `<div class="dado flex flex--2 gap--10 font--size--20">${hist}${edicao}</div>`;
         }
         function render(salas) {
             lista.innerHTML = "";
@@ -3640,7 +3642,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 const div = document.createElement("div");
                 div.classList.add("dados", "flex", "align--items--center");
                 div.innerHTML = `
-                    <div class="dado flex flex--2">${s.sala_nome}</div>
+                    <div class="dado flex flex--2" title="${s.created_by_nome ? "Cadastrada por " + s.created_by_nome : ""}">${s.sala_nome}</div>
                     <div class="dado flex flex--2">${s.predio || "—"}</div>
                     <div class="dado flex flex--3">${s.subunidade_nome || "—"}</div>
                     <div class="dado flex flex--2">${(s.sala_tipo_nome || "—").toUpperCase()}</div>
@@ -3730,8 +3732,28 @@ document.addEventListener("DOMContentLoaded", function() {
             document.querySelector("#frmSala").reset(); dialog.close(); carregar();
         });
 
-        // editar/excluir — só super_admin (ícones só existem p/ ele)
+        async function abrirHistoricoSala(id, nome) {
+            const dlg = document.querySelector("#dialogHistSala");
+            document.querySelector("#histSalaLegend").textContent = `Histórico — ${nome}`;
+            const box = document.querySelector("#histSalaLista");
+            box.innerHTML = "carregando…";
+            dlg.showModal();
+            try {
+                const evs = (await (await fetch(`${apiUrl}/salas/${id}/historico`)).json()).data || [];
+                box.innerHTML = evs.length === 0 ? "Sem histórico." : evs.map(ev => `
+                    <div style="padding:4px 0;border-bottom:1px dashed #ddd">
+                        <span style="color:#009536;font-weight:600">${ROT_ACAO_SALA[ev.acao] || ev.acao}</span>${ev.usuario_nome ? ` por <strong>${ev.usuario_nome}</strong>` : ""}
+                        <span style="color:#999"> · ${fmtDataHoraSala(ev.createdat)}</span>
+                        ${ev.detalhe ? `<div style="color:#555;font-size:13px">${ev.detalhe}</div>` : ""}
+                    </div>`).join("");
+            } catch (e) { box.innerHTML = "Erro ao carregar histórico."; console.error(e); }
+        }
+        document.querySelector("#btnFecharHistSala").addEventListener("click", () => document.querySelector("#dialogHistSala").close());
+
+        // histórico (todos) + editar/excluir (super_admin)
         lista.addEventListener("click", async (e) => {
+            const h = e.target.closest(".historico-sala");
+            if (h) { abrirHistoricoSala(h.dataset.id, h.dataset.nome); return; }
             const ed = e.target.closest(".editar-sala");
             if (ed) {
                 const s = salasCache.find(x => String(x.sala_id) === ed.dataset.id);

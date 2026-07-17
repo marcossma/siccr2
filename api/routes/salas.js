@@ -43,14 +43,15 @@ router.get("/total-info", async (req, res) => {
                 sa.sala_id, sa.sala_nome, sa.sala_descricao, sa.sala_capacidade,
                 sa.sala_largura, sa.sala_comprimento, sa.sala_altura,
                 sa.predio_id, sa.subunidade_id, sa.is_agendavel, sa.sala_tipo_id,
-                sa.presta_servicos_externos,
+                sa.presta_servicos_externos, sa.created_by_user_id,
                 p.predio, p.descricao AS predio_descricao, p.unidade_id,
                 s.subunidade_nome, s.subunidade_sigla,
-                st.sala_tipo_nome
+                st.sala_tipo_nome, cu.nome AS created_by_nome
             FROM salas sa
             LEFT JOIN predios p ON p.predio_id = sa.predio_id
             LEFT JOIN subunidades s ON s.subunidade_id = sa.subunidade_id
             LEFT JOIN salas_tipo st ON st.sala_tipo_id = sa.sala_tipo_id
+            LEFT JOIN users cu ON cu.user_id = sa.created_by_user_id
             ${whereClause}
             ORDER BY sa.sala_nome
         `, params);
@@ -107,6 +108,30 @@ async function nomeDuplicado(nome, exceptId = null) {
     return rows.length > 0;
 }
 
+// Grava um evento no log de auditoria das salas (na mesma transação da mudança)
+async function registrarHistorico(client, ev) {
+    await client.query(
+        `INSERT INTO salas_historico (sala_id, sala_nome, acao, user_id, detalhe) VALUES ($1, $2, $3, $4, $5)`,
+        [ev.sala_id ?? null, ev.sala_nome ?? null, ev.acao, ev.user_id ?? null, ev.detalhe ? String(ev.detalhe).slice(0, 500) : null]
+    );
+}
+
+// GET /api/salas/:id/historico — linha do tempo de auditoria da sala
+router.get("/:id/historico", async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT h.id_historico, h.acao, h.detalhe, h.createdat, h.sala_nome, u.nome AS usuario_nome
+             FROM salas_historico h LEFT JOIN users u ON u.user_id = h.user_id
+             WHERE h.sala_id = $1 ORDER BY h.createdat DESC, h.id_historico DESC`,
+            [req.params.id]
+        );
+        return res.status(200).json({ status: "success", message: "", data: rows });
+    } catch (error) {
+        logger.error({ err: error }, "Erro ao buscar histórico da sala:");
+        return res.status(500).json({ status: "error", message: "Erro ao buscar histórico.", data: null });
+    }
+});
+
 // POST /api/salas — cadastra nova sala (chefe+ ou 'cadastrar_salas')
 router.post("/", podeCriar, async (req, res) => {
     const { sala_nome, sala_descricao, sala_capacidade, predio_id, subunidade_id, is_agendavel, sala_tipo_id, presta_servicos_externos, sala_largura, sala_comprimento, sala_altura } = req.body;
@@ -119,24 +144,32 @@ router.post("/", podeCriar, async (req, res) => {
         });
     }
 
+    const client = await pool.connect();
     try {
         if (await nomeDuplicado(sala_nome)) {
             return res.status(409).json({ status: "error", message: `Já existe uma sala com a identificação "${sala_nome.trim()}".`, data: null });
         }
-        const { rows } = await pool.query(
-            `INSERT INTO salas (sala_nome, sala_descricao, sala_capacidade, predio_id, subunidade_id, is_agendavel, sala_tipo_id, presta_servicos_externos, sala_largura, sala_comprimento, sala_altura)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+        await client.query("BEGIN");
+        const { rows } = await client.query(
+            `INSERT INTO salas (sala_nome, sala_descricao, sala_capacidade, predio_id, subunidade_id, is_agendavel, sala_tipo_id, presta_servicos_externos, sala_largura, sala_comprimento, sala_altura, created_by_user_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
             [sala_nome.trim(), sala_descricao || null, parseCapacidade(sala_capacidade), predio_id,
              subunidade_id || null, is_agendavel ?? 0, sala_tipo_id || null, parseFlag(presta_servicos_externos),
-             parseDimensao(sala_largura), parseDimensao(sala_comprimento), parseDimensao(sala_altura)]
+             parseDimensao(sala_largura), parseDimensao(sala_comprimento), parseDimensao(sala_altura), req.usuario.id]
         );
-        return res.status(201).json({ status: "success", message: "Sala cadastrada com sucesso.", data: rows[0] });
+        const sala = rows[0];
+        await registrarHistorico(client, { sala_id: sala.sala_id, sala_nome: sala.sala_nome, acao: "cadastro", user_id: req.usuario.id, detalhe: `Cadastrada: "${sala.sala_nome}"` });
+        await client.query("COMMIT");
+        return res.status(201).json({ status: "success", message: "Sala cadastrada com sucesso.", data: sala });
     } catch (error) {
+        await client.query("ROLLBACK");
         if (error.code === "23505") {
             return res.status(409).json({ status: "error", message: `Já existe uma sala com a identificação "${sala_nome.trim()}".`, data: null });
         }
         logger.error({ err: error }, "Erro ao cadastrar sala:");
         return res.status(500).json({ status: "error", message: "Erro ao cadastrar sala.", data: null });
+    } finally {
+        client.release();
     }
 });
 
@@ -153,11 +186,19 @@ router.put("/:id", soSuperAdmin, async (req, res) => {
         });
     }
 
+    const client = await pool.connect();
     try {
         if (await nomeDuplicado(sala_nome, id)) {
             return res.status(409).json({ status: "error", message: `Já existe outra sala com a identificação "${sala_nome.trim()}".`, data: null });
         }
-        const { rows, rowCount } = await pool.query(
+        const atual = await client.query("SELECT * FROM salas WHERE sala_id = $1", [id]);
+        if (atual.rowCount === 0) {
+            return res.status(404).json({ status: "error", message: "Sala não encontrada.", data: null });
+        }
+        const antes = atual.rows[0];
+
+        await client.query("BEGIN");
+        const { rows } = await client.query(
             `UPDATE salas SET sala_nome=$1, sala_descricao=$2, sala_capacidade=$3, subunidade_id=$4,
                  predio_id=$5, is_agendavel=$6, sala_tipo_id=$7, presta_servicos_externos=$8,
                  sala_largura=$9, sala_comprimento=$10, sala_altura=$11
@@ -166,16 +207,33 @@ router.put("/:id", soSuperAdmin, async (req, res) => {
              predio_id, is_agendavel ?? 0, sala_tipo_id || null, parseFlag(presta_servicos_externos),
              parseDimensao(sala_largura), parseDimensao(sala_comprimento), parseDimensao(sala_altura), id]
         );
-        if (rowCount === 0) {
-            return res.status(404).json({ status: "error", message: "Sala não encontrada.", data: null });
-        }
+
+        // Descreve as mudanças para a auditoria
+        const mud = [];
+        const cap = parseCapacidade(sala_capacidade);
+        if ((antes.sala_nome || "") !== sala_nome.trim()) mud.push(`identificação: "${antes.sala_nome}" → "${sala_nome.trim()}"`);
+        if ((antes.sala_descricao || "") !== (sala_descricao || "")) mud.push("descrição alterada");
+        if (Number(antes.sala_capacidade ?? -1) !== Number(cap ?? -1)) mud.push(`capacidade: ${antes.sala_capacidade ?? "—"} → ${cap ?? "—"}`);
+        if (String(antes.predio_id ?? "") !== String(predio_id ?? "")) mud.push("prédio alterado");
+        if (String(antes.subunidade_id ?? "") !== String(subunidade_id ?? "")) mud.push("departamento alterado");
+        if (String(antes.sala_tipo_id ?? "") !== String(sala_tipo_id ?? "")) mud.push("tipo alterado");
+        const agNovo = Number(is_agendavel ?? 0) === 1 ? 1 : 0;
+        if ((antes.is_agendavel ? 1 : 0) !== agNovo) mud.push(`agendável: ${antes.is_agendavel ? "sim" : "não"} → ${agNovo ? "sim" : "não"}`);
+        const dimMudou = ["sala_largura", "sala_comprimento", "sala_altura"].some((k, i) => Number(antes[k] ?? -1) !== Number([parseDimensao(sala_largura), parseDimensao(sala_comprimento), parseDimensao(sala_altura)][i] ?? -1));
+        if (dimMudou) mud.push("dimensões alteradas");
+
+        await registrarHistorico(client, { sala_id: id, sala_nome: sala_nome.trim(), acao: "edicao", user_id: req.usuario.id, detalhe: mud.join("; ") || "sem alterações de campo" });
+        await client.query("COMMIT");
         return res.status(200).json({ status: "success", message: "Sala atualizada com sucesso.", data: rows[0] });
     } catch (error) {
+        await client.query("ROLLBACK");
         if (error.code === "23505") {
             return res.status(409).json({ status: "error", message: `Já existe outra sala com a identificação "${sala_nome.trim()}".`, data: null });
         }
         logger.error({ err: error }, "Erro ao atualizar sala:");
         return res.status(500).json({ status: "error", message: "Erro ao atualizar sala.", data: null });
+    } finally {
+        client.release();
     }
 });
 
@@ -183,15 +241,25 @@ router.put("/:id", soSuperAdmin, async (req, res) => {
 router.delete("/:id", soSuperAdmin, async (req, res) => {
     const { id } = req.params;
 
+    const client = await pool.connect();
     try {
-        const { rowCount } = await pool.query("DELETE FROM salas WHERE sala_id = $1", [id]);
-        if (rowCount === 0) {
+        const atual = await client.query("SELECT sala_id, sala_nome FROM salas WHERE sala_id = $1", [id]);
+        if (atual.rowCount === 0) {
             return res.status(404).json({ status: "error", message: "Sala não encontrada.", data: null });
         }
+        const antes = atual.rows[0];
+        await client.query("BEGIN");
+        // Registra a exclusão ANTES do DELETE (o snapshot de sala_nome sobrevive)
+        await registrarHistorico(client, { sala_id: id, sala_nome: antes.sala_nome, acao: "exclusao", user_id: req.usuario.id, detalhe: `Excluída: "${antes.sala_nome}"` });
+        await client.query("DELETE FROM salas WHERE sala_id = $1", [id]);
+        await client.query("COMMIT");
         return res.status(200).json({ status: "success", message: "Sala excluída com sucesso.", data: null });
     } catch (error) {
+        await client.query("ROLLBACK");
         logger.error({ err: error }, "Erro ao excluir sala:");
         return res.status(500).json({ status: "error", message: "Erro ao excluir sala.", data: null });
+    } finally {
+        client.release();
     }
 });
 
