@@ -200,7 +200,9 @@ app.use("/api/usuarios",          autenticar, autorizar("chefe"),       usuarios
 app.use("/api/unidades",          autenticar, autorizar("diretor"),      unidadesRoutes);
 app.use("/api/predios",           autenticar, autorizar("chefe"),        prediosRoutes);
 app.use("/api/subunidades",       autenticar, autorizar("chefe"),        subunidadesRoutes);
-app.use("/api/salas",             autenticar, autorizar("chefe"),        salasRoutes);
+// Salas: leitura p/ qualquer logado; criar (chefe+/cadastrar_salas) e editar/excluir
+// (super_admin) são controlados por rota dentro de routes/salas.js
+app.use("/api/salas",             autenticar, autorizar("servidor"),     salasRoutes);
 app.use("/api/salas-tipo",        autenticar, autorizar("chefe"),        salasTipoRoutes);
 
 // Financeiro

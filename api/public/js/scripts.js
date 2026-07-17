@@ -3588,4 +3588,183 @@ document.addEventListener("DOMContentLoaded", function() {
         carregarHistorico();
     }
 
+    // =========================================================================
+    // SALAS — /salas (adaptativa: leitura p/ todos; criar chefe+/func; editar/excluir super_admin)
+    // =========================================================================
+    if (urlParam === "/salas") {
+        const siccrU = JSON.parse(localStorage.getItem("siccr") || "null") || {};
+        const funcs = Array.isArray(siccrU.funcionalidades) ? siccrU.funcionalidades : [];
+        const nivel = (() => {
+            if (siccrU.permissao === "super_admin") return 4;
+            if (["diretor", "vice_diretor"].includes(siccrU.permissao) || siccrU.is_direcao_centro) return 3;
+            if (["chefe", "subchefe"].includes(siccrU.permissao)) return 2;
+            return siccrU.permissao ? 1 : 0;
+        })();
+        const ehSuperAdmin = siccrU.permissao === "super_admin";
+        const podeCriar = nivel >= 2 || funcs.includes("cadastrar_salas");
+
+        const lista = document.querySelector("#slLista");
+        const busca = document.querySelector("#slBusca");
+        const fPredio = document.querySelector("#slPredioF"), fTipo = document.querySelector("#slTipoF"), fDepto = document.querySelector("#slDeptoF");
+        const contagem = document.querySelector("#slContagem");
+        const btnAdd = document.querySelector("#btnAddSala");
+        const dialog = document.querySelector("#dialogSala");
+        const selPredio = document.querySelector("#slPredio"), selSub = document.querySelector("#slSubunidade"), selTipo = document.querySelector("#slTipo");
+        let salasCache = [], tiposCache = [];
+
+        if (podeCriar) btnAdd.style.display = "inline-block";
+        if (ehSuperAdmin) document.querySelector("#slColAcoes").style.display = "";
+
+        const norm = (s) => String(s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+        function popSelect(el, itens, ph) {
+            const ant = el.value;
+            el.innerHTML = `<option value="">${ph}</option>` + itens.map(i => `<option value="${i.id}">${i.nome}</option>`).join("");
+            if (itens.some(i => String(i.id) === ant)) el.value = ant;
+        }
+        function popularFiltros() {
+            const uniq = (kid, knome) => { const m = new Map(); salasCache.forEach(s => { if (s[kid] !== null && s[kid] !== undefined && !m.has(s[kid])) m.set(s[kid], s[knome] || "—"); }); return [...m.entries()].map(([id, nome]) => ({ id, nome })).sort((a, b) => String(a.nome).localeCompare(String(b.nome))); };
+            popSelect(fPredio, uniq("predio_id", "predio"), "Todos os prédios");
+            popSelect(fTipo, uniq("sala_tipo_id", "sala_tipo_nome"), "Todos os tipos");
+            popSelect(fDepto, uniq("subunidade_id", "subunidade_nome"), "Todos os departamentos");
+        }
+        function acoesHtml(s) {
+            if (!ehSuperAdmin) return "";
+            return `<div class="dado flex flex--2 gap--10 font--size--20">
+                <i class="bi bi-pencil-square editar-sala cursor--pointer" title="Editar" data-id="${s.sala_id}"></i>
+                <i class="bi bi-trash excluir-sala cursor--pointer" title="Excluir" data-id="${s.sala_id}" style="color:#c92a2a"></i>
+            </div>`;
+        }
+        function render(salas) {
+            lista.innerHTML = "";
+            salas.forEach(s => {
+                const div = document.createElement("div");
+                div.classList.add("dados", "flex", "align--items--center");
+                div.innerHTML = `
+                    <div class="dado flex flex--2">${s.sala_nome}</div>
+                    <div class="dado flex flex--2">${s.predio || "—"}</div>
+                    <div class="dado flex flex--3">${s.subunidade_nome || "—"}</div>
+                    <div class="dado flex flex--2">${(s.sala_tipo_nome || "—").toUpperCase()}</div>
+                    <div class="dado flex flex--1">${s.sala_capacidade ?? "—"}</div>
+                    <div class="dado flex flex--4">${s.sala_descricao || ""}</div>
+                    <div class="dado flex flex--2">${s.is_agendavel ? "Sim" : "Não"}</div>
+                    ${acoesHtml(s)}`;
+                lista.appendChild(div);
+            });
+        }
+        function aplicar() {
+            const fp = fPredio.value, ft = fTipo.value, fd = fDepto.value, q = norm(busca.value.trim());
+            const out = salasCache.filter(s => {
+                if (fp && String(s.predio_id) !== fp) return false;
+                if (ft && String(s.sala_tipo_id) !== ft) return false;
+                if (fd && String(s.subunidade_id) !== fd) return false;
+                if (q) {
+                    const hay = [s.sala_nome, s.predio, s.subunidade_nome, s.subunidade_sigla, s.sala_tipo_nome, s.sala_descricao, s.sala_capacidade, s.is_agendavel ? "sim agendavel" : "nao"].map(norm).join(" ");
+                    if (!hay.includes(q)) return false;
+                }
+                return true;
+            });
+            render(out);
+            contagem.textContent = `${out.length} de ${salasCache.length} sala(s)`;
+        }
+        async function carregar() {
+            try {
+                salasCache = (await (await fetch(`${apiUrl}/salas/total-info`)).json()).data || [];
+                popularFiltros(); aplicar();
+            } catch (e) { console.error("Erro ao carregar salas:", e); }
+        }
+        busca.addEventListener("input", aplicar);
+        [fPredio, fTipo, fDepto].forEach(el => el.addEventListener("change", aplicar));
+        document.querySelector("#slLimpar").addEventListener("click", () => { busca.value = ""; fPredio.value = ""; fTipo.value = ""; fDepto.value = ""; aplicar(); });
+
+        // ── Form (criar/editar) — só carrega opções se puder criar ──
+        async function carregarOpcoesForm() {
+            if (!podeCriar) return;
+            try {
+                const d = (await (await fetch(`${apiUrl}/salas/form-opcoes`)).json()).data || {};
+                tiposCache = d.tipos || [];
+                popSelect(selPredio, (d.predios || []).map(p => ({ id: p.predio_id, nome: p.predio })), "Selecione o prédio…");
+                popSelect(selSub, (d.subunidades || []).map(s => ({ id: s.subunidade_id, nome: s.subunidade_nome })), "Selecione o departamento…");
+                popSelect(selTipo, (d.tipos || []).map(t => ({ id: t.sala_tipo_id, nome: (t.sala_tipo_nome || "").toUpperCase() })), "Selecione o tipo…");
+            } catch (e) { console.error(e); }
+        }
+        function ehLab() { const t = tiposCache.find(x => String(x.sala_tipo_id) === selTipo.value); return !!(t && /lab/i.test(t.sala_tipo_nome || "")); }
+        function atualizarServicos(valor) {
+            const row = document.querySelector("#slRowServicos");
+            const lab = ehLab();
+            row.style.display = lab ? "" : "none";
+            if (lab) { const v = valor === "1" ? "1" : "0"; document.querySelectorAll("input[name='slServicos']").forEach(r => r.checked = r.value === v); }
+        }
+        selTipo.addEventListener("change", () => atualizarServicos());
+
+        function coletar() {
+            return {
+                sala_nome: document.querySelector("#slNome").value.trim(),
+                predio_id: selPredio.value || null,
+                subunidade_id: selSub.value || null,
+                sala_tipo_id: selTipo.value || null,
+                sala_capacidade: document.querySelector("#slCapacidade").value || null,
+                sala_largura: document.querySelector("#slLargura").value || null,
+                sala_comprimento: document.querySelector("#slComprimento").value || null,
+                sala_altura: document.querySelector("#slAltura").value || null,
+                sala_descricao: document.querySelector("#slDescricao").value.trim() || null,
+                is_agendavel: (document.querySelector("input[name='slAgendavel']:checked") || {}).value || "0",
+                presta_servicos_externos: ehLab() ? ((document.querySelector("input[name='slServicos']:checked") || {}).value || "0") : "",
+            };
+        }
+        btnAdd.addEventListener("click", async () => {
+            document.querySelector("#slLegend").textContent = "Cadastrar sala";
+            document.querySelector("#frmSala").reset();
+            document.querySelector("#slId").value = "";
+            await carregarOpcoesForm();
+            atualizarServicos();
+            dialog.showModal();
+        });
+        document.querySelector("#btnCancelarSala").addEventListener("click", () => { document.querySelector("#frmSala").reset(); dialog.close(); });
+        document.querySelector("#btnSalvarSala").addEventListener("click", async () => {
+            const dados = coletar();
+            if (!dados.sala_nome || !dados.predio_id) { alert("Identificação da sala e prédio são obrigatórios."); return; }
+            const id = document.querySelector("#slId").value;
+            const r = await fetch(id ? `${apiUrl}/salas/${id}` : `${apiUrl}/salas`, { method: id ? "PUT" : "POST", body: JSON.stringify(dados) });
+            const resp = await r.json();
+            if (!r.ok) { alert(resp.message); return; }
+            document.querySelector("#frmSala").reset(); dialog.close(); carregar();
+        });
+
+        // editar/excluir — só super_admin (ícones só existem p/ ele)
+        lista.addEventListener("click", async (e) => {
+            const ed = e.target.closest(".editar-sala");
+            if (ed) {
+                const s = salasCache.find(x => String(x.sala_id) === ed.dataset.id);
+                if (!s) return;
+                document.querySelector("#slLegend").textContent = "Editar sala";
+                document.querySelector("#frmSala").reset();
+                await carregarOpcoesForm();
+                document.querySelector("#slId").value = s.sala_id;
+                document.querySelector("#slNome").value = s.sala_nome || "";
+                selPredio.value = s.predio_id || "";
+                selSub.value = s.subunidade_id || "";
+                selTipo.value = s.sala_tipo_id || "";
+                document.querySelector("#slCapacidade").value = s.sala_capacidade ?? "";
+                document.querySelector("#slLargura").value = s.sala_largura ?? "";
+                document.querySelector("#slComprimento").value = s.sala_comprimento ?? "";
+                document.querySelector("#slAltura").value = s.sala_altura ?? "";
+                document.querySelector("#slDescricao").value = s.sala_descricao || "";
+                document.querySelectorAll("input[name='slAgendavel']").forEach(r => r.checked = r.value === String(s.is_agendavel ? 1 : 0));
+                atualizarServicos(String(s.presta_servicos_externos ?? ""));
+                dialog.showModal();
+                return;
+            }
+            const ex = e.target.closest(".excluir-sala");
+            if (ex) {
+                if (!confirm("Excluir esta sala?")) return;
+                const r = await fetch(`${apiUrl}/salas/${ex.dataset.id}`, { method: "DELETE" });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                carregar();
+            }
+        });
+
+        carregar();
+    }
+
 });

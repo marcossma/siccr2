@@ -182,7 +182,7 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 
 ### Usuários
 - **users** — `user_id`, `nome`, `siape`, `email`, `senha`(bcrypt), `whatsapp`, `data_nascimento`, `permissao`, `subunidade_id`, `unidade_id`
-- **funcionalidades** — `id`, `nome`, `descricao`, `modulo` (ex: `"criar_despesa"`, `"aprovar_agendamento"`, `"ver_agenda_portaria"`, `"atender_pedido_almoxarifado"`, `"fazer_levantamento"`)
+- **funcionalidades** — `id`, `nome`, `descricao`, `modulo` (ex: `"criar_despesa"`, `"aprovar_agendamento"`, `"ver_agenda_portaria"`, `"atender_pedido_almoxarifado"`, `"fazer_levantamento"`, `"cadastrar_salas"`)
 - **permissoes_usuario** — `id`, `user_id`, `funcionalidade_id`
 - **api_keys** — chaves p/ rotas RPA (validadas via `X-Api-Key`)
 
@@ -233,7 +233,7 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 | `/api/unidades` | diretor | routes/unidades.js |
 | `/api/predios` | chefe | routes/predios.js |
 | `/api/subunidades` | chefe | routes/subunidades.js |
-| `/api/salas` | chefe | routes/salas.js |
+| `/api/salas` | servidor (ler) / chefe+·`cadastrar_salas` (criar) / super_admin (editar·excluir) | routes/salas.js |
 | `/api/salas-tipo` | chefe | routes/salas-tipo.js |
 | `/api/patrimonio` | chefe / servidor c/ `fazer_levantamento` | routes/patrimonio.js |
 | `/api/aniversariantes` | servidor (logado) | routes/aniversariantes.js |

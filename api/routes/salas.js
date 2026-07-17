@@ -1,9 +1,15 @@
 const express = require("express");
 const pool = require("../config/database.js");
 const logger = require("../lib/logger.js");
-const { getNivelAcesso } = require("../middlewares/autorizar.js");
+const { getNivelAcesso, autorizar } = require("../middlewares/autorizar.js");
 
 const router = express.Router();
+
+// RBAC das salas (montado com autorizar("servidor") — qualquer logado LÊ):
+//   criar  → chefe+ ou servidor com a funcionalidade 'cadastrar_salas'
+//   editar/excluir → somente super_admin
+const podeCriar = autorizar("chefe", "cadastrar_salas");
+const soSuperAdmin = autorizar("super_admin");
 
 // GET /api/salas — lista salas (com filtro de escopo)
 router.get("/", async (req, res) => {
@@ -79,8 +85,23 @@ function parseFlag(valor) {
     return null;
 }
 
-// POST /api/salas — cadastra nova sala
-router.post("/", async (req, res) => {
+// GET /api/salas/form-opcoes — prédios/subunidades/tipos p/ o form de cadastro
+router.get("/form-opcoes", podeCriar, async (_req, res) => {
+    try {
+        const [predios, subs, tipos] = await Promise.all([
+            pool.query("SELECT predio_id, predio FROM predios ORDER BY predio"),
+            pool.query("SELECT subunidade_id, subunidade_nome FROM subunidades ORDER BY subunidade_nome"),
+            pool.query("SELECT sala_tipo_id, sala_tipo_nome FROM salas_tipo ORDER BY sala_tipo_nome"),
+        ]);
+        return res.status(200).json({ status: "success", message: "", data: { predios: predios.rows, subunidades: subs.rows, tipos: tipos.rows } });
+    } catch (error) {
+        logger.error({ err: error }, "Erro ao carregar opções do form de salas:");
+        return res.status(500).json({ status: "error", message: "Erro ao carregar opções.", data: null });
+    }
+});
+
+// POST /api/salas — cadastra nova sala (chefe+ ou 'cadastrar_salas')
+router.post("/", podeCriar, async (req, res) => {
     const { sala_nome, sala_descricao, sala_capacidade, predio_id, subunidade_id, is_agendavel, sala_tipo_id, presta_servicos_externos, sala_largura, sala_comprimento, sala_altura } = req.body;
 
     if (!sala_nome || !predio_id) {
@@ -106,8 +127,8 @@ router.post("/", async (req, res) => {
     }
 });
 
-// PUT /api/salas/:id — atualiza sala
-router.put("/:id", async (req, res) => {
+// PUT /api/salas/:id — atualiza sala (somente super_admin)
+router.put("/:id", soSuperAdmin, async (req, res) => {
     const { id } = req.params;
     const { sala_nome, sala_descricao, sala_capacidade, predio_id, subunidade_id, is_agendavel, sala_tipo_id, presta_servicos_externos, sala_largura, sala_comprimento, sala_altura } = req.body;
 
@@ -139,8 +160,8 @@ router.put("/:id", async (req, res) => {
     }
 });
 
-// DELETE /api/salas/:id — remove sala
-router.delete("/:id", async (req, res) => {
+// DELETE /api/salas/:id — remove sala (somente super_admin)
+router.delete("/:id", soSuperAdmin, async (req, res) => {
     const { id } = req.params;
 
     try {

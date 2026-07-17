@@ -29,6 +29,9 @@ class ResponsiveMenu extends HTMLElement {
         // Levantamento patrimonial: chefe+ ou servidor com a funcionalidade concedida
         const podeLevantamento = nivel >= 2 || funcs.includes("fazer_levantamento");
 
+        // Cadastrar salas (menu Infraestrutura): chefe+ ou funcionalidade concedida
+        const podeCadastrarSalas = nivel >= 2 || funcs.includes("cadastrar_salas");
+
         // Monta os itens de menu por nível — só mostra para usuários logados
         const admDropdown = nivel >= 1 ? `
             <li class="nav-dropdown">
@@ -36,6 +39,7 @@ class ResponsiveMenu extends HTMLElement {
                     Administrativo <span aria-hidden="true">⤵</span>
                 </button>
                 <ul class="nav-dropdown-menu">
+                    <li><a href="/salas">Salas</a></li>
                     <li><a href="/solicitar-agendamento">Solicitar agendamento</a></li>
                     <li><a href="/calendario-de-salas">Calendário de salas</a></li>
                     ${ehPortaria ? `<li><a href="/agenda-portaria">Agenda da portaria</a></li>` : ""}
@@ -85,15 +89,15 @@ class ResponsiveMenu extends HTMLElement {
                             <li><a href="/levantamento-patrimonial">Levantamento patrimonial</a></li>
                         </ul>
                     </li>` : ""}
+                    ${podeCadastrarSalas ? `
                     <li class="nav-dropdown">
                         <button class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true">
                             Infraestrutura <span aria-hidden="true">⤵</span>
                         </button>
                         <ul class="nav-dropdown-menu">
-                            <li><a href="#">Equipe</a></li>
-                            <li><a href="#">História</a></li>
+                            <li><a href="/salas">Cadastrar salas</a></li>
                         </ul>
-                    </li>
+                    </li>` : ""}
                     <li class="nav-dropdown">
                         <button class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true">
                             Transporte <span aria-hidden="true">⤵</span>
