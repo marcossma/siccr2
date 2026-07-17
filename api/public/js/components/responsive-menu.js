@@ -29,9 +29,6 @@ class ResponsiveMenu extends HTMLElement {
         // Levantamento patrimonial: aberto a qualquer servidor logado (auditado)
         const podeLevantamento = nivel >= 1;
 
-        // Cadastrar salas (menu Infraestrutura): chefe+ ou funcionalidade concedida
-        const podeCadastrarSalas = nivel >= 2 || funcs.includes("cadastrar_salas");
-
         // Monta os itens de menu por nível — só mostra para usuários logados
         const admDropdown = nivel >= 1 ? `
             <li class="nav-dropdown">
@@ -39,7 +36,6 @@ class ResponsiveMenu extends HTMLElement {
                     Administrativo <span aria-hidden="true">⤵</span>
                 </button>
                 <ul class="nav-dropdown-menu">
-                    <li><a href="/salas">Salas</a></li>
                     <li><a href="/solicitar-agendamento">Solicitar agendamento</a></li>
                     <li><a href="/calendario-de-salas">Calendário de salas</a></li>
                     ${ehPortaria ? `<li><a href="/agenda-portaria">Agenda da portaria</a></li>` : ""}
@@ -89,13 +85,13 @@ class ResponsiveMenu extends HTMLElement {
                             <li><a href="/levantamento-patrimonial">Levantamento patrimonial</a></li>
                         </ul>
                     </li>` : ""}
-                    ${podeCadastrarSalas ? `
+                    ${nivel >= 1 ? `
                     <li class="nav-dropdown">
                         <button class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true">
                             Infraestrutura <span aria-hidden="true">⤵</span>
                         </button>
                         <ul class="nav-dropdown-menu">
-                            <li><a href="/salas">Cadastrar salas</a></li>
+                            <li><a href="/salas">Salas</a></li>
                         </ul>
                     </li>` : ""}
                     <li class="nav-dropdown">
