@@ -51,6 +51,7 @@ const cursos = require("./routes/cursos.js");
 const patrimonio = require("./routes/patrimonio.js");
 const aniversariantes = require("./routes/aniversariantes.js");
 const comunicados = require("./routes/comunicados.js");
+const manutencao = require("./routes/manutencao.js");
 // Rota de setup do OAuth do Gmail (pública — retorno do Google, sem JWT)
 const emailOauth = require("./routes/email-oauth.js");
 // Importar rota de importação de dados (super_admin)
@@ -232,6 +233,9 @@ app.use("/api/aniversariantes",      autenticar, autorizar("servidor"),     aniv
 
 // Comunicados por e-mail: painel restrito à direção
 app.use("/api/comunicados",          autenticar, autorizar("diretor"),      comunicados);
+
+// Manutenção: registrar/consultar aberto a qualquer logado; gestão/tipos restrito à direção (nas rotas)
+app.use("/api/manutencao",           autenticar, autorizar("servidor"),     manutencao);
 
 // Importação de dados em massa (planilhas) — restrito ao super_admin
 app.use("/api/importacao",           autenticar, autorizar("super_admin"),  importacao);

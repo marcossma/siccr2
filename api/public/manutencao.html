@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICCR - Manutenção</title>
+    <link rel="shortcut icon" href="./img/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/dialogs.css">
+    <link rel="stylesheet" href="./adm/css/style.css">
+    <link rel="stylesheet" href="./adm/css/dialogs.css">
+    <link rel="stylesheet" href="./css/ui-kit.css">
+    <script type="module" src="./js/scripts.js"></script>
+</head>
+<body>
+    <!-- Formulário de Login DIALOG -->
+    <dialog id="dialogLogin">
+        <fieldset>
+            <legend>Login</legend>
+            <form id="frmLogin">
+                <div class="row"><input type="text" name="txtLogin" id="txtLogin" class="formInput" placeholder="Digite o seu login"></div>
+                <div class="row"><input type="password" name="txtSenha" id="txtSenha" class="formInput" placeholder="Digite a sua senha"></div>
+                <p id="loginErro" class="login-erro" hidden></p>
+                <div class="row">
+                    <button id="btnLogin" type="button">Entrar</button>
+                    <button id="btnCancelarLogin" type="button">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+
+    <div class="container">
+        <header>
+            <a href="/"><img src="./img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo"></a>
+            <div class="acesso"><a href="#" id="btnEntrar" class="">Entrar</a></div>
+        </header>
+        <div><responsive-menu></responsive-menu></div>
+
+        <main class="flex flex--column">
+            <section class="titulo_secao flex justify--space--between align--items--center" style="flex-wrap:wrap;gap:10px">
+                <h1 class="flex align--items--center gap--10"><i class="bi bi-tools"></i> Manutenção</h1>
+                <div class="flex gap--10 align--items--center flex--wrap">
+                    <button id="mtCategorias" class="btnPainelFormulario" style="display:none;padding:8px 12px">Categorias</button>
+                    <button id="mtRegistrar" class="btn_adicionar">Registrar ocorrência <i class="bi bi-plus-circle"></i></button>
+                </div>
+            </section>
+
+            <section class="flex gap--10 align--items--center flex--wrap" style="margin:8px 0">
+                <select id="mtFStatus" class="formInput" style="padding:6px 10px">
+                    <option value="">Todos os status</option>
+                    <option value="aberta">Abertas</option>
+                    <option value="em_andamento">Em andamento</option>
+                    <option value="concluida">Concluídas</option>
+                    <option value="cancelada">Canceladas</option>
+                </select>
+                <select id="mtFSala" class="formInput" style="padding:6px 10px"></select>
+                <select id="mtFTipo" class="formInput" style="padding:6px 10px"></select>
+                <select id="mtFPrioridade" class="formInput" style="padding:6px 10px">
+                    <option value="">Todas as prioridades</option>
+                    <option value="alta">Alta</option>
+                    <option value="media">Média</option>
+                    <option value="baixa">Baixa</option>
+                </select>
+                <button type="button" id="mtLimpar" class="btnPainelFormulario" style="padding:6px 12px">Limpar</button>
+                <span id="mtContagem" class="painelLabel" style="white-space:nowrap"></span>
+            </section>
+
+            <section class="informacoes_painel">
+                <div class="cabecalho flex">
+                    <div class="titulo flex flex--2">Sala</div>
+                    <div class="titulo flex flex--2">Categoria</div>
+                    <div class="titulo flex flex--4">Descrição</div>
+                    <div class="titulo flex flex--1">Prioridade</div>
+                    <div class="titulo flex flex--2">Status</div>
+                    <div class="titulo flex flex--3">Aberta por</div>
+                    <div class="titulo flex flex--2">Ações</div>
+                </div>
+                <div class="listaUnidades" id="mtLista"></div>
+            </section>
+        </main>
+        <footer>Rodapé</footer>
+    </div>
+
+    <!-- Dialog: registrar / gerir ocorrência -->
+    <dialog class="dialogPainel" id="dialogOcorr" style="min-width:520px">
+        <fieldset>
+            <legend id="mtLegend">Registrar ocorrência</legend>
+            <form id="frmOcorr" class="flex flex--column gap--12">
+                <input type="hidden" id="mtId">
+                <div class="flex flex--column gap--5">
+                    <label class="painelLabel" for="mtSala">Sala</label>
+                    <select id="mtSala" class="formInput width--100"></select>
+                </div>
+                <div class="flex gap--10 flex--wrap">
+                    <div class="flex flex--column gap--5 flex--1">
+                        <label class="painelLabel" for="mtTipo">Categoria</label>
+                        <select id="mtTipo" class="formInput"></select>
+                    </div>
+                    <div class="flex flex--column gap--5 flex--1">
+                        <label class="painelLabel" for="mtPrioridade">Prioridade</label>
+                        <select id="mtPrioridade" class="formInput">
+                            <option value="baixa">Baixa</option>
+                            <option value="media" selected>Média</option>
+                            <option value="alta">Alta</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex flex--column gap--5">
+                    <label class="painelLabel" for="mtDescricao">Descrição do problema</label>
+                    <textarea id="mtDescricao" class="formInput width--100" rows="4" placeholder="Ex.: Datashow da sala não liga; ar-condicionado pingando; 3 cadeiras quebradas…"></textarea>
+                </div>
+
+                <!-- Só direção, ao gerir -->
+                <div id="mtGestao" style="display:none">
+                    <div class="flex gap--10 flex--wrap">
+                        <div class="flex flex--column gap--5 flex--1">
+                            <label class="painelLabel" for="mtStatus">Status</label>
+                            <select id="mtStatus" class="formInput">
+                                <option value="aberta">Aberta</option>
+                                <option value="em_andamento">Em andamento</option>
+                                <option value="concluida">Concluída</option>
+                                <option value="cancelada">Cancelada</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex flex--column gap--5" style="margin-top:8px">
+                        <label class="painelLabel" for="mtResolucao">Resolução / o que foi feito</label>
+                        <textarea id="mtResolucao" class="formInput width--100" rows="3" placeholder="Descreva o reparo realizado (ao concluir)"></textarea>
+                    </div>
+                </div>
+
+                <div id="mtFeedback"></div>
+                <div class="flex gap--10">
+                    <button type="button" id="mtSalvar" class="btnPainelFormulario">Registrar</button>
+                    <button type="button" id="mtCancelar" class="btnPainelFormulario cancelarUnidade">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+
+    <!-- Dialog: categorias (direção) -->
+    <dialog class="dialogPainel" id="dialogTipos" style="min-width:460px">
+        <fieldset>
+            <legend>Categorias de manutenção</legend>
+            <div id="mtTiposLista" style="margin-bottom:12px"></div>
+            <div class="flex gap--10 align--items--center flex--wrap">
+                <input type="text" id="mtNovoTipo" class="formInput flex--1" placeholder="Nova categoria" style="min-width:160px">
+                <button type="button" id="mtAddTipo" class="btnPainelFormulario">Adicionar</button>
+            </div>
+            <div class="row" style="margin-top:12px">
+                <button type="button" id="mtFecharTipos" class="btnPainelFormulario cancelarUnidade">Fechar</button>
+            </div>
+        </fieldset>
+    </dialog>
+
+    <script type="module" src="./js/components/index.js"></script>
+</body>
+</html>

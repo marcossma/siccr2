@@ -174,6 +174,11 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 - **salas_tipo** — `sala_tipo_id`, `sala_tipo_nome`
 - **salas_historico** — `id_historico`, `sala_id`(FK SET NULL), `sala_nome`(snapshot), `acao`(`cadastro`/`edicao`/`exclusao`), `user_id`(FK users SET NULL), `detalhe`(o que mudou), `createdat`. Auditoria das salas: POST/PUT/DELETE gravam evento **na mesma transação**. Consultável em `GET /salas/:id/historico` (ícone de histórico nas telas `/salas` e `/adm/salas`).
 
+### Manutenção
+- **manutencao_tipos** — `id_tipo`, `nome`, `ativo`(bool), `createdat`. Categorias configuráveis (Datashow/Projetor, Ar-condicionado, Mobiliário, Informática, Elétrica, Hidráulica, Estrutura/Alvenaria, Limpeza, Outros). CRUD só **direção**.
+- **manutencoes** — `id_manutencao`, `sala_id`(FK SET NULL), `tipo_id`(FK SET NULL), `descricao`, `prioridade`(`baixa`/`media`/`alta`), `status`(`aberta`/`em_andamento`/`concluida`/`cancelada`), `created_by_user_id`(quem registrou), `resolucao`, `data_conclusao`, `concluido_por_user_id`, `createdat`, `updatedat`
+  - **Registrar** (POST) e **consultar** (GET): qualquer servidor logado. **Gerir** (PATCH: status/conclusão/edição) e **excluir** (DELETE): só direção. Ao concluir, grava `data_conclusao`+`concluido_por`. Página `/manutencao` (menu Infraestrutura). Fase 2 (pendente): relatório com gráficos.
+
 ### Patrimônio
 - **bens_permanentes** — `id_bem`, `numero_registro`(unique — código da etiqueta patrimonial), `descricao`, `sala_id`(FK SET NULL), `subunidade_id`(FK SET NULL — derivada da sala no cadastro), `estado_conservacao`(`novo`/`bom`/`regular`/`ruim`/`inservivel`), `observacao`, `data_levantamento`, `created_by_user_id`(FK users SET NULL — quem cadastrou), `createdat`
   - Levantamento por sala: dialog na tela `/adm/salas` (super_admin) **e** página servidor-facing `/levantamento-patrimonial` (menu **Patrimônio**, visível p/ chefe+ ou `fazer_levantamento`) — seletor de sala + lista/cadastro de bens, scan, mover e histórico. `numero_registro` preenchível manualmente **ou** por leitura de código de barras (`BarcodeDetector` nativo — só em contexto seguro/HTTPS; degrada para manual).
@@ -240,6 +245,7 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 | `/api/aniversariantes` | servidor (logado) | routes/aniversariantes.js |
 | `/api/aniversariantes/parabenizar` `/config` | diretor | routes/aniversariantes.js |
 | `/api/comunicados` | diretor | routes/comunicados.js |
+| `/api/manutencao` | servidor (registrar/ler) / diretor (gerir·tipos) | routes/manutencao.js |
 | `/api/tipos-recursos` | chefe | routes/tipos-recursos.js |
 | `/api/tipos-despesas` | chefe | routes/tipos-despesas.js |
 | `/api/despesas` | chefe | routes/despesas.js |

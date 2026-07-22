@@ -1,12 +1,12 @@
 -- Schema dump gerado automaticamente. NÃO editar manualmente.
--- Origem: docker compose db (siccr) — 2026-07-17T13:44:46.387Z
+-- Origem: docker compose db (siccr) — 2026-07-22T11:55:50.760Z
 -- Regenere com: npm run db:dump
 
 --
 -- PostgreSQL database dump
 --
 
-\restrict rjpnsHJt4CGQVcTL6f9MjZf1A2mbhGBxR3jNFJLv6qj5JIgdOMegMYpknKRnXJa
+\restrict RsqjEmx4aIXX6B02Zl7IJ6pnRHovxmirNlfk1lRFf2iGjNHydNQf5XczDrxlLQT
 
 -- Dumped from database version 16.13
 -- Dumped by pg_dump version 16.13
@@ -437,6 +437,78 @@ CREATE SEQUENCE public.itens_pedido_almoxarifado_id_item_seq
 --
 
 ALTER SEQUENCE public.itens_pedido_almoxarifado_id_item_seq OWNED BY public.itens_pedido_almoxarifado.id_item;
+
+
+--
+-- Name: manutencao_tipos; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.manutencao_tipos (
+    id_tipo integer NOT NULL,
+    nome character varying(120) NOT NULL,
+    ativo boolean DEFAULT true NOT NULL,
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: manutencao_tipos_id_tipo_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.manutencao_tipos_id_tipo_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: manutencao_tipos_id_tipo_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.manutencao_tipos_id_tipo_seq OWNED BY public.manutencao_tipos.id_tipo;
+
+
+--
+-- Name: manutencoes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.manutencoes (
+    id_manutencao integer NOT NULL,
+    sala_id integer,
+    tipo_id integer,
+    descricao text NOT NULL,
+    prioridade character varying(10) DEFAULT 'media'::character varying NOT NULL,
+    status character varying(15) DEFAULT 'aberta'::character varying NOT NULL,
+    created_by_user_id integer,
+    resolucao text,
+    data_conclusao timestamp with time zone,
+    concluido_por_user_id integer,
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updatedat timestamp with time zone
+);
+
+
+--
+-- Name: manutencoes_id_manutencao_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.manutencoes_id_manutencao_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: manutencoes_id_manutencao_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.manutencoes_id_manutencao_seq OWNED BY public.manutencoes.id_manutencao;
 
 
 --
@@ -1179,6 +1251,20 @@ ALTER TABLE ONLY public.itens_pedido_almoxarifado ALTER COLUMN id_item SET DEFAU
 
 
 --
+-- Name: manutencao_tipos id_tipo; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manutencao_tipos ALTER COLUMN id_tipo SET DEFAULT nextval('public.manutencao_tipos_id_tipo_seq'::regclass);
+
+
+--
+-- Name: manutencoes id_manutencao; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manutencoes ALTER COLUMN id_manutencao SET DEFAULT nextval('public.manutencoes_id_manutencao_seq'::regclass);
+
+
+--
 -- Name: patrimonio_historico id_historico; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1448,6 +1534,22 @@ ALTER TABLE ONLY public.itens_pedido_almoxarifado
 
 
 --
+-- Name: manutencao_tipos manutencao_tipos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manutencao_tipos
+    ADD CONSTRAINT manutencao_tipos_pkey PRIMARY KEY (id_tipo);
+
+
+--
+-- Name: manutencoes manutencoes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manutencoes
+    ADD CONSTRAINT manutencoes_pkey PRIMARY KEY (id_manutencao);
+
+
+--
 -- Name: patrimonio_historico patrimonio_historico_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1702,6 +1804,27 @@ CREATE INDEX disciplinas_subunidade_id ON public.disciplinas USING btree (subuni
 
 
 --
+-- Name: manutencoes_sala_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX manutencoes_sala_id ON public.manutencoes USING btree (sala_id);
+
+
+--
+-- Name: manutencoes_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX manutencoes_status ON public.manutencoes USING btree (status);
+
+
+--
+-- Name: manutencoes_tipo_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX manutencoes_tipo_id ON public.manutencoes USING btree (tipo_id);
+
+
+--
 -- Name: patrimonio_historico_bem_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1874,6 +1997,38 @@ ALTER TABLE ONLY public.funcionalidades
 
 ALTER TABLE ONLY public.itens_pedido_almoxarifado
     ADD CONSTRAINT itens_pedido_almoxarifado_pedido_id_fkey FOREIGN KEY (pedido_id) REFERENCES public.pedidos_almoxarifado(id_pedido) ON DELETE CASCADE;
+
+
+--
+-- Name: manutencoes manutencoes_concluido_por_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manutencoes
+    ADD CONSTRAINT manutencoes_concluido_por_user_id_fkey FOREIGN KEY (concluido_por_user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: manutencoes manutencoes_created_by_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manutencoes
+    ADD CONSTRAINT manutencoes_created_by_user_id_fkey FOREIGN KEY (created_by_user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: manutencoes manutencoes_sala_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manutencoes
+    ADD CONSTRAINT manutencoes_sala_id_fkey FOREIGN KEY (sala_id) REFERENCES public.salas(sala_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: manutencoes manutencoes_tipo_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manutencoes
+    ADD CONSTRAINT manutencoes_tipo_id_fkey FOREIGN KEY (tipo_id) REFERENCES public.manutencao_tipos(id_tipo) ON UPDATE CASCADE ON DELETE SET NULL;
 
 
 --
@@ -2072,5 +2227,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict rjpnsHJt4CGQVcTL6f9MjZf1A2mbhGBxR3jNFJLv6qj5JIgdOMegMYpknKRnXJa
+\unrestrict RsqjEmx4aIXX6B02Zl7IJ6pnRHovxmirNlfk1lRFf2iGjNHydNQf5XczDrxlLQT
 

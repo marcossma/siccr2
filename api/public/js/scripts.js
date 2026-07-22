@@ -3372,6 +3372,154 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     // =========================================================================
+    // MANUTENÇÃO — /manutencao (registrar: todos; gestão/categorias: direção)
+    // =========================================================================
+    if (urlParam === "/manutencao") {
+        const $ = (id) => document.getElementById(id);
+        const siccrU = JSON.parse(localStorage.getItem("siccr") || "null") || {};
+        const ehDirecao = ["diretor", "vice_diretor", "super_admin"].includes(siccrU.permissao) || siccrU.is_direcao_centro === true;
+
+        const lista = $("mtLista"), contagem = $("mtContagem");
+        const fStatus = $("mtFStatus"), fSala = $("mtFSala"), fTipo = $("mtFTipo"), fPrio = $("mtFPrioridade");
+        const dialogOcorr = $("dialogOcorr"), dialogTipos = $("dialogTipos");
+        const selSala = $("mtSala"), selTipo = $("mtTipo"), selPrio = $("mtPrioridade");
+        let salasCache = [], tiposCache = [], listaCache = [];
+
+        const STATUS = { aberta: { t: "Aberta", c: "badge--pendente" }, em_andamento: { t: "Em andamento", c: "badge--parcial" }, concluida: { t: "Concluída", c: "badge--atendido" }, cancelada: { t: "Cancelada", c: "badge--cancelado" } };
+        const PRIO = { alta: { t: "Alta", bg: "#f8d7da", fg: "#842029" }, media: { t: "Média", bg: "#fff3cd", fg: "#856404" }, baixa: { t: "Baixa", bg: "#e2e3e5", fg: "#41464b" } };
+        const fmtDataHora = (v) => { const d = new Date(v); if (Number.isNaN(d.getTime())) return ""; const z = (n) => String(n).padStart(2, "0"); return `${z(d.getDate())}/${z(d.getMonth() + 1)}/${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}`; };
+
+        if (ehDirecao) $("mtCategorias").style.display = "inline-block";
+
+        async function carregarBases() {
+            salasCache = (await (await fetch(`${apiUrl}/salas/total-info`)).json()).data || [];
+            tiposCache = (await (await fetch(`${apiUrl}/manutencao/tipos`)).json()).data || [];
+            const optsSala = salasCache.map(s => `<option value="${s.sala_id}">${s.sala_nome}${s.predio ? " (" + s.predio + ")" : ""}</option>`).join("");
+            selSala.innerHTML = '<option value="">Selecione a sala…</option>' + optsSala;
+            fSala.innerHTML = '<option value="">Todas as salas</option>' + optsSala;
+            const optsTipo = tiposCache.map(t => `<option value="${t.id_tipo}">${t.nome}</option>`).join("");
+            selTipo.innerHTML = '<option value="">— categoria —</option>' + optsTipo;
+            fTipo.innerHTML = '<option value="">Todas as categorias</option>' + optsTipo;
+        }
+
+        async function carregarLista() {
+            const p = new URLSearchParams();
+            if (fStatus.value) p.set("status", fStatus.value);
+            if (fSala.value) p.set("sala_id", fSala.value);
+            if (fTipo.value) p.set("tipo_id", fTipo.value);
+            if (fPrio.value) p.set("prioridade", fPrio.value);
+            try {
+                listaCache = (await (await fetch(`${apiUrl}/manutencao?${p.toString()}`)).json()).data || [];
+                contagem.textContent = `${listaCache.length} ocorrência(s)`;
+                lista.innerHTML = listaCache.length === 0
+                    ? '<p class="pedido-lista-vazia" style="padding:12px">Nenhuma ocorrência.</p>'
+                    : listaCache.map(m => {
+                        const st = STATUS[m.status] || { t: m.status, c: "badge--info" };
+                        const pr = PRIO[m.prioridade] || { t: m.prioridade, bg: "#eee", fg: "#333" };
+                        const acoes = ehDirecao
+                            ? `<i class="bi bi-pencil-square mt-gerir cursor--pointer" title="Gerir" data-id="${m.id_manutencao}"></i><i class="bi bi-trash mt-excluir cursor--pointer" title="Excluir" data-id="${m.id_manutencao}" style="color:#c92a2a"></i>`
+                            : "";
+                        return `<div class="dados flex align--items--center">
+                            <div class="dado flex flex--2">${m.sala_nome || "—"}</div>
+                            <div class="dado flex flex--2">${m.tipo_nome || "—"}</div>
+                            <div class="dado flex flex--4">${m.descricao || ""}</div>
+                            <div class="dado flex flex--1"><span class="badge" style="background:${pr.bg};color:${pr.fg}">${pr.t}</span></div>
+                            <div class="dado flex flex--2"><span class="badge ${st.c}">${st.t}</span></div>
+                            <div class="dado flex flex--3">${m.created_by_nome ? m.created_by_nome.split(" ").slice(0, 2).join(" ") : "—"}<br><span style="font-size:11px;color:#999">${fmtDataHora(m.createdat)}</span></div>
+                            <div class="dado flex flex--2 gap--10 font--size--20">${acoes}</div>
+                        </div>`;
+                    }).join("");
+            } catch (e) { console.error("Erro ao listar manutenções:", e); }
+        }
+
+        [fStatus, fSala, fTipo, fPrio].forEach(el => el.addEventListener("change", carregarLista));
+        $("mtLimpar").addEventListener("click", () => { fStatus.value = ""; fSala.value = ""; fTipo.value = ""; fPrio.value = ""; carregarLista(); });
+
+        function abrirCriar() {
+            $("mtId").value = "";
+            $("frmOcorr").reset();
+            $("mtLegend").textContent = "Registrar ocorrência";
+            $("mtSalvar").textContent = "Registrar";
+            $("mtGestao").style.display = "none";
+            $("mtFeedback").innerHTML = "";
+            dialogOcorr.showModal();
+        }
+        function abrirGerir(m) {
+            $("mtId").value = m.id_manutencao;
+            $("mtLegend").textContent = "Gerir ocorrência";
+            $("mtSalvar").textContent = "Salvar";
+            selSala.value = m.sala_id || ""; selTipo.value = m.tipo_id || ""; selPrio.value = m.prioridade || "media";
+            $("mtDescricao").value = m.descricao || "";
+            $("mtGestao").style.display = "block";
+            $("mtStatus").value = m.status || "aberta";
+            $("mtResolucao").value = m.resolucao || "";
+            $("mtFeedback").innerHTML = "";
+            dialogOcorr.showModal();
+        }
+        $("mtRegistrar").addEventListener("click", abrirCriar);
+        $("mtCancelar").addEventListener("click", () => { $("frmOcorr").reset(); dialogOcorr.close(); });
+
+        $("mtSalvar").addEventListener("click", async () => {
+            const fb = $("mtFeedback");
+            const id = $("mtId").value;
+            const body = { sala_id: selSala.value || null, tipo_id: selTipo.value || null, prioridade: selPrio.value, descricao: $("mtDescricao").value.trim() };
+            if (!body.sala_id || !body.descricao) { fb.innerHTML = '<span style="color:#c92a2a">Sala e descrição são obrigatórias.</span>'; return; }
+            if (id) { body.status = $("mtStatus").value; body.resolucao = $("mtResolucao").value.trim() || null; }
+            const r = await fetch(id ? `${apiUrl}/manutencao/${id}` : `${apiUrl}/manutencao`, { method: id ? "PATCH" : "POST", body: JSON.stringify(body) });
+            const resp = await r.json();
+            if (!r.ok) { fb.innerHTML = `<span style="color:#c92a2a">${resp.message}</span>`; return; }
+            $("frmOcorr").reset(); dialogOcorr.close(); carregarLista();
+        });
+
+        lista.addEventListener("click", async (e) => {
+            const g = e.target.closest(".mt-gerir");
+            if (g) { const m = listaCache.find(x => String(x.id_manutencao) === g.dataset.id); if (m) abrirGerir(m); return; }
+            const x = e.target.closest(".mt-excluir");
+            if (x) {
+                if (!confirm("Excluir esta ocorrência?")) return;
+                const r = await fetch(`${apiUrl}/manutencao/${x.dataset.id}`, { method: "DELETE" });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                carregarLista();
+            }
+        });
+
+        // ── Categorias (direção) ──
+        async function carregarTipos() {
+            const arr = (await (await fetch(`${apiUrl}/manutencao/tipos?todos=1`)).json()).data || [];
+            $("mtTiposLista").innerHTML = arr.map(t => `
+                <div class="flex align--items--center gap--10" style="padding:4px 0;border-bottom:1px dashed #ddd">
+                    <input type="text" class="formInput flex--1 mt-tipo-nome" value="${(t.nome || "").replace(/"/g, "&quot;")}" data-id="${t.id_tipo}" style="padding:4px 8px">
+                    <label class="flex align--items--center gap--5" style="font-size:12px"><input type="checkbox" class="mt-tipo-ativo" data-id="${t.id_tipo}" ${t.ativo ? "checked" : ""}> ativo</label>
+                    <button type="button" class="btnPainelFormulario mt-tipo-salvar" data-id="${t.id_tipo}" style="padding:2px 10px;font-size:12px">Salvar</button>
+                </div>`).join("");
+        }
+        if (ehDirecao) {
+            $("mtCategorias").addEventListener("click", async () => { await carregarTipos(); dialogTipos.showModal(); });
+            $("mtFecharTipos").addEventListener("click", () => dialogTipos.close());
+            $("mtAddTipo").addEventListener("click", async () => {
+                const nome = $("mtNovoTipo").value.trim(); if (!nome) return;
+                const r = await fetch(`${apiUrl}/manutencao/tipos`, { method: "POST", body: JSON.stringify({ nome }) });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                $("mtNovoTipo").value = ""; await carregarTipos(); await carregarBases();
+            });
+            $("mtTiposLista").addEventListener("click", async (e) => {
+                const b = e.target.closest(".mt-tipo-salvar"); if (!b) return;
+                const id = b.dataset.id;
+                const nome = document.querySelector(`.mt-tipo-nome[data-id="${id}"]`).value.trim();
+                const ativo = document.querySelector(`.mt-tipo-ativo[data-id="${id}"]`).checked;
+                const r = await fetch(`${apiUrl}/manutencao/tipos/${id}`, { method: "PATCH", body: JSON.stringify({ nome, ativo }) });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message); return; }
+                await carregarTipos(); await carregarBases();
+            });
+        }
+
+        carregarBases().then(carregarLista);
+    }
+
+    // =========================================================================
     // ANIVERSARIANTES DO MÊS — /aniversariantes (qualquer usuário logado)
     // =========================================================================
     if (urlParam === "/aniversariantes") {
