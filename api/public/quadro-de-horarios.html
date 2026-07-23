@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICCR - Quadro de horários</title>
+    <link rel="shortcut icon" href="./img/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/dialogs.css">
+    <link rel="stylesheet" href="./adm/css/style.css">
+    <link rel="stylesheet" href="./css/ui-kit.css">
+    <script type="module" src="./js/scripts.js"></script>
+    <style>
+        .qh-toolbar { display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
+        .qh-toolbar .campo { display:flex; flex-direction:column; gap:4px; }
+        .qh-toolbar select, .qh-toolbar button { padding:7px 10px; border-radius:5px; border:1px solid #ccc; font:12px verdana,sans-serif; }
+        .btn-gerar { background:#007a2e !important; color:#fff !important; border-color:#007a2e !important; cursor:pointer; }
+        .btn-imprimir { background:#555 !important; color:#fff !important; border-color:#555 !important; cursor:pointer; }
+        .qh-modo { display:flex; gap:6px; align-items:center; }
+        .qh-modo label { font-size:13px; cursor:pointer; }
+
+        /* ── Quadro ── */
+        .qh-quadro { margin-top:14px; }
+        .qh-scroll { overflow-x:auto; }
+        .qh-titulo { text-align:center; margin-bottom:4px; }
+        .qh-titulo h2 { font-size:26px; color:#111; margin:0; letter-spacing:1px; }
+        .qh-sub { display:flex; justify-content:space-between; font-size:12px; color:#333; margin:2px 4px 8px; }
+        .q-tabela { width:100%; border-collapse:collapse; table-layout:fixed; }
+        .q-tabela th, .q-tabela td { border:1px solid #333; padding:2px 4px; font-size:11px; vertical-align:top; }
+        .q-tabela thead th { background:#fff; text-align:center; font-size:13px; padding:6px 4px; }
+        .q-hcol { width:88px; }
+        .q-hora { text-align:center; font-weight:bold; white-space:nowrap; background:#fff; width:88px; }
+        .q-vazio { background:#fff; }
+        .q-aula { line-height:1.15; }
+        .q-cod { font-weight:bold; display:flex; justify-content:space-between; gap:4px; }
+        .q-turma { font-weight:bold; }
+        .q-disc { font-size:10.5px; }
+        .q-prof { font-size:10px; color:#222; margin-top:2px; }
+        .q-meta { font-size:10px; color:#222; font-weight:bold; margin-top:1px; }
+        .qh-vazio { padding:24px; text-align:center; color:#888; }
+
+        @media print {
+            @page { size: landscape; margin:8mm; }
+            header, footer, responsive-menu, .qh-toolbar, #btnEntrar { display:none !important; }
+            body { background:#fff; } .container { box-shadow:none; margin:0; max-width:none; }
+            .qh-scroll { overflow:visible; }
+            .q-tabela th, .q-tabela td { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+            .qh-quadro { break-inside:avoid; }
+        }
+        @media (max-width:700px){ .qh-sub{ flex-direction:column; gap:2px; } }
+    </style>
+</head>
+<body>
+    <!-- Formulário de Login DIALOG -->
+    <dialog id="dialogLogin">
+        <fieldset>
+            <legend>Login</legend>
+            <form id="frmLogin">
+                <div class="row"><input type="text" name="txtLogin" id="txtLogin" class="formInput" placeholder="Digite o seu login"></div>
+                <div class="row"><input type="password" name="txtSenha" id="txtSenha" class="formInput" placeholder="Digite a sua senha"></div>
+                <p id="loginErro" class="login-erro" hidden></p>
+                <div class="row">
+                    <button id="btnLogin" type="button">Entrar</button>
+                    <button id="btnCancelarLogin" type="button">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+
+    <div class="container">
+        <header>
+            <a href="/"><img src="./img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo"></a>
+            <div class="acesso"><a href="#" id="btnEntrar" class="">Entrar</a></div>
+        </header>
+        <div><responsive-menu></responsive-menu></div>
+
+        <main class="flex flex--column">
+            <section class="titulo_secao flex justify--space--between align--items--center" style="flex-wrap:wrap;gap:10px">
+                <h1 class="flex align--items--center gap--10"><i class="bi bi-table"></i> Quadro de horários</h1>
+            </section>
+
+            <section class="qh-toolbar">
+                <div class="campo">
+                    <label class="painelLabel">Visualizar por</label>
+                    <div class="qh-modo">
+                        <label><input type="radio" name="qhModo" value="sala" checked> Sala</label>
+                        <label><input type="radio" name="qhModo" value="curso"> Curso</label>
+                    </div>
+                </div>
+                <div class="campo">
+                    <label class="painelLabel" for="qhPeriodo">Período</label>
+                    <select id="qhPeriodo"></select>
+                </div>
+                <div class="campo" id="qhCampoSala">
+                    <label class="painelLabel" for="qhSala">Sala</label>
+                    <select id="qhSala"><option value="">—</option></select>
+                </div>
+                <div class="campo" id="qhCampoCurso" style="display:none">
+                    <label class="painelLabel" for="qhCurso">Curso</label>
+                    <select id="qhCurso"><option value="">—</option></select>
+                </div>
+                <label class="painelLabel flex align--items--center gap--5 cursor--pointer" id="qhCampoPos" style="white-space:nowrap;padding-bottom:6px;display:none">
+                    <input type="checkbox" id="qhIncluirPos"> Incluir pós
+                </label>
+                <button type="button" id="qhGerar" class="btn-gerar">Gerar quadro</button>
+                <button type="button" id="qhImprimir" class="btn-imprimir">🖨 Imprimir / PDF</button>
+            </section>
+
+            <div class="qh-quadro" id="qhQuadro">
+                <div class="qh-vazio">Escolha o período e a sala/curso e clique em <b>Gerar quadro</b>.</div>
+            </div>
+        </main>
+        <footer>Rodapé</footer>
+    </div>
+
+    <script type="module" src="./js/components/index.js"></script>
+</body>
+</html>

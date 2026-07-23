@@ -122,6 +122,107 @@ router.get("/ensalamento", async (req, res) => {
 });
 
 // ───────────────────────────────────────────────────────────────
+// GET /quadro/salas — salas que têm aulas no período (seletor do quadro)
+// ───────────────────────────────────────────────────────────────
+router.get("/quadro/salas", async (req, res) => {
+    if (!ehDirecao(req.usuario)) {
+        return res.status(403).json({ status: "error", message: "Acesso restrito à direção.", data: null });
+    }
+    const { periodo_letivo_id } = req.query;
+    const params = [];
+    const where = ["h.sala_id IS NOT NULL"];
+    if (periodo_letivo_id) { params.push(periodo_letivo_id); where.push(`t.periodo_letivo_id = $${params.length}`); }
+    try {
+        const { rows } = await pool.query(`
+            SELECT s.sala_id, s.sala_nome, s.sala_capacidade, p.predio AS predio_nome,
+                   COUNT(h.id_horario)::int AS total_aulas
+            FROM turmas_horarios h
+            JOIN turmas t ON t.id_turma = h.turma_id
+            JOIN salas s ON s.sala_id = h.sala_id
+            LEFT JOIN predios p ON p.predio_id = s.predio_id
+            WHERE ${where.join(" AND ")}
+            GROUP BY s.sala_id, p.predio
+            ORDER BY s.sala_nome
+        `, params);
+        return res.status(200).json({ status: "success", message: "", data: rows });
+    } catch (error) {
+        logger.error({ err: error }, "Erro ao listar salas do quadro:");
+        return res.status(500).json({ status: "error", message: "Erro ao listar salas do quadro.", data: null });
+    }
+});
+
+// ───────────────────────────────────────────────────────────────
+// GET /quadro — grade semanal de aulas (quadro impresso)
+//   Query: periodo_letivo_id (obrigatório) + sala_id OU curso_id.
+//   Por sala: header = sala; células têm disciplina/turma/professor.
+//   Por curso: header = curso; células têm também a sala.
+// ───────────────────────────────────────────────────────────────
+router.get("/quadro", async (req, res) => {
+    if (!ehDirecao(req.usuario)) {
+        return res.status(403).json({ status: "error", message: "Acesso restrito à direção.", data: null });
+    }
+    const { periodo_letivo_id, sala_id, curso_id, incluir_pos } = req.query;
+    if (!periodo_letivo_id || (!sala_id && !curso_id)) {
+        return res.status(400).json({ status: "error", message: "Informe periodo_letivo_id e sala_id ou curso_id.", data: null });
+    }
+    const incluirPos = incluir_pos === "1" || incluir_pos === "true";
+
+    // Professor(es): co-docência agregada; se não houver, o professor titular
+    const profExpr = `COALESCE(
+        (SELECT string_agg(u2.nome, ', ' ORDER BY u2.nome)
+         FROM turmas_professores tp JOIN users u2 ON u2.user_id = tp.user_id
+         WHERE tp.turma_id = t.id_turma),
+        u.nome) AS professor_nome`;
+
+    const params = [periodo_letivo_id];
+    const where = ["t.periodo_letivo_id = $1"];
+    // Por sala: só horários daquela sala. Por curso: todos (com/sem sala) do curso.
+    if (sala_id) { params.push(sala_id); where.push(`h.sala_id = $${params.length}`); }
+    if (curso_id) { params.push(curso_id); where.push(`t.curso_id = $${params.length}`); }
+    if (curso_id && !incluirPos) { where.push(`(c.nivel IS DISTINCT FROM 'pos_graduacao')`); }
+
+    try {
+        const horarios = await pool.query(`
+            SELECT h.dia_semana, h.hora_inicio, h.hora_fim, h.tipo_aula,
+                   d.codigo AS disciplina_codigo, d.nome AS disciplina_nome,
+                   t.nome_turma, t.vagas,
+                   s.sala_nome, p.predio AS predio_nome,
+                   ${profExpr}
+            FROM turmas_horarios h
+            JOIN turmas t ON t.id_turma = h.turma_id
+            JOIN disciplinas d ON d.id_disciplina = t.disciplina_id
+            LEFT JOIN cursos c ON c.id_curso = t.curso_id
+            LEFT JOIN users u ON u.user_id = t.professor_user_id
+            LEFT JOIN salas s ON s.sala_id = h.sala_id
+            LEFT JOIN predios p ON p.predio_id = s.predio_id
+            WHERE ${where.join(" AND ")}
+            ORDER BY h.dia_semana, h.hora_inicio
+        `, params);
+
+        // Cabeçalho conforme o eixo
+        let header = null;
+        const periodo = (await pool.query("SELECT id_periodo, nome FROM periodos_letivos WHERE id_periodo = $1", [periodo_letivo_id])).rows[0] || null;
+        if (sala_id) {
+            const s = (await pool.query(`
+                SELECT s.sala_id, s.sala_nome, s.sala_capacidade, p.predio AS predio_nome
+                FROM salas s LEFT JOIN predios p ON p.predio_id = s.predio_id
+                WHERE s.sala_id = $1`, [sala_id])).rows[0];
+            if (!s) return res.status(404).json({ status: "error", message: "Sala não encontrada.", data: null });
+            header = { tipo: "sala", titulo: s.sala_nome, sala_capacidade: s.sala_capacidade, predio_nome: s.predio_nome };
+        } else {
+            const c = (await pool.query("SELECT id_curso, nome FROM cursos WHERE id_curso = $1", [curso_id])).rows[0];
+            if (!c) return res.status(404).json({ status: "error", message: "Curso não encontrado.", data: null });
+            header = { tipo: "curso", titulo: c.nome };
+        }
+
+        return res.status(200).json({ status: "success", message: "", data: { header, periodo, horarios: horarios.rows } });
+    } catch (error) {
+        logger.error({ err: error }, "Erro ao montar quadro de horários:");
+        return res.status(500).json({ status: "error", message: "Erro ao montar o quadro.", data: null });
+    }
+});
+
+// ───────────────────────────────────────────────────────────────
 // GET /:id — detalhe da turma + horários (com sala/prédio)
 // ───────────────────────────────────────────────────────────────
 router.get("/:id", async (req, res) => {

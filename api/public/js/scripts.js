@@ -4220,4 +4220,174 @@ document.addEventListener("DOMContentLoaded", function() {
         carregarBases();
     } // fim /ensalamento
 
+    // ═══════════════════════════════════════════════════════════════
+    // QUADRO DE HORÁRIOS — /quadro-de-horarios (direção; menu Administrativo)
+    //   Grade semanal impressa, por sala ou por curso (só aulas).
+    // ═══════════════════════════════════════════════════════════════
+    if (urlParam === "/quadro-de-horarios") {
+        const siccrQ = JSON.parse(localStorage.getItem("siccr") || "null");
+        const ehDir = siccrQ && (["super_admin", "diretor", "vice_diretor"].includes(siccrQ.permissao) || siccrQ.is_direcao_centro === true);
+        if (!ehDir) { window.location.href = "/"; return; }
+
+        const $ = (id) => document.getElementById(id);
+        const selPeriodo = $("qhPeriodo"), selSala = $("qhSala"), selCurso = $("qhCurso");
+        const campoSala = $("qhCampoSala"), campoCurso = $("qhCampoCurso"), campoPos = $("qhCampoPos");
+        const chkPos = $("qhIncluirPos"), quadro = $("qhQuadro");
+        const DIAS = { 0: "DOMINGO", 1: "SEGUNDA", 2: "TERÇA", 3: "QUARTA", 4: "QUINTA", 5: "SEXTA", 6: "SÁBADO" };
+
+        const modo = () => (document.querySelector("input[name='qhModo']:checked") || {}).value || "sala";
+        const toMin = (hhmm) => { const [h, m] = String(hhmm).slice(0, 5).split(":").map(Number); return h * 60 + m; };
+        const fmtMin = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+        const titulo = (s) => String(s || "").toLowerCase().replace(/(^|[\s.'-])([a-zà-ú])/g, (_, a, b) => a + b.toUpperCase());
+        const profCurto = (p) => !p ? "" : p.split(",").map(n => titulo(n.trim().split(/\s+/)[0])).filter(Boolean).join(", ");
+        const periodoExtenso = (nome) => {
+            const m = String(nome || "").match(/^(\d{4})\.(\d)$/);
+            if (!m) return nome || "";
+            const sem = { "1": "Primeiro", "2": "Segundo" }[m[2]] || `${m[2]}º`;
+            return `${sem} semestre ${m[1]}`;
+        };
+        // Cor pastel estável por código de disciplina
+        const corDe = (key) => {
+            let h = 0; for (const ch of String(key || "?")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+            return `hsl(${h % 360}, 55%, 88%)`;
+        };
+
+        async function carregarPeriodos() {
+            const periodos = ((await (await fetch(`${apiUrl}/periodos-letivos`)).json()).data) || [];
+            selPeriodo.innerHTML = periodos.map(p => `<option value="${p.id_periodo}" ${p.ativo ? "selected" : ""}>${p.nome}${p.ativo ? " (ativo)" : ""}</option>`).join("");
+        }
+        async function carregarSalas() {
+            const q = selPeriodo.value ? `?periodo_letivo_id=${selPeriodo.value}` : "";
+            const salas = ((await (await fetch(`${apiUrl}/turmas/quadro/salas${q}`)).json()).data) || [];
+            selSala.innerHTML = '<option value="">— selecione —</option>' +
+                salas.map(s => `<option value="${s.sala_id}">${s.sala_nome} (${s.total_aulas})</option>`).join("");
+        }
+        async function carregarCursos() {
+            const q = chkPos.checked ? "?incluir_pos=1" : "";
+            const cursos = ((await (await fetch(`${apiUrl}/cursos${q}`)).json()).data) || [];
+            selCurso.innerHTML = '<option value="">— selecione —</option>' +
+                cursos.map(c => `<option value="${c.id_curso}">${c.nome}${c.nivel === "pos_graduacao" ? " (pós)" : ""}</option>`).join("");
+        }
+
+        function aplicarModo() {
+            const m = modo();
+            campoSala.style.display = m === "sala" ? "" : "none";
+            campoCurso.style.display = m === "curso" ? "" : "none";
+            campoPos.style.display = m === "curso" ? "" : "none";
+        }
+
+        function celulaHTML(it, m) {
+            const meta = m === "curso"
+                ? `${it.sala_nome ? it.sala_nome : "— sem sala —"}${it.vagas !== null ? ` · ${it.vagas}` : ""}`
+                : (it.vagas !== null ? `${it.vagas} lugares` : "");
+            return `<div class="q-cod"><span>${it.disciplina_codigo || ""}</span>${it.nome_turma ? `<span class="q-turma">${it.nome_turma}</span>` : ""}</div>
+                    <div class="q-disc">${titulo(it.disciplina_nome) || ""}</div>
+                    <div class="q-prof">${profCurto(it.professor_nome)}</div>
+                    ${meta ? `<div class="q-meta">${meta}</div>` : ""}`;
+        }
+
+        function montarTabela(horarios, m) {
+            const itens = horarios
+                .map(h => ({ ...h, dia: h.dia_semana, ini: toMin(h.hora_inicio), fim: toMin(h.hora_fim) }))
+                .filter(x => x.fim > x.ini);
+            if (!itens.length) return '<div class="qh-vazio">Nenhuma aula ensalada para este filtro.</div>';
+
+            const presentes = new Set(itens.map(i => i.dia));
+            const dias = [1, 2, 3, 4, 5];
+            if (presentes.has(6)) dias.push(6);
+            if (presentes.has(0)) dias.push(0);
+
+            // Bandas horárias fixas (1h) cobrindo o intervalo usado — mostra os
+            // vãos livres, como num quadro de horários. Placement por contenção
+            // (robusto a horários fora da grade de :30).
+            const minIni = Math.min(...itens.map(i => i.ini));
+            const maxFim = Math.max(...itens.map(i => i.fim));
+            const bands = [];
+            for (let s = minIni; s < maxFim; s += 60) bands.push({ s, e: s + 60 });
+            const idxStart = (mn) => bands.findIndex(b => b.s <= mn && mn < b.e);
+            const idxEnd = (mn) => bands.findIndex(b => b.s < mn && mn <= b.e);
+
+            // Lanes por dia (aulas sobrepostas ficam lado a lado)
+            const lanes = {}, laneOf = new Map();
+            for (const dia of dias) {
+                const d05 = itens.filter(i => i.dia === dia).sort((a, b) => a.ini - b.ini || a.fim - b.fim);
+                const fim = [];
+                for (const it of d05) {
+                    let l = fim.findIndex(e => e <= it.ini);
+                    if (l === -1) { l = fim.length; fim.push(it.fim); } else fim[l] = it.fim;
+                    laneOf.set(it, l);
+                }
+                lanes[dia] = Math.max(1, fim.length);
+            }
+
+            // Ocupação: occ[dia][lane][banda] = {item,span} no início | "cont" | null
+            const occ = {};
+            for (const dia of dias) { occ[dia] = []; for (let l = 0; l < lanes[dia]; l++) occ[dia][l] = new Array(bands.length).fill(null); }
+            for (const it of itens) {
+                const l = laneOf.get(it), sb = idxStart(it.ini), eb = idxEnd(it.fim);
+                if (sb < 0 || eb < 0) continue;
+                occ[it.dia][l][sb] = { item: it, span: eb - sb + 1 };
+                for (let b = sb + 1; b <= eb; b++) occ[it.dia][l][b] = "cont";
+            }
+
+            const totalLanes = dias.reduce((a, d) => a + lanes[d], 0);
+            let html = `<div class="qh-scroll"><table class="q-tabela" style="min-width:${88 + totalLanes * 120}px"><colgroup><col class="q-hcol">`;
+            for (const dia of dias) for (let l = 0; l < lanes[dia]; l++) html += "<col>";
+            html += '</colgroup><thead><tr><th class="q-hcol">HORÁRIO</th>';
+            for (const dia of dias) html += `<th colspan="${lanes[dia]}">${DIAS[dia]}</th>`;
+            html += "</tr></thead><tbody>";
+            for (let b = 0; b < bands.length; b++) {
+                html += `<tr><th class="q-hora">${fmtMin(bands[b].s)}<br>${fmtMin(bands[b].e)}</th>`;
+                for (const dia of dias) {
+                    for (let l = 0; l < lanes[dia]; l++) {
+                        const cell = occ[dia][l][b];
+                        if (cell === "cont") continue;
+                        if (cell && cell.item) {
+                            html += `<td class="q-aula" rowspan="${cell.span}" style="background:${corDe(cell.item.disciplina_codigo)}">${celulaHTML(cell.item, m)}</td>`;
+                        } else {
+                            html += '<td class="q-vazio"></td>';
+                        }
+                    }
+                }
+                html += "</tr>";
+            }
+            html += "</tbody></table></div>";
+            return html;
+        }
+
+        async function gerar() {
+            const m = modo();
+            const alvo = m === "sala" ? selSala.value : selCurso.value;
+            if (!selPeriodo.value || !alvo) { alert(`Selecione o período e ${m === "sala" ? "a sala" : "o curso"}.`); return; }
+            const p = new URLSearchParams({ periodo_letivo_id: selPeriodo.value });
+            p.set(m === "sala" ? "sala_id" : "curso_id", alvo);
+            if (m === "curso" && chkPos.checked) p.set("incluir_pos", "1");
+            quadro.innerHTML = '<div class="qh-vazio">Montando…</div>';
+            let d;
+            try { d = (await (await fetch(`${apiUrl}/turmas/quadro?${p.toString()}`)).json()).data; } catch { d = null; }
+            if (!d) { quadro.innerHTML = '<div class="qh-vazio" style="color:#c92a2a">Erro ao montar o quadro (ou sem permissão).</div>'; return; }
+
+            const h = d.header || {};
+            const per = periodoExtenso(d.periodo && d.periodo.nome);
+            const subEsq = per;
+            const subDir = h.tipo === "sala"
+                ? [h.sala_capacidade !== null ? `${h.sala_capacidade} lugares` : null, h.predio_nome ? `Prédio ${h.predio_nome}` : null].filter(Boolean).join(" · ")
+                : "Grade do curso";
+            quadro.innerHTML = `
+                <div class="qh-titulo"><h2>${(h.tipo === "sala" ? "SALA " : "") + (h.titulo || "").toUpperCase()}</h2></div>
+                <div class="qh-sub"><span>${subEsq}</span><span>${subDir}</span></div>
+                ${montarTabela(d.horarios || [], m)}`;
+        }
+
+        // Eventos
+        document.querySelectorAll("input[name='qhModo']").forEach(r => r.addEventListener("change", aplicarModo));
+        selPeriodo.addEventListener("change", () => { carregarSalas(); });
+        chkPos.addEventListener("change", carregarCursos);
+        $("qhGerar").addEventListener("click", gerar);
+        $("qhImprimir").addEventListener("click", () => window.print());
+
+        aplicarModo();
+        (async () => { await carregarPeriodos(); await Promise.all([carregarSalas(), carregarCursos()]); })();
+    } // fim /quadro-de-horarios
+
 });
