@@ -3520,6 +3520,58 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     // =========================================================================
+    // RELATÓRIOS DE MANUTENÇÃO — /relatorios-manutencao (direção)
+    // =========================================================================
+    if (urlParam === "/relatorios-manutencao") {
+        const $ = (id) => document.getElementById(id);
+        const charts = {};
+        const destroyIf = (k) => { if (charts[k]) { charts[k].destroy(); delete charts[k]; } };
+        const fmtMes = (ym) => { const [y, m] = ym.split("-"); return `${m}/${y.slice(2)}`; };
+        const tile = (n, l, cor) => `<div class="mt-tile" style="border-left-color:${cor || "#009536"}"><div class="n" style="color:${cor || "#009536"}">${n}</div><div class="l">${l}</div></div>`;
+
+        const hoje = new Date();
+        $("relFim").value = hoje.toISOString().slice(0, 10);
+        $("relInicio").value = new Date(hoje.getFullYear(), hoje.getMonth() - 11, 1).toISOString().slice(0, 10);
+
+        async function carregar() {
+            const p = new URLSearchParams();
+            if ($("relInicio").value) p.set("inicio", $("relInicio").value);
+            if ($("relFim").value) p.set("fim", $("relFim").value);
+            let d;
+            try { d = (await (await fetch(`${apiUrl}/manutencao/relatorio?${p.toString()}`)).json()).data; } catch { d = null; }
+            if (!d) { $("relTiles").innerHTML = '<p style="color:#c92a2a;padding:10px">Sem dados ou sem permissão para o relatório.</p>'; return; }
+
+            const r = d.resumo;
+            const tmpo = (d.tempo_medio_dias !== null && d.tempo_medio_dias !== undefined) ? d.tempo_medio_dias.toFixed(1).replace(".", ",") + " dias" : "—";
+            $("relTiles").innerHTML = tile(r.total, "Total no período") + tile(r.aberta, "Abertas", "#856404") + tile(r.em_andamento, "Em andamento", "#084298") + tile(r.concluida, "Concluídas", "#0a5732") + tile(tmpo, "Tempo médio de reparo", "#555");
+
+            destroyIf("mes");
+            charts.mes = new Chart($("gMes"), { type: "bar", data: { labels: d.por_mes.map(x => fmtMes(x.mes)), datasets: [
+                { label: "Abertas", data: d.por_mes.map(x => x.abertas), backgroundColor: "#f0ad4e" },
+                { label: "Concluídas", data: d.por_mes.map(x => x.concluidas), backgroundColor: "#009536" },
+            ] }, options: { responsive: true, maintainAspectRatio: false, animation: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } });
+
+            destroyIf("status");
+            charts.status = new Chart($("gStatus"), { type: "doughnut", data: { labels: ["Abertas", "Em andamento", "Concluídas", "Canceladas"], datasets: [{ data: [r.aberta, r.em_andamento, r.concluida, r.cancelada], backgroundColor: ["#f0ad4e", "#5b9bd5", "#009536", "#c0392b"] }] }, options: { responsive: true, maintainAspectRatio: false, animation: false } });
+
+            destroyIf("prio");
+            const prioMap = { alta: 0, media: 0, baixa: 0 };
+            d.por_prioridade.forEach(x => { prioMap[x.prioridade] = x.n; });
+            charts.prio = new Chart($("gPrioridade"), { type: "doughnut", data: { labels: ["Alta", "Média", "Baixa"], datasets: [{ data: [prioMap.alta, prioMap.media, prioMap.baixa], backgroundColor: ["#c0392b", "#f0ad4e", "#adb5bd"] }] }, options: { responsive: true, maintainAspectRatio: false, animation: false } });
+
+            destroyIf("cat");
+            charts.cat = new Chart($("gCategoria"), { type: "bar", data: { labels: d.por_categoria.map(x => x.tipo), datasets: [{ label: "Ocorrências", data: d.por_categoria.map(x => x.n), backgroundColor: "#009536" }] }, options: { indexAxis: "y", responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } } });
+
+            destroyIf("sala");
+            charts.sala = new Chart($("gSala"), { type: "bar", data: { labels: d.por_sala.map(x => x.sala), datasets: [{ label: "Ocorrências", data: d.por_sala.map(x => x.n), backgroundColor: "#5b9bd5" }] }, options: { indexAxis: "y", responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } } });
+        }
+
+        $("relAplicar").addEventListener("click", carregar);
+        $("relImprimir").addEventListener("click", () => window.print());
+        carregar();
+    }
+
+    // =========================================================================
     // ANIVERSARIANTES DO MÊS — /aniversariantes (qualquer usuário logado)
     // =========================================================================
     if (urlParam === "/aniversariantes") {

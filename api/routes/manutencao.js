@@ -67,6 +67,50 @@ router.patch("/tipos/:id", async (req, res) => {
     }
 });
 
+// GET /api/manutencao/relatorio — agregações p/ gráficos (direção). ?inicio=&fim=
+router.get("/relatorio", async (req, res) => {
+    if (!ehDirecao(req.usuario)) return res.status(403).json({ status: "error", message: "Acesso restrito à direção.", data: null });
+    const hoje = new Date();
+    const inicio = req.query.inicio || new Date(hoje.getFullYear(), hoje.getMonth() - 11, 1).toISOString().slice(0, 10);
+    const fim = req.query.fim || hoje.toISOString().slice(0, 10);
+    const rng = "m.createdat::date BETWEEN $1 AND $2";
+    const params = [inicio, fim];
+    try {
+        const [resumo, prioridade, categoria, sala, tempo, serie] = await Promise.all([
+            pool.query(`SELECT status, COUNT(*)::int n FROM manutencoes m WHERE ${rng} GROUP BY status`, params),
+            pool.query(`SELECT prioridade, COUNT(*)::int n FROM manutencoes m WHERE ${rng} GROUP BY prioridade`, params),
+            pool.query(`SELECT COALESCE(t.nome,'—') tipo, COUNT(*)::int n FROM manutencoes m LEFT JOIN manutencao_tipos t ON t.id_tipo = m.tipo_id WHERE ${rng} GROUP BY 1 ORDER BY n DESC`, params),
+            pool.query(`SELECT COALESCE(s.sala_nome,'—') sala, COUNT(*)::int n FROM manutencoes m LEFT JOIN salas s ON s.sala_id = m.sala_id WHERE ${rng} GROUP BY 1 ORDER BY n DESC LIMIT 12`, params),
+            pool.query(`SELECT AVG(EXTRACT(EPOCH FROM (data_conclusao - createdat)) / 86400.0) dias FROM manutencoes m WHERE status='concluida' AND data_conclusao IS NOT NULL AND ${rng}`, params),
+            pool.query(`
+                WITH meses AS (SELECT to_char(gs, 'YYYY-MM') mes FROM generate_series(date_trunc('month', $1::date), date_trunc('month', $2::date), interval '1 month') gs)
+                SELECT mm.mes, COALESCE(ab.n, 0)::int abertas, COALESCE(co.n, 0)::int concluidas
+                FROM meses mm
+                LEFT JOIN (SELECT to_char(createdat, 'YYYY-MM') mes, COUNT(*) n FROM manutencoes GROUP BY 1) ab ON ab.mes = mm.mes
+                LEFT JOIN (SELECT to_char(data_conclusao, 'YYYY-MM') mes, COUNT(*) n FROM manutencoes WHERE data_conclusao IS NOT NULL GROUP BY 1) co ON co.mes = mm.mes
+                ORDER BY mm.mes`, params),
+        ]);
+        const byStatus = {};
+        resumo.rows.forEach((r) => { byStatus[r.status] = r.n; });
+        const total = resumo.rows.reduce((a, r) => a + r.n, 0);
+        return res.status(200).json({
+            status: "success", message: "",
+            data: {
+                periodo: { inicio, fim },
+                resumo: { total, aberta: byStatus.aberta || 0, em_andamento: byStatus.em_andamento || 0, concluida: byStatus.concluida || 0, cancelada: byStatus.cancelada || 0 },
+                tempo_medio_dias: (tempo.rows[0].dias !== null && tempo.rows[0].dias !== undefined) ? Number(tempo.rows[0].dias) : null,
+                por_prioridade: prioridade.rows,
+                por_categoria: categoria.rows,
+                por_sala: sala.rows,
+                por_mes: serie.rows,
+            },
+        });
+    } catch (error) {
+        logger.error({ err: error }, "Erro no relatório de manutenção:");
+        return res.status(500).json({ status: "error", message: "Erro ao gerar relatório.", data: null });
+    }
+});
+
 // ─────────────────────────── Ocorrências ───────────────────────────
 // GET /api/manutencao — lista (qualquer logado). Filtros: ?status=&sala_id=&tipo_id=&prioridade=
 router.get("/", async (req, res) => {

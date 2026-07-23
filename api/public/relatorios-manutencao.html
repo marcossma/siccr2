@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICCR - Relatórios de Manutenção</title>
+    <link rel="shortcut icon" href="./img/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/dialogs.css">
+    <link rel="stylesheet" href="./adm/css/style.css">
+    <link rel="stylesheet" href="./adm/css/dialogs.css">
+    <link rel="stylesheet" href="./css/ui-kit.css">
+    <script src="./js/vendor/chart.min.js"></script>
+    <script type="module" src="./js/scripts.js"></script>
+    <style>
+        .relatorio-toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+        .relatorio-toolbar input, .relatorio-toolbar button, .relatorio-toolbar label { padding:7px 12px; border-radius:5px; border:1px solid #ccc; font:12px verdana,sans-serif; background:#fff; }
+        .relatorio-toolbar label { border:none; padding:0; color:#555; }
+        .btn-aplicar { background:#007a2e !important; color:#fff !important; border-color:#007a2e !important; cursor:pointer; }
+        .btn-imprimir { background:#555 !important; color:#fff !important; border-color:#555 !important; cursor:pointer; }
+        .mt-tiles { display:flex; gap:12px; flex-wrap:wrap; margin:16px 0; }
+        .mt-tile { flex:1; min-width:130px; background:#fff; border-radius:8px; padding:14px 16px; box-shadow:0 1px 4px rgba(0,0,0,.08); border-left:4px solid #009536; }
+        .mt-tile .n { font-size:26px; font-weight:bold; color:#009536; }
+        .mt-tile .l { font-size:12px; color:#777; }
+        .relatorio-graficos { display:flex; gap:20px; flex-wrap:wrap; margin:1rem 0; width:100%; }
+        .relatorio-grafico-box { flex:1; min-width:300px; background:#fff; border-radius:8px; padding:16px; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+        .relatorio-grafico-box.full { flex-basis:100%; }
+        .relatorio-grafico-box h3 { font-size:13px; color:#555; margin:0 0 12px; text-transform:uppercase; letter-spacing:.5px; }
+        .grafico-wrap { position:relative; height:280px; }
+        .grafico-wrap.alto { height:320px; }
+        @media print {
+            header, footer, .relatorio-toolbar, responsive-menu, #btnEntrar { display:none !important; }
+            body { background:#fff; } .container { box-shadow:none; }
+            .relatorio-grafico-box { break-inside:avoid; }
+        }
+        @media (max-width:600px) { .relatorio-grafico-box { min-width:0; } }
+    </style>
+</head>
+<body>
+    <!-- Formulário de Login DIALOG -->
+    <dialog id="dialogLogin">
+        <fieldset>
+            <legend>Login</legend>
+            <form id="frmLogin">
+                <div class="row"><input type="text" name="txtLogin" id="txtLogin" class="formInput" placeholder="Digite o seu login"></div>
+                <div class="row"><input type="password" name="txtSenha" id="txtSenha" class="formInput" placeholder="Digite a sua senha"></div>
+                <p id="loginErro" class="login-erro" hidden></p>
+                <div class="row">
+                    <button id="btnLogin" type="button">Entrar</button>
+                    <button id="btnCancelarLogin" type="button">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+
+    <div class="container">
+        <header>
+            <a href="/"><img src="./img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo"></a>
+            <div class="acesso"><a href="#" id="btnEntrar" class="">Entrar</a></div>
+        </header>
+        <div><responsive-menu></responsive-menu></div>
+
+        <main class="flex flex--column">
+            <section class="titulo_secao flex justify--space--between align--items--center" style="flex-wrap:wrap;gap:10px">
+                <h1 class="flex align--items--center gap--10"><i class="bi bi-bar-chart-line"></i> Relatórios de Manutenção</h1>
+                <div class="relatorio-toolbar">
+                    <label for="relInicio">De:</label>
+                    <input type="date" id="relInicio">
+                    <label for="relFim">até:</label>
+                    <input type="date" id="relFim">
+                    <button type="button" id="relAplicar" class="btn-aplicar">Aplicar</button>
+                    <button type="button" id="relImprimir" class="btn-imprimir">🖨 Imprimir / PDF</button>
+                </div>
+            </section>
+
+            <div class="mt-tiles" id="relTiles"></div>
+
+            <div class="relatorio-graficos">
+                <div class="relatorio-grafico-box full">
+                    <h3>Ocorrências por mês (abertas × concluídas)</h3>
+                    <div class="grafico-wrap alto"><canvas id="gMes"></canvas></div>
+                </div>
+            </div>
+            <div class="relatorio-graficos">
+                <div class="relatorio-grafico-box"><h3>Por status</h3><div class="grafico-wrap"><canvas id="gStatus"></canvas></div></div>
+                <div class="relatorio-grafico-box"><h3>Por prioridade</h3><div class="grafico-wrap"><canvas id="gPrioridade"></canvas></div></div>
+            </div>
+            <div class="relatorio-graficos">
+                <div class="relatorio-grafico-box"><h3>Por categoria (tipos mais pedidos)</h3><div class="grafico-wrap"><canvas id="gCategoria"></canvas></div></div>
+                <div class="relatorio-grafico-box"><h3>Salas mais requisitadas</h3><div class="grafico-wrap"><canvas id="gSala"></canvas></div></div>
+            </div>
+        </main>
+        <footer>Rodapé</footer>
+    </div>
+
+    <script type="module" src="./js/components/index.js"></script>
+</body>
+</html>

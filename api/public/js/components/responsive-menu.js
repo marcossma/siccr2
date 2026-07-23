@@ -93,6 +93,7 @@ class ResponsiveMenu extends HTMLElement {
                         <ul class="nav-dropdown-menu">
                             <li><a href="/salas">Salas</a></li>
                             <li><a href="/manutencao">Manutenção</a></li>
+                            ${ehDirecao ? `<li><a href="/relatorios-manutencao">Relatórios de manutenção</a></li>` : ""}
                         </ul>
                     </li>` : ""}
                     <li class="nav-dropdown">
