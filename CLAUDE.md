@@ -394,7 +394,7 @@ Impressão/PDF: páginas usam `@media print` p/ esconder menu/toolbar.
 
 ## Pendências
 
-- Relatórios financeiros não têm filtro por ano no frontend (endpoint `?ano=` existe no backend)
+- ~~Relatórios financeiros sem filtro por ano no frontend~~ **JÁ IMPLEMENTADO** (verificado jul/2026): `/relatorios` tem `#filtroAno` (select ano atual → −5 anos + "Todos"), aplicado no `GET /relatorios/resumo?ano=` e no cabeçalho/nome do CSV. Backend filtra por `EXTRACT(YEAR FROM ...)`.
 - 5 vulnerabilidades npm restantes só corrigíveis com `--force` (breaking: bcrypt@6, downgrade sequelize@3) — tooling de build/migration, fora do request path; deixadas conscientemente
 - ~~Aulas alocadas não disparam tempo real~~ **FEITO** (jul/2026): alocar/editar/remover aula (POST/PUT/DELETE horário, lote de ensalamento, excluir turma) emite WS `agenda_atualizada` via `lib/realtime.js`; calendário e portaria refazem o fetch ao vivo. **TV** permanece no polling 60s (kiosk público sem token, não conecta na WS autenticada).
 - ~~Ensalamento em massa: falta tela dedicada~~ **FEITO** (jul/2026): tela `/adm/ensalamento` (manual em lote + sugestão automática por capacidade/dry-run). Ver sub-rotas de `/api/turmas`.
