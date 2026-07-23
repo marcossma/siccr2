@@ -23,7 +23,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "bcrypt": "^5.1.1",
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
@@ -38,6 +38,10 @@
     "sequelize": "^6.37.5",
     "sequelize-cli": "^6.6.2",
     "ws": "^8.18.0"
+  },
+    "overrides_comment": "uuid forçado p/ versão sem a falha de bounds (GHSA-w5hq-g745-h8pq); sequelize pede ^8.3.2 mas usa só v1()/v4() sem buffer (API estável no v11) e apenas em migrations.",
+  "overrides": {
+    "uuid": "^11.1.1"
   },
   "description": "SICCR - Sistema Integrado Centro de Ciências Rurais",
   "devDependencies": {
