@@ -171,11 +171,15 @@ router.get("/disponiveis", async (req, res) => {
         const params = [];
         let filtroPredio = "";
         if (predio_id) { params.push(predio_id); filtroPredio = ` AND s.predio_id = $${params.length}`; }
+        // Auditórios ficam fora do ensalamento — são agendados manualmente pela
+        // direção conforme solicitação prévia (workflow de agendamento avulso).
         const salas = await pool.query(
             `SELECT s.sala_id, s.sala_nome, s.sala_capacidade, s.predio_id, p.predio AS predio_nome
              FROM salas s
              LEFT JOIN predios p ON p.predio_id = s.predio_id
-             WHERE s.is_agendavel = 1${filtroPredio}`,
+             LEFT JOIN salas_tipo st ON st.sala_tipo_id = s.sala_tipo_id
+             WHERE s.is_agendavel = 1
+               AND COALESCE(st.sala_tipo_nome, '') NOT ILIKE 'auditório'${filtroPredio}`,
             params
         );
 

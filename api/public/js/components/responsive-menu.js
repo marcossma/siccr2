@@ -40,6 +40,7 @@ class ResponsiveMenu extends HTMLElement {
                     <li><a href="/calendario-de-salas">Calendário de salas</a></li>
                     ${ehPortaria ? `<li><a href="/agenda-portaria">Agenda da portaria</a></li>` : ""}
                     ${ehDirecao ? `<li><a href="/solicitacoes-de-agendamento">Solicitações de agendamento</a></li>` : ""}
+                    ${ehDirecao ? `<li><a href="/ensalamento">Ensalamento em lote</a></li>` : ""}
                     ${ehDirecao ? `<li><a href="/relatorios-salas">Relatórios de salas</a></li>` : ""}
                     ${ehDirecao ? `<li><a href="/comunicados">Comunicados (e-mail)</a></li>` : ""}
                     ${ehPortaria ? `<li><a href="/painel-tv" target="_blank">Painel TV (hall)</a></li>` : ""}

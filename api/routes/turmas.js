@@ -2,11 +2,27 @@ const express = require("express");
 const pool = require("../config/database.js");
 const logger = require("../lib/logger.js");
 const realtime = require("../lib/realtime.js");
+const { getNivelAcesso } = require("../middlewares/autorizar.js");
 const { expandirRecorrencia, detectarConflitos } = require("../lib/recorrencia.js");
 
 const router = express.Router();
 
 const NOMES_DIAS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+
+// Ensalamento é uma atribuição da direção (super_admin/diretor/vice/is_direcao_centro)
+function ehDirecao(u) {
+    return ["super_admin", "diretor"].includes(getNivelAcesso(u));
+}
+
+// Auditórios ficam fora do ensalamento (agendados manualmente pela direção)
+async function salaEhAuditorio(client, salaId) {
+    const r = await client.query(
+        `SELECT 1 FROM salas s JOIN salas_tipo st ON st.sala_tipo_id = s.sala_tipo_id
+         WHERE s.sala_id = $1 AND st.sala_tipo_nome ILIKE 'auditório' LIMIT 1`,
+        [salaId]
+    );
+    return r.rows.length > 0;
+}
 
 function toDateStr(v) {
     return typeof v === "string" ? v.slice(0, 10) : new Date(v).toISOString().slice(0, 10);
@@ -64,6 +80,9 @@ router.get("/", async (req, res) => {
 //   Filtros: periodo_letivo_id, curso_id, disciplina_id, dia_semana, incluir_pos
 // ───────────────────────────────────────────────────────────────
 router.get("/ensalamento", async (req, res) => {
+    if (!ehDirecao(req.usuario)) {
+        return res.status(403).json({ status: "error", message: "Acesso restrito à direção.", data: null });
+    }
     const { periodo_letivo_id, curso_id, disciplina_id, dia_semana, incluir_pos } = req.query;
     const incluirPos = incluir_pos === "1" || incluir_pos === "true";
     const params = [];
@@ -519,6 +538,9 @@ async function carregarHorarioInfo(client, horarioId) {
 //   Devolve resultado por item.
 // ───────────────────────────────────────────────────────────────
 router.post("/ensalamento/lote", async (req, res) => {
+    if (!ehDirecao(req.usuario)) {
+        return res.status(403).json({ status: "error", message: "Acesso restrito à direção.", data: null });
+    }
     const itens = Array.isArray(req.body?.itens) ? req.body.itens : [];
     if (itens.length === 0) {
         return res.status(400).json({ status: "error", message: "Nenhum item para ensalar.", data: null });
@@ -541,6 +563,11 @@ router.post("/ensalamento/lote", async (req, res) => {
                 if (!info) {
                     await client.query("ROLLBACK");
                     resultados.push({ horario_id: horarioId, ok: false, message: "Horário não encontrado." });
+                    continue;
+                }
+                if (await salaEhAuditorio(client, salaId)) {
+                    await client.query("ROLLBACK");
+                    resultados.push({ horario_id: horarioId, ok: false, message: "Auditórios não entram no ensalamento (agendamento manual)." });
                     continue;
                 }
                 // Re-ensalamento: remove aula antiga (se houver) e aponta a nova sala
@@ -594,6 +621,9 @@ router.post("/ensalamento/lote", async (req, res) => {
 //   devolve a proposta p/ revisão; aplicar via POST /ensalamento/lote.
 // ───────────────────────────────────────────────────────────────
 router.post("/ensalamento/auto", async (req, res) => {
+    if (!ehDirecao(req.usuario)) {
+        return res.status(403).json({ status: "error", message: "Acesso restrito à direção.", data: null });
+    }
     const { periodo_letivo_id, curso_id, disciplina_id, dia_semana, incluir_pos } = req.body || {};
     const respeitarCap = req.body?.respeitar_capacidade !== false;
     const incluirPos = incluir_pos === true || incluir_pos === "1";
@@ -625,8 +655,11 @@ router.post("/ensalamento/auto", async (req, res) => {
 
         const salas = (await pool.query(`
             SELECT s.sala_id, s.sala_nome, s.sala_capacidade, s.predio_id, p.predio AS predio_nome
-            FROM salas s LEFT JOIN predios p ON p.predio_id = s.predio_id
-            WHERE s.is_agendavel = 1`)).rows;
+            FROM salas s
+            LEFT JOIN predios p ON p.predio_id = s.predio_id
+            LEFT JOIN salas_tipo st ON st.sala_tipo_id = s.sala_tipo_id
+            WHERE s.is_agendavel = 1
+              AND COALESCE(st.sala_tipo_nome, '') NOT ILIKE 'auditório'`)).rows;
 
         const tentativas = []; // { sala_id, dia, hi, hf, ini, fim }
         const proposta = [];
