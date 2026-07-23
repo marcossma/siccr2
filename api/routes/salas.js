@@ -49,7 +49,7 @@ router.get("/total-info", async (req, res) => {
                 sa.sala_id, sa.sala_nome, sa.sala_descricao, sa.sala_capacidade,
                 sa.sala_largura, sa.sala_comprimento, sa.sala_altura,
                 sa.predio_id, sa.subunidade_id, sa.is_agendavel, sa.sala_tipo_id,
-                sa.presta_servicos_externos, sa.created_by_user_id,
+                sa.agendamento_manual, sa.presta_servicos_externos, sa.created_by_user_id,
                 p.predio, p.descricao AS predio_descricao, p.unidade_id,
                 s.subunidade_nome, s.subunidade_sigla,
                 st.sala_tipo_nome, cu.nome AS created_by_nome
@@ -171,14 +171,16 @@ router.get("/disponiveis", async (req, res) => {
         const params = [];
         let filtroPredio = "";
         if (predio_id) { params.push(predio_id); filtroPredio = ` AND s.predio_id = $${params.length}`; }
-        // Auditórios ficam fora do ensalamento — são agendados manualmente pela
-        // direção conforme solicitação prévia (workflow de agendamento avulso).
+        // Fora do ensalamento: auditórios (por tipo) e salas marcadas como
+        // "somente agendamento manual" (flag) — agendadas pela direção sob
+        // solicitação prévia (workflow de agendamento avulso).
         const salas = await pool.query(
             `SELECT s.sala_id, s.sala_nome, s.sala_capacidade, s.predio_id, p.predio AS predio_nome
              FROM salas s
              LEFT JOIN predios p ON p.predio_id = s.predio_id
              LEFT JOIN salas_tipo st ON st.sala_tipo_id = s.sala_tipo_id
              WHERE s.is_agendavel = 1
+               AND COALESCE(s.agendamento_manual, 0) = 0
                AND COALESCE(st.sala_tipo_nome, '') NOT ILIKE 'auditório'${filtroPredio}`,
             params
         );
@@ -242,7 +244,7 @@ router.get("/:id/historico", async (req, res) => {
 
 // POST /api/salas — cadastra nova sala (chefe+ ou 'cadastrar_salas')
 router.post("/", podeCriar, async (req, res) => {
-    const { sala_nome, sala_descricao, sala_capacidade, predio_id, subunidade_id, is_agendavel, sala_tipo_id, presta_servicos_externos, sala_largura, sala_comprimento, sala_altura } = req.body;
+    const { sala_nome, sala_descricao, sala_capacidade, predio_id, subunidade_id, is_agendavel, sala_tipo_id, agendamento_manual, presta_servicos_externos, sala_largura, sala_comprimento, sala_altura } = req.body;
 
     if (!sala_nome || !predio_id) {
         return res.status(400).json({
@@ -259,10 +261,10 @@ router.post("/", podeCriar, async (req, res) => {
         }
         await client.query("BEGIN");
         const { rows } = await client.query(
-            `INSERT INTO salas (sala_nome, sala_descricao, sala_capacidade, predio_id, subunidade_id, is_agendavel, sala_tipo_id, presta_servicos_externos, sala_largura, sala_comprimento, sala_altura, created_by_user_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+            `INSERT INTO salas (sala_nome, sala_descricao, sala_capacidade, predio_id, subunidade_id, is_agendavel, sala_tipo_id, agendamento_manual, presta_servicos_externos, sala_largura, sala_comprimento, sala_altura, created_by_user_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
             [sala_nome.trim(), sala_descricao || null, parseCapacidade(sala_capacidade), predio_id,
-             subunidade_id || null, is_agendavel ?? 0, sala_tipo_id || null, parseFlag(presta_servicos_externos),
+             subunidade_id || null, is_agendavel ?? 0, sala_tipo_id || null, parseFlag(agendamento_manual) ?? 0, parseFlag(presta_servicos_externos),
              parseDimensao(sala_largura), parseDimensao(sala_comprimento), parseDimensao(sala_altura), req.usuario.id]
         );
         const sala = rows[0];
@@ -284,7 +286,7 @@ router.post("/", podeCriar, async (req, res) => {
 // PUT /api/salas/:id — atualiza sala (somente super_admin)
 router.put("/:id", soSuperAdmin, async (req, res) => {
     const { id } = req.params;
-    const { sala_nome, sala_descricao, sala_capacidade, predio_id, subunidade_id, is_agendavel, sala_tipo_id, presta_servicos_externos, sala_largura, sala_comprimento, sala_altura } = req.body;
+    const { sala_nome, sala_descricao, sala_capacidade, predio_id, subunidade_id, is_agendavel, sala_tipo_id, agendamento_manual, presta_servicos_externos, sala_largura, sala_comprimento, sala_altura } = req.body;
 
     if (!sala_nome || !predio_id) {
         return res.status(400).json({
@@ -308,11 +310,11 @@ router.put("/:id", soSuperAdmin, async (req, res) => {
         await client.query("BEGIN");
         const { rows } = await client.query(
             `UPDATE salas SET sala_nome=$1, sala_descricao=$2, sala_capacidade=$3, subunidade_id=$4,
-                 predio_id=$5, is_agendavel=$6, sala_tipo_id=$7, presta_servicos_externos=$8,
-                 sala_largura=$9, sala_comprimento=$10, sala_altura=$11
-             WHERE sala_id=$12 RETURNING *`,
+                 predio_id=$5, is_agendavel=$6, sala_tipo_id=$7, agendamento_manual=$8, presta_servicos_externos=$9,
+                 sala_largura=$10, sala_comprimento=$11, sala_altura=$12
+             WHERE sala_id=$13 RETURNING *`,
             [sala_nome.trim(), sala_descricao || null, parseCapacidade(sala_capacidade), subunidade_id || null,
-             predio_id, is_agendavel ?? 0, sala_tipo_id || null, parseFlag(presta_servicos_externos),
+             predio_id, is_agendavel ?? 0, sala_tipo_id || null, parseFlag(agendamento_manual) ?? 0, parseFlag(presta_servicos_externos),
              parseDimensao(sala_largura), parseDimensao(sala_comprimento), parseDimensao(sala_altura), id]
         );
 
@@ -327,6 +329,8 @@ router.put("/:id", soSuperAdmin, async (req, res) => {
         if (String(antes.sala_tipo_id ?? "") !== String(sala_tipo_id ?? "")) mud.push("tipo alterado");
         const agNovo = Number(is_agendavel ?? 0) === 1 ? 1 : 0;
         if ((antes.is_agendavel ? 1 : 0) !== agNovo) mud.push(`agendável: ${antes.is_agendavel ? "sim" : "não"} → ${agNovo ? "sim" : "não"}`);
+        const manNovo = (parseFlag(agendamento_manual) ?? 0) === 1 ? 1 : 0;
+        if ((antes.agendamento_manual ? 1 : 0) !== manNovo) mud.push(`só agendamento manual: ${antes.agendamento_manual ? "sim" : "não"} → ${manNovo ? "sim" : "não"}`);
         const dimMudou = ["sala_largura", "sala_comprimento", "sala_altura"].some((k, i) => Number(antes[k] ?? -1) !== Number([parseDimensao(sala_largura), parseDimensao(sala_comprimento), parseDimensao(sala_altura)][i] ?? -1));
         if (dimMudou) mud.push("dimensões alteradas");
 

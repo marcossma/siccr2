@@ -14,11 +14,15 @@ function ehDirecao(u) {
     return ["super_admin", "diretor"].includes(getNivelAcesso(u));
 }
 
-// Auditórios ficam fora do ensalamento (agendados manualmente pela direção)
-async function salaEhAuditorio(client, salaId) {
+// Sala fora do ensalamento: auditório (por tipo) OU marcada como "somente
+// agendamento manual" (flag) — agendadas pela direção sob solicitação prévia.
+async function salaForaDoEnsalamento(client, salaId) {
     const r = await client.query(
-        `SELECT 1 FROM salas s JOIN salas_tipo st ON st.sala_tipo_id = s.sala_tipo_id
-         WHERE s.sala_id = $1 AND st.sala_tipo_nome ILIKE 'auditório' LIMIT 1`,
+        `SELECT 1 FROM salas s
+         LEFT JOIN salas_tipo st ON st.sala_tipo_id = s.sala_tipo_id
+         WHERE s.sala_id = $1
+           AND (COALESCE(s.agendamento_manual, 0) = 1 OR st.sala_tipo_nome ILIKE 'auditório')
+         LIMIT 1`,
         [salaId]
     );
     return r.rows.length > 0;
@@ -565,9 +569,9 @@ router.post("/ensalamento/lote", async (req, res) => {
                     resultados.push({ horario_id: horarioId, ok: false, message: "Horário não encontrado." });
                     continue;
                 }
-                if (await salaEhAuditorio(client, salaId)) {
+                if (await salaForaDoEnsalamento(client, salaId)) {
                     await client.query("ROLLBACK");
-                    resultados.push({ horario_id: horarioId, ok: false, message: "Auditórios não entram no ensalamento (agendamento manual)." });
+                    resultados.push({ horario_id: horarioId, ok: false, message: "Sala reservada a agendamento manual (auditório/uso sob solicitação) — fora do ensalamento." });
                     continue;
                 }
                 // Re-ensalamento: remove aula antiga (se houver) e aponta a nova sala
@@ -659,6 +663,7 @@ router.post("/ensalamento/auto", async (req, res) => {
             LEFT JOIN predios p ON p.predio_id = s.predio_id
             LEFT JOIN salas_tipo st ON st.sala_tipo_id = s.sala_tipo_id
             WHERE s.is_agendavel = 1
+              AND COALESCE(s.agendamento_manual, 0) = 0
               AND COALESCE(st.sala_tipo_nome, '') NOT ILIKE 'auditório'`)).rows;
 
         const tentativas = []; // { sala_id, dia, hi, hf, ini, fim }

@@ -3918,6 +3918,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 sala_altura: document.querySelector("#slAltura").value || null,
                 sala_descricao: document.querySelector("#slDescricao").value.trim() || null,
                 is_agendavel: (document.querySelector("input[name='slAgendavel']:checked") || {}).value || "0",
+                agendamento_manual: (document.querySelector("input[name='slAgManual']:checked") || {}).value || "0",
                 presta_servicos_externos: ehLab() ? ((document.querySelector("input[name='slServicos']:checked") || {}).value || "0") : "",
             };
         }
@@ -3980,6 +3981,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 document.querySelector("#slAltura").value = s.sala_altura ?? "";
                 document.querySelector("#slDescricao").value = s.sala_descricao || "";
                 document.querySelectorAll("input[name='slAgendavel']").forEach(r => r.checked = r.value === String(s.is_agendavel ? 1 : 0));
+                document.querySelectorAll("input[name='slAgManual']").forEach(r => r.checked = r.value === String(s.agendamento_manual ? 1 : 0));
                 atualizarServicos(String(s.presta_servicos_externos ?? ""));
                 dialog.showModal();
                 return;

@@ -788,6 +788,7 @@ document.addEventListener("DOMContentLoaded", function() {
                              data-sala_comprimento="${s.sala_comprimento ?? ""}"
                              data-sala_altura="${s.sala_altura ?? ""}"
                              data-is_agendavel="${s.is_agendavel ? 1 : 0}"
+                             data-agendamento_manual="${s.agendamento_manual ? 1 : 0}"
                              data-sala_tipo_id="${s.sala_tipo_id || ""}"
                              data-presta_servicos_externos="${s.presta_servicos_externos ?? ""}"`,
                             s.sala_id, "sala"
@@ -970,6 +971,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 // Marcar radio is_agendavel
                 document.querySelectorAll("input[name='is_agendavel']").forEach(radio => {
                     radio.checked = radio.value === d.is_agendavel;
+                });
+                // Marcar radio agendamento_manual (fora do ensalamento)
+                document.querySelectorAll("input[name='agendamento_manual']").forEach(radio => {
+                    radio.checked = radio.value === (d.agendamento_manual || "0");
                 });
                 // Mostra/esconde row de serviços externos e marca o valor armazenado
                 atualizarRowServicosExternos(d.presta_servicos_externos);

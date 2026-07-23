@@ -140,6 +140,19 @@
                     </div>
                 </div>
 
+                <!-- Fora do ensalamento (agendada só sob solicitação): auditórios, NUSI etc. -->
+                <div class="row flex justify--content--center align--items--center gap--10">
+                    <label for="" class="formLabel" title="A sala não entra no ensalamento de aulas; continua agendável via solicitação">Somente agendamento manual: </label>
+                    <div class="flex align--items--center justify--content--center gap--20">
+                        <span>
+                            <input type="radio" name="agendamento_manual" value="0" checked> Não
+                        </span>
+                        <span>
+                            <input type="radio" name="agendamento_manual" value="1"> Sim
+                        </span>
+                    </div>
+                </div>
+
                 <!-- Aparece apenas quando o tipo é Laboratório (controle via JS) -->
                 <div class="row flex justify--content--center align--items--center gap--10" id="rowServicosExternos" style="display:none">
                     <label for="" class="formLabel">Presta serviços externos:</label>

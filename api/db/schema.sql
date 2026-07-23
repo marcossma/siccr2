@@ -1,12 +1,12 @@
 -- Schema dump gerado automaticamente. NÃO editar manualmente.
--- Origem: docker compose db (siccr) — 2026-07-22T11:55:50.760Z
+-- Origem: docker compose db (siccr) — 2026-07-23T11:57:40.974Z
 -- Regenere com: npm run db:dump
 
 --
 -- PostgreSQL database dump
 --
 
-\restrict RsqjEmx4aIXX6B02Zl7IJ6pnRHovxmirNlfk1lRFf2iGjNHydNQf5XczDrxlLQT
+\restrict Yi1L8LB3atBEfCDNF9mysgjNqobZCkUyzjRMyWerMSxKcvMXt7doh1MGadSNpBi
 
 -- Dumped from database version 16.13
 -- Dumped by pg_dump version 16.13
@@ -801,7 +801,8 @@ CREATE TABLE public.salas (
     sala_largura numeric(6,2),
     sala_comprimento numeric(6,2),
     sala_altura numeric(6,2),
-    created_by_user_id integer
+    created_by_user_id integer,
+    agendamento_manual integer DEFAULT 0
 );
 
 
@@ -2227,5 +2228,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict RsqjEmx4aIXX6B02Zl7IJ6pnRHovxmirNlfk1lRFf2iGjNHydNQf5XczDrxlLQT
+\unrestrict Yi1L8LB3atBEfCDNF9mysgjNqobZCkUyzjRMyWerMSxKcvMXt7doh1MGadSNpBi
 
