@@ -2,8 +2,14 @@ const express = require("express");
 const pool = require("../config/database.js");
 const logger = require("../lib/logger.js");
 const { getNivelAcesso, autorizar } = require("../middlewares/autorizar.js");
+const { expandirRecorrencia } = require("../lib/recorrencia.js");
 
 const router = express.Router();
+
+// Converte DATEONLY/timestamp (pg devolve Date) ou string ISO → "YYYY-MM-DD"
+function toDateStr(v) {
+    return typeof v === "string" ? v.slice(0, 10) : new Date(v).toISOString().slice(0, 10);
+}
 
 // RBAC das salas (montado com autorizar("servidor") — qualquer logado LÊ):
 //   criar  → chefe+ ou servidor com a funcionalidade 'cadastrar_salas'
@@ -98,6 +104,104 @@ router.get("/form-opcoes", podeCriar, async (_req, res) => {
     } catch (error) {
         logger.error({ err: error }, "Erro ao carregar opções do form de salas:");
         return res.status(500).json({ status: "error", message: "Erro ao carregar opções.", data: null });
+    }
+});
+
+// ───────────────────────────────────────────────────────────────
+// GET /api/salas/disponiveis — salas agendáveis livres em um slot semanal
+//   Query: dia_semana, hora_inicio, hora_fim, periodo_letivo_id (bounds),
+//          [data_inicio, data_fim] (bloco modular, sobrepõe o período),
+//          [vagas] (para ordenar por melhor encaixe), [predio_id]
+//   Devolve só salas LIVRES no slot, cada uma com sala_capacidade, prédio e
+//   `cabe` (capacidade >= vagas). Ordena: cabe primeiro, menor folga, nome.
+// ───────────────────────────────────────────────────────────────
+router.get("/disponiveis", async (req, res) => {
+    const { dia_semana, hora_inicio, hora_fim, periodo_letivo_id, predio_id } = req.query;
+    const data_inicio = req.query.data_inicio || null;
+    const data_fim = req.query.data_fim || null;
+    const vagas = req.query.vagas ? parseInt(req.query.vagas, 10) : null;
+
+    const dia = parseInt(dia_semana, 10);
+    if (Number.isNaN(dia) || dia < 0 || dia > 6) {
+        return res.status(400).json({ status: "error", message: "Dia da semana inválido.", data: null });
+    }
+    if (!hora_inicio || !hora_fim || hora_inicio >= hora_fim) {
+        return res.status(400).json({ status: "error", message: "Horário inválido.", data: null });
+    }
+
+    try {
+        // Bounds: bloco modular, se vier; senão o período letivo
+        let inicioBound = data_inicio;
+        let fimBound = data_fim;
+        if (!inicioBound || !fimBound) {
+            if (!periodo_letivo_id) {
+                return res.status(400).json({ status: "error", message: "Informe periodo_letivo_id ou data_inicio/data_fim.", data: null });
+            }
+            const pl = await pool.query("SELECT data_inicio, data_fim FROM periodos_letivos WHERE id_periodo = $1", [periodo_letivo_id]);
+            if (pl.rows.length === 0) {
+                return res.status(404).json({ status: "error", message: "Período letivo não encontrado.", data: null });
+            }
+            inicioBound = inicioBound || toDateStr(pl.rows[0].data_inicio);
+            fimBound = fimBound || toDateStr(pl.rows[0].data_fim);
+        }
+
+        const datas = expandirRecorrencia({
+            tipo: "semanal", data_inicio: inicioBound, data_fim_recorrencia: fimBound,
+            dias_semana: String(dia), intervalo_semanas: 1,
+        });
+        if (datas.length === 0) {
+            return res.status(200).json({ status: "success", message: "", data: [] });
+        }
+
+        // Salas ocupadas nesse conjunto de datas com sobreposição de horário
+        const ocupadas = await pool.query(
+            `SELECT DISTINCT a.sala_id
+             FROM agendamentos_ocorrencias ao
+             JOIN agendamentos a ON a.id_agendamento = ao.agendamento_id
+             WHERE ao.status_individual = 'ativa'
+               AND a.status IN ('pendente', 'aprovada')
+               AND a.sala_id IS NOT NULL
+               AND ao.data_ocorrencia = ANY($1::date[])
+               AND (a.dia_inteiro OR (a.hora_inicio < $3 AND a.hora_fim > $2))`,
+            [datas, hora_inicio, hora_fim]
+        );
+        const idsOcupadas = new Set(ocupadas.rows.map((r) => r.sala_id));
+
+        // Salas agendáveis candidatas (opcionalmente de um prédio)
+        const params = [];
+        let filtroPredio = "";
+        if (predio_id) { params.push(predio_id); filtroPredio = ` AND s.predio_id = $${params.length}`; }
+        const salas = await pool.query(
+            `SELECT s.sala_id, s.sala_nome, s.sala_capacidade, s.predio_id, p.predio AS predio_nome
+             FROM salas s
+             LEFT JOIN predios p ON p.predio_id = s.predio_id
+             WHERE s.is_agendavel = 1${filtroPredio}`,
+            params
+        );
+
+        const livres = salas.rows
+            .filter((s) => !idsOcupadas.has(s.sala_id))
+            .map((s) => {
+                const cap = s.sala_capacidade;
+                const cabe = vagas !== null && cap !== null ? cap >= vagas : null;
+                const folga = vagas !== null && cap !== null ? cap - vagas : null;
+                return { ...s, cabe, folga };
+            })
+            .sort((a, b) => {
+                // Cabe (true) antes; sem dado de capacidade no meio; não cabe (false) por último
+                const rank = (x) => (x.cabe === true ? 0 : x.cabe === false ? 2 : 1);
+                if (rank(a) !== rank(b)) return rank(a) - rank(b);
+                if (a.folga !== null && b.folga !== null) {
+                    // Cabe: menor folga (melhor encaixe). Não cabe: maior capacidade (menos negativa) primeiro.
+                    return a.cabe === true ? a.folga - b.folga : b.folga - a.folga;
+                }
+                return String(a.sala_nome).localeCompare(String(b.sala_nome), "pt-BR");
+            });
+
+        return res.status(200).json({ status: "success", message: "", data: livres });
+    } catch (error) {
+        logger.error({ err: error }, "Erro ao listar salas disponíveis:");
+        return res.status(500).json({ status: "error", message: "Erro ao listar salas disponíveis.", data: null });
     }
 });
 

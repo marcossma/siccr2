@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICCR - Ensalamento em lote</title>
+    <link rel="shortcut icon" href="../img/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/dialogs.css">
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/ui-kit.css">
+    <link rel="stylesheet" href="./css/dialogs.css">
+    <script src="./js/guard.js"></script>
+    <script type="module" src="./js/script.js"></script>
+    <style>
+        .ens-toolbar { display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
+        .ens-toolbar .campo { display:flex; flex-direction:column; gap:4px; }
+        .ens-acoes { display:flex; gap:8px; flex-wrap:wrap; margin-left:auto; }
+        .btn-auto { background:#0b7285 !important; color:#fff !important; border-color:#0b7285 !important; cursor:pointer; }
+        .btn-aplicar { background:#007a2e !important; color:#fff !important; border-color:#007a2e !important; cursor:pointer; }
+        .btn-aplicar:disabled { opacity:.5; cursor:not-allowed; }
+        .ens-tabela { width:100%; border-collapse:collapse; font-size:13px; margin-top:8px; }
+        .ens-tabela th, .ens-tabela td { padding:8px 10px; border-bottom:1px solid #eee; text-align:left; vertical-align:middle; }
+        .ens-tabela th { background:#f6f8f7; color:#555; font-size:12px; text-transform:uppercase; letter-spacing:.4px; position:sticky; top:0; z-index:1; }
+        .ens-tabela tr.ok { background:#eafaf0; }
+        .ens-tabela tr.falha { background:#fdecec; }
+        .ens-dia { font-weight:600; color:#007a2e; white-space:nowrap; }
+        .ens-hora { white-space:nowrap; color:#444; }
+        .ens-sala-sel { min-width:210px; padding:5px 8px; }
+        .ens-vagas { text-align:center; font-weight:600; }
+        .badge-fit { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; white-space:nowrap; }
+        .fit-ok { background:#d3f9d8; color:#2b8a3e; }
+        .fit-no { background:#ffe3e3; color:#c92a2a; }
+        .fit-na { background:#e9ecef; color:#868e96; }
+        .ens-msg { font-size:12px; color:#842828; }
+        .ens-resumo { font-size:13px; color:#555; white-space:nowrap; }
+        .ens-vazio { padding:24px; text-align:center; color:#888; }
+        .ens-scroll { max-height:62vh; overflow:auto; border:1px solid #eee; border-radius:8px; }
+        @media (max-width:700px){ .ens-acoes{ margin-left:0; width:100%; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/"><img src="../img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo"></a>
+            <div class="acesso">
+                <span id="adminNome"></span>
+                <a href="#" id="btnSair">Sair</a>
+            </div>
+        </header>
+        <div><responsive-menu></responsive-menu></div>
+
+        <main class="flex flex--column">
+            <section class="titulo_painel flex justify--space--between align--items--center" style="flex-wrap:wrap;gap:10px">
+                <h1 class="flex align--items--center gap--15">
+                    <i class="bi bi-grid-3x3-gap font--size--40"></i>
+                    Ensalamento em lote
+                </h1>
+            </section>
+
+            <div><menu-navegacao-adm></menu-navegacao-adm></div>
+
+            <section class="ens-toolbar" style="margin:6px 0 12px">
+                <div class="campo">
+                    <label class="painelLabel" for="ensPeriodo">Período</label>
+                    <select id="ensPeriodo" class="formInput" style="padding:6px 10px"></select>
+                </div>
+                <div class="campo">
+                    <label class="painelLabel" for="ensCurso">Curso</label>
+                    <select id="ensCurso" class="formInput" style="padding:6px 10px"></select>
+                </div>
+                <div class="campo">
+                    <label class="painelLabel" for="ensDia">Dia</label>
+                    <select id="ensDia" class="formInput" style="padding:6px 10px">
+                        <option value="">Todos</option>
+                        <option value="1">Segunda</option>
+                        <option value="2">Terça</option>
+                        <option value="3">Quarta</option>
+                        <option value="4">Quinta</option>
+                        <option value="5">Sexta</option>
+                        <option value="6">Sábado</option>
+                        <option value="0">Domingo</option>
+                    </select>
+                </div>
+                <label class="painelLabel flex align--items--center gap--5 cursor--pointer" style="white-space:nowrap;padding-bottom:6px">
+                    <input type="checkbox" id="ensIncluirPos"> Incluir pós
+                </label>
+                <button type="button" id="ensCarregar" class="btnPainelFormulario" style="height:36px">Carregar fila</button>
+
+                <div class="ens-acoes">
+                    <label class="painelLabel flex align--items--center gap--5 cursor--pointer" style="white-space:nowrap">
+                        <input type="checkbox" id="ensRespeitarCap" checked> respeitar capacidade
+                    </label>
+                    <button type="button" id="ensAuto" class="btnPainelFormulario btn-auto" style="height:36px">Sugerir automaticamente</button>
+                    <button type="button" id="ensAplicar" class="btnPainelFormulario btn-aplicar" style="height:36px" disabled>Aplicar ensalamento</button>
+                </div>
+            </section>
+
+            <div class="flex align--items--center gap--10" style="margin-bottom:6px">
+                <span id="ensResumo" class="ens-resumo"></span>
+            </div>
+
+            <div class="ens-scroll">
+                <table class="ens-tabela">
+                    <thead>
+                        <tr>
+                            <th>Disciplina</th>
+                            <th>Turma</th>
+                            <th>Curso</th>
+                            <th>Dia</th>
+                            <th>Horário</th>
+                            <th>Vagas</th>
+                            <th>Sala</th>
+                            <th>Encaixe</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ensLista">
+                        <tr><td colspan="9" class="ens-vazio">Escolha os filtros e clique em <b>Carregar fila</b>.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+        <footer>Rodapé</footer>
+    </div>
+
+    <script type="module" src="../js/components/index.js"></script>
+</body>
+</html>

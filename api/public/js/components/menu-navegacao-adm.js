@@ -12,6 +12,7 @@ class MenuNavegacaoAdm extends HTMLElement {
             { href: "/adm/periodos-letivos", icone: "bi-calendar-range", label: "Períodos letivos" },
             { href: "/adm/disciplinas", icone: "bi-journal-bookmark", label: "Disciplinas" },
             { href: "/adm/turmas",      icone: "bi-people-fill",    label: "Turmas" },
+            { href: "/adm/ensalamento", icone: "bi-grid-3x3-gap",   label: "Ensalamento" },
             { href: "/adm/importar-servidores", icone: "bi-file-earmark-arrow-up", label: "Importar servidores" },
             { href: "/adm/importar-subunidades", icone: "bi-diagram-3", label: "Importar subunidades" },
             { href: "/adm/importar-disciplinas", icone: "bi-calendar3", label: "Importar disciplinas" },

@@ -285,6 +285,8 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 
 `/api/turmas` sub-rotas: `GET /` (lista; filtros `?periodo_letivo_id=&curso_id=&disciplina_id=`, pós excluída salvo `?incluir_pos=1`; devolve `horarios_com_sala`/`total_horarios` e `total_professores`), `POST/PUT/DELETE /` (CRUD turma), `GET /:id` (detalhe + horários com tipo/bloco modular + professores de co-docência), `POST /:id/horarios` (aloca + materializa aula; 409 com datas em conflito), `PUT /:id/horarios/:horarioId` (edição in-place — re-materializa preservando tipo/bloco; sala vazia = desaloca), `DELETE /:id/horarios/:horarioId`.
 
+**Ensalamento em lote** (tela `/adm/ensalamento`, super_admin): `POST/PUT /:id/horarios` e o lote compartilham o helper `materializarAula(client, {...})` (expande recorrência + checa conflito + cria `agendamento origem='aula'` + ocorrências; o caller gerencia a transação). Sub-rotas: `GET /ensalamento` (fila de horários **sem sala** — `sala_id IS NULL` — filtros `?periodo_letivo_id=&curso_id=&disciplina_id=&dia_semana=&incluir_pos=`), `POST /ensalamento/lote` (`{itens:[{horario_id,sala_id}]}` — materializa cada item na **sua** transação, sucesso parcial, resultado por item), `POST /ensalamento/auto` (**dry-run** por capacidade — guloso: horários por vagas desc, escolhe a menor sala que comporta e está livre respeitando as escolhas da mesma rodada; `respeitar_capacidade` default true; **não grava**, devolve proposta p/ revisão e aplicação via o lote). `GET /api/salas/disponiveis?dia_semana=&hora_inicio=&hora_fim=&periodo_letivo_id=|data_inicio=&data_fim=&vagas=&predio_id=` (salas agendáveis **livres** no slot, com `cabe`/`folga`, ordenadas por melhor encaixe). ⚠️ Datas do pg vêm como `Date` no server — sempre converter com `toDateStr()` antes de `expandirRecorrencia` (não `String(...).slice`).
+
 `/api/cursos`: `GET /` (lista p/ filtro; pós excluída salvo `?incluir_pos=1`), `PATCH /:id` (ajuste manual do `nivel`).
 
 `/api/aniversariantes`: `GET /?mes=` (mural do mês, logado), `GET /hoje` (aniversariantes de hoje, logado), e — **só direção** — `POST /parabenizar` (envia parabéns por e-mail aos de hoje, agora), `GET/PATCH /config` (liga/desliga o **envio automático diário**). Lógica em `lib/aniversarios.js`; agendador (setInterval) iniciado no `server.js` roda ~08:00 BRT se o automático estiver ligado (guard por data em `configuracoes`). Painel de disparo/toggle no topo de `/aniversariantes` (visível só p/ direção). Tabela **configuracoes** (chave/valor) guarda o flag e o "último envio".
@@ -296,7 +298,7 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 "Direção" = `super_admin`/`diretor`/`vice_diretor`, ou `is_direcao_centro=true`, ou funcionalidade `aprovar_agendamento`/`ver_todos_agendamentos`.
 
 ### Páginas do painel admin (`/adm/*`)
-unidades, subunidades, usuários, prédios, salas, salas-tipo, **periodos-letivos**, **disciplinas**, **turmas**, api-keys. Menu em `js/components/menu-navegacao-adm.js`.
+unidades, subunidades, usuários, prédios, salas, salas-tipo, **periodos-letivos**, **disciplinas**, **turmas**, **ensalamento** (ensalamento em lote), api-keys. Menu em `js/components/menu-navegacao-adm.js`.
 
 ---
 
@@ -394,6 +396,6 @@ Impressão/PDF: páginas usam `@media print` p/ esconder menu/toolbar.
 - Relatórios financeiros não têm filtro por ano no frontend (endpoint `?ano=` existe no backend)
 - 5 vulnerabilidades npm restantes só corrigíveis com `--force` (breaking: bcrypt@6, downgrade sequelize@3) — tooling de build/migration, fora do request path; deixadas conscientemente
 - Aulas alocadas não disparam tempo real (WS) no calendário/portaria/TV — refletem no próximo carregamento (TV faz polling 60s). Real-time só vale p/ solicitações.
-- Ensalamento em massa: hoje atribui-se sala horário a horário (via editar horário na tela de turmas). Falta uma tela dedicada de ensalamento (atribuição em lote das salas aos horários importados).
+- ~~Ensalamento em massa: falta tela dedicada~~ **FEITO** (jul/2026): tela `/adm/ensalamento` (manual em lote + sugestão automática por capacidade/dry-run). Ver sub-rotas de `/api/turmas`.
 - Leitura de código de barras do patrimônio via câmera exige **HTTPS** (contexto seguro); em HTTP na LAN o navegador bloqueia a câmera — hoje o sistema roda em HTTP, então a câmera só funciona quando servido por HTTPS (o cadastro manual funciona sempre).
-- Ensalamento automático (matrícula × `sala_capacidade`) ainda não implementado.
+- Ensalamento automático usa **vagas da turma × `sala_capacidade`** (proxy) — a matrícula real (nº de alunos matriculados) ainda não é rastreada no sistema; quando existir, o guloso pode passar a usá-la.
