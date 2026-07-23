@@ -105,6 +105,10 @@ document.addEventListener("DOMContentLoaded", function() {
                     mostrarToastWS(`Sua solicitação foi ${decisao}`);
                     window.dispatchEvent(new CustomEvent("siccr:agendamento_decidido", { detail: msg }));
                 }
+                // Aulas alocadas/editadas/removidas (ensalamento) — sem toast, só refetch
+                if (msg.tipo === "agenda_atualizada") {
+                    window.dispatchEvent(new CustomEvent("siccr:agenda_atualizada", { detail: msg }));
+                }
             } catch {
                 // payload WS inválido — ignora silenciosamente
             }
@@ -2762,9 +2766,11 @@ document.addEventListener("DOMContentLoaded", function() {
         btnFecharEventoCal.addEventListener("click", () => dialogEvento.close());
 
         // Tempo real: recarrega eventos quando alguém cria/decide um agendamento
+        // ou quando aulas são (des)alocadas pelo ensalamento
         const refetchCalendario = () => calendario.refetchEvents();
         window.addEventListener("siccr:agendamento_pendente", refetchCalendario);
         window.addEventListener("siccr:agendamento_decidido", refetchCalendario);
+        window.addEventListener("siccr:agenda_atualizada", refetchCalendario);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -2925,8 +2931,10 @@ document.addEventListener("DOMContentLoaded", function() {
         btnImprimir.addEventListener("click", () => window.print());
 
         // Tempo real: recarrega a agenda quando algum agendamento muda
+        // ou quando aulas são (des)alocadas pelo ensalamento
         window.addEventListener("siccr:agendamento_pendente", carregar);
         window.addEventListener("siccr:agendamento_decidido", carregar);
+        window.addEventListener("siccr:agenda_atualizada", carregar);
 
         carregar();
     }

@@ -313,8 +313,9 @@ unidades, subunidades, usuários, prédios, salas, salas-tipo, **periodos-letivo
 
 ### Tempo real (WebSocket)
 - `scripts.js` abre 1 WS no boot, autentica via `{tipo:"auth", token}`.
-- Mensagens recebidas viram **CustomEvent** no `window`: `siccr:agendamento_pendente`, `siccr:agendamento_decidido` (e toasts de pedido almox).
+- Mensagens recebidas viram **CustomEvent** no `window`: `siccr:agendamento_pendente`, `siccr:agendamento_decidido`, `siccr:agenda_atualizada` (aulas do ensalamento) — e toasts de pedido almox.
 - Páginas escutam esses eventos p/ atualizar listas/calendário em tempo real (`/solicitacoes-de-agendamento`, `/calendario-de-salas`, `/agenda-portaria`).
+- **Broadcast no backend:** `agendamentos.js`/`pedidos-almoxarifado.js` recebem `wss` por factory; as demais rotas (ex.: `turmas.js`) usam o singleton `lib/realtime.js` (`setWss(wss)` no boot + `broadcast(tipo, payload, predicado)`). `agenda_atualizada` é emitido ao alocar/editar/remover aula, no lote de ensalamento e ao excluir turma.
 
 ### Web Components (Light DOM)
 - `<responsive-menu>` — menu do header com hamburger e dropdowns
@@ -395,7 +396,7 @@ Impressão/PDF: páginas usam `@media print` p/ esconder menu/toolbar.
 
 - Relatórios financeiros não têm filtro por ano no frontend (endpoint `?ano=` existe no backend)
 - 5 vulnerabilidades npm restantes só corrigíveis com `--force` (breaking: bcrypt@6, downgrade sequelize@3) — tooling de build/migration, fora do request path; deixadas conscientemente
-- Aulas alocadas não disparam tempo real (WS) no calendário/portaria/TV — refletem no próximo carregamento (TV faz polling 60s). Real-time só vale p/ solicitações.
+- ~~Aulas alocadas não disparam tempo real~~ **FEITO** (jul/2026): alocar/editar/remover aula (POST/PUT/DELETE horário, lote de ensalamento, excluir turma) emite WS `agenda_atualizada` via `lib/realtime.js`; calendário e portaria refazem o fetch ao vivo. **TV** permanece no polling 60s (kiosk público sem token, não conecta na WS autenticada).
 - ~~Ensalamento em massa: falta tela dedicada~~ **FEITO** (jul/2026): tela `/adm/ensalamento` (manual em lote + sugestão automática por capacidade/dry-run). Ver sub-rotas de `/api/turmas`.
 - Leitura de código de barras do patrimônio via câmera exige **HTTPS** (contexto seguro); em HTTP na LAN o navegador bloqueia a câmera — hoje o sistema roda em HTTP, então a câmera só funciona quando servido por HTTPS (o cadastro manual funciona sempre).
 - Ensalamento automático usa **vagas da turma × `sala_capacidade`** (proxy) — a matrícula real (nº de alunos matriculados) ainda não é rastreada no sistema; quando existir, o guloso pode passar a usá-la.

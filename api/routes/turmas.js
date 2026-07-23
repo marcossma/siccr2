@@ -1,6 +1,7 @@
 const express = require("express");
 const pool = require("../config/database.js");
 const logger = require("../lib/logger.js");
+const realtime = require("../lib/realtime.js");
 const { expandirRecorrencia, detectarConflitos } = require("../lib/recorrencia.js");
 
 const router = express.Router();
@@ -198,6 +199,7 @@ router.delete("/:id", async (req, res) => {
     try {
         const { rowCount } = await pool.query("DELETE FROM turmas WHERE id_turma = $1", [id]);
         if (rowCount === 0) return res.status(404).json({ status: "error", message: "Turma não encontrada.", data: null });
+        realtime.broadcast("agenda_atualizada", { motivo: "turma_excluida" });
         return res.status(200).json({ status: "success", message: "Turma excluída.", data: null });
     } catch (error) {
         logger.error({ err: error }, "Erro ao excluir turma:");
@@ -356,6 +358,7 @@ router.post("/:id/horarios", async (req, res) => {
         }
 
         await client.query("COMMIT");
+        realtime.broadcast("agenda_atualizada", { motivo: "aula_alocada", sala_id });
         return res.status(201).json({
             status: "success",
             message: `Horário alocado (${resultado.total} aulas em ${NOMES_DIAS[dia]}).`,
@@ -429,6 +432,7 @@ router.put("/:id/horarios/:horarioId", async (req, res) => {
         // Sem sala: só desaloca (horário permanece na grade, aguardando ensalamento)
         if (!sala_id) {
             await client.query("COMMIT");
+            realtime.broadcast("agenda_atualizada", { motivo: "aula_desalocada" });
             return res.status(200).json({ status: "success", message: "Horário atualizado (sem sala).", data: null });
         }
 
@@ -459,6 +463,7 @@ router.put("/:id/horarios/:horarioId", async (req, res) => {
         }
 
         await client.query("COMMIT");
+        realtime.broadcast("agenda_atualizada", { motivo: "aula_realocada", sala_id });
         return res.status(200).json({
             status: "success",
             message: `Horário atualizado (${resultado.total} aulas em ${NOMES_DIAS[dia]}).`,
@@ -482,6 +487,7 @@ router.delete("/:id/horarios/:horarioId", async (req, res) => {
     try {
         const { rowCount } = await pool.query("DELETE FROM turmas_horarios WHERE id_horario = $1", [horarioId]);
         if (rowCount === 0) return res.status(404).json({ status: "error", message: "Horário não encontrado.", data: null });
+        realtime.broadcast("agenda_atualizada", { motivo: "horario_removido" });
         return res.status(200).json({ status: "success", message: "Horário removido.", data: null });
     } catch (error) {
         logger.error({ err: error }, "Erro ao remover horário:");
@@ -568,6 +574,7 @@ router.post("/ensalamento/lote", async (req, res) => {
                 resultados.push({ horario_id: horarioId, ok: false, message: "Erro interno ao alocar." });
             }
         }
+        if (alocados > 0) realtime.broadcast("agenda_atualizada", { motivo: "ensalamento_lote", alocados });
         return res.status(200).json({
             status: "success",
             message: `${alocados} de ${itens.length} horário(s) alocado(s).`,

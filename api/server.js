@@ -120,6 +120,10 @@ app.use(helmet({
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
+// Disponibiliza o wss ao broadcaster compartilhado (lib/realtime.js),
+// usado por rotas que não recebem wss por factory (ex.: turmas/ensalamento).
+require("./lib/realtime.js").setWss(wss);
+
 // Autenticação WebSocket via token enviado na primeira mensagem
 wss.on("connection", (ws) => {
     ws.autenticado = false;
