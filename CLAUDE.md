@@ -345,6 +345,7 @@ Cor primária: `#009536` (verde CCR). Fonte padrão: `verdana, sans-serif`.
 - Sempre `type="button"` nos botões dentro de `<form>` para evitar submit acidental
 - Modo cadastro: mostra `btnCadastrar`, esconde `btnAtualizar`
 - Modo edição: dados preenchidos via `dataset` do ícone `.editar`
+- **Enter aciona a confirmação:** como os botões são `type="button"`, há um handler global (topo do `DOMContentLoaded` em `scripts.js` **e** `adm/js/script.js`) que, ao teclar Enter num `input`/`select` (não `textarea`/contenteditable), clica o botão visível cujo texto começa com verbo de confirmação (`Entrar`/`Cadastrar`/`Atualizar`/`Registrar`/`Salvar`/`Enviar`/…). Pula forms com submit nativo (ex.: `/adm/login`, que usa `type="submit"` + `login.js`).
 
 ### Datas
 - **Banco:** armazena formato completo (`DATEONLY` ou `TIMESTAMP`)
