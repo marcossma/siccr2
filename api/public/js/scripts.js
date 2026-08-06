@@ -29,6 +29,31 @@ document.addEventListener("DOMContentLoaded", function() {
     const apiUrl = `${window.location.origin}/api`;
     const urlParam = window.location.pathname;
 
+    // ── Enter aciona o botão de confirmação do formulário ──────────────────
+    // Os botões do projeto são type="button" (evita submit acidental), então
+    // Enter não dispararia nada. Aqui, ao teclar Enter num campo, clicamos o
+    // botão cujo texto começa com um verbo de confirmação. Não interfere em
+    // textarea/contenteditable, nem em forms com submit nativo.
+    const RE_CONFIRMAR = /^[\s+*·•-]*(entrar|cadastrar|atualizar|salvar|registrar|enviar|adicionar|confirmar|aplicar|gerar|alocar|criar|gravar|parabenizar|mover)/i;
+    document.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter" || e.isComposing || e.shiftKey) return;
+        const el = e.target;
+        if (!el || el.isContentEditable) return;
+        const tag = el.tagName;
+        if (tag !== "INPUT" && tag !== "SELECT") return;
+        if (tag === "INPUT" && /^(button|submit|reset|checkbox|radio|file)$/i.test(el.type || "")) return;
+        const form = el.closest("form");
+        // Form com submit nativo: deixa o navegador cuidar (não duplica)
+        if (form && form.querySelector('button[type="submit"], input[type="submit"]')) return;
+        const container = form || el.closest("dialog") || el.closest("fieldset");
+        if (!container) return;
+        const botoes = [...container.querySelectorAll("button")].filter(b => !b.disabled && b.offsetParent !== null);
+        const alvo = botoes.find(b => RE_CONFIRMAR.test((b.textContent || "").trim()));
+        if (!alvo) return;
+        e.preventDefault();
+        alvo.click();
+    });
+
     function verificaLogin() {
         const acesso = document.querySelector(".acesso");
         if (!localStorage.getItem("siccr_token")) return;

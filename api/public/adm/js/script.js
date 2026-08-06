@@ -29,6 +29,28 @@ document.addEventListener("DOMContentLoaded", function() {
     const apiUrl = `${window.location.origin}/api`;
     const urlParam = window.location.pathname;
 
+    // ── Enter aciona o botão de confirmação do formulário ──────────────────
+    // Botões do painel são type="button"; aqui Enter num campo clica o botão
+    // cujo texto começa com um verbo de confirmação (Cadastrar/Atualizar/…).
+    const RE_CONFIRMAR = /^[\s+*·•-]*(entrar|cadastrar|atualizar|salvar|registrar|enviar|adicionar|confirmar|aplicar|gerar|alocar|criar|gravar|parabenizar|mover)/i;
+    document.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter" || e.isComposing || e.shiftKey) return;
+        const el = e.target;
+        if (!el || el.isContentEditable) return;
+        const tag = el.tagName;
+        if (tag !== "INPUT" && tag !== "SELECT") return;
+        if (tag === "INPUT" && /^(button|submit|reset|checkbox|radio|file)$/i.test(el.type || "")) return;
+        const form = el.closest("form");
+        if (form && form.querySelector('button[type="submit"], input[type="submit"]')) return;
+        const container = form || el.closest("dialog") || el.closest("fieldset");
+        if (!container) return;
+        const botoes = [...container.querySelectorAll("button")].filter(b => !b.disabled && b.offsetParent !== null);
+        const alvo = botoes.find(b => RE_CONFIRMAR.test((b.textContent || "").trim()));
+        if (!alvo) return;
+        e.preventDefault();
+        alvo.click();
+    });
+
     // Exibir usuário logado no cabeçalho
     const siccr = JSON.parse(localStorage.getItem("siccr") || "null");
     const acesso = document.querySelector(".acesso");
