@@ -1,12 +1,12 @@
 -- Schema dump gerado automaticamente. NÃO editar manualmente.
--- Origem: docker compose db (siccr) — 2026-07-23T11:57:40.974Z
+-- Origem: docker compose db (siccr) — 2026-08-26T13:42:24.868Z
 -- Regenere com: npm run db:dump
 
 --
 -- PostgreSQL database dump
 --
 
-\restrict Yi1L8LB3atBEfCDNF9mysgjNqobZCkUyzjRMyWerMSxKcvMXt7doh1MGadSNpBi
+\restrict rxCNTofhrH8iRjhpjC0F3UzB5D2Ye0WyNPrQSKAP0ZZtM21g4dKTUvI5Y2MsIgk
 
 -- Dumped from database version 16.13
 -- Dumped by pg_dump version 16.13
@@ -148,6 +148,50 @@ CREATE SEQUENCE public.agendamentos_ocorrencias_id_ocorrencia_seq
 --
 
 ALTER SEQUENCE public.agendamentos_ocorrencias_id_ocorrencia_seq OWNED BY public.agendamentos_ocorrencias.id_ocorrencia;
+
+
+--
+-- Name: almoxarifado_requisicoes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.almoxarifado_requisicoes (
+    id_requisicao integer NOT NULL,
+    ano integer NOT NULL,
+    data_lancamento date,
+    num_requisicao character varying(30),
+    tipo_movimento character varying(60),
+    subunidade_id integer,
+    subunidade_texto character varying(255),
+    solicitante character varying(255),
+    usuario_sie character varying(255),
+    valor_total numeric(14,2),
+    local_entrega character varying(255),
+    situacao character varying(120),
+    observacao text,
+    tramitacao character varying(120),
+    origem_aba character varying(80) NOT NULL,
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: almoxarifado_requisicoes_id_requisicao_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.almoxarifado_requisicoes_id_requisicao_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: almoxarifado_requisicoes_id_requisicao_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.almoxarifado_requisicoes_id_requisicao_seq OWNED BY public.almoxarifado_requisicoes.id_requisicao;
 
 
 --
@@ -374,6 +418,55 @@ ALTER SEQUENCE public.disciplinas_id_disciplina_seq OWNED BY public.disciplinas.
 
 
 --
+-- Name: empenhos; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.empenhos (
+    id_empenho integer NOT NULL,
+    ano integer NOT NULL,
+    data_cadastro date,
+    num_sie character varying(30),
+    num_siafi character varying(30),
+    especie character varying(30),
+    cod_natureza character varying(20),
+    tipo_despesa character varying(120),
+    estimativo boolean DEFAULT false NOT NULL,
+    fornecedor character varying(255),
+    subunidade_pagadora_id integer,
+    subunidade_pagadora_texto character varying(255),
+    subunidade_entrega_id integer,
+    subunidade_entrega_texto character varying(255),
+    resumo text,
+    valor_empenhado numeric(14,2),
+    valor_liquidado numeric(14,2),
+    processo character varying(255),
+    observacao text,
+    origem_aba character varying(80) NOT NULL,
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: empenhos_id_empenho_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.empenhos_id_empenho_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: empenhos_id_empenho_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.empenhos_id_empenho_seq OWNED BY public.empenhos.id_empenho;
+
+
+--
 -- Name: funcionalidades; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -407,6 +500,42 @@ ALTER SEQUENCE public.funcionalidades_id_seq OWNED BY public.funcionalidades.id;
 
 
 --
+-- Name: importacoes_financeiro; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.importacoes_financeiro (
+    id_importacao integer NOT NULL,
+    origem_aba character varying(80) NOT NULL,
+    tipo character varying(30) NOT NULL,
+    ano integer,
+    linhas_gravadas integer DEFAULT 0 NOT NULL,
+    linhas_ignoradas integer DEFAULT 0 NOT NULL,
+    user_id integer,
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: importacoes_financeiro_id_importacao_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.importacoes_financeiro_id_importacao_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: importacoes_financeiro_id_importacao_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.importacoes_financeiro_id_importacao_seq OWNED BY public.importacoes_financeiro.id_importacao;
+
+
+--
 -- Name: itens_pedido_almoxarifado; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -437,6 +566,53 @@ CREATE SEQUENCE public.itens_pedido_almoxarifado_id_item_seq
 --
 
 ALTER SEQUENCE public.itens_pedido_almoxarifado_id_item_seq OWNED BY public.itens_pedido_almoxarifado.id_item;
+
+
+--
+-- Name: licitacoes_itens; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.licitacoes_itens (
+    id_item integer NOT NULL,
+    ano integer NOT NULL,
+    data date,
+    tipo character varying(120),
+    subunidade_id integer,
+    subunidade_texto character varying(255),
+    interessado character varying(255),
+    elaborador_etp character varying(255),
+    usuario_sie character varying(255),
+    cod_reduzido character varying(40),
+    descricao text,
+    unidades numeric(12,3),
+    valor_unitario numeric(14,2),
+    valor_total numeric(14,2),
+    dfd character varying(40),
+    etp character varying(40),
+    solicitacao_sie character varying(40),
+    origem_aba character varying(80) NOT NULL,
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: licitacoes_itens_id_item_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.licitacoes_itens_id_item_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: licitacoes_itens_id_item_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.licitacoes_itens_id_item_seq OWNED BY public.licitacoes_itens.id_item;
 
 
 --
@@ -509,6 +685,77 @@ CREATE SEQUENCE public.manutencoes_id_manutencao_seq
 --
 
 ALTER SEQUENCE public.manutencoes_id_manutencao_seq OWNED BY public.manutencoes.id_manutencao;
+
+
+--
+-- Name: naturezas_despesa; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.naturezas_despesa (
+    id_natureza integer NOT NULL,
+    codigo character varying(20) NOT NULL,
+    nome character varying(120) NOT NULL,
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: naturezas_despesa_id_natureza_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.naturezas_despesa_id_natureza_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: naturezas_despesa_id_natureza_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.naturezas_despesa_id_natureza_seq OWNED BY public.naturezas_despesa.id_natureza;
+
+
+--
+-- Name: orcamento_dotacoes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.orcamento_dotacoes (
+    id_dotacao integer NOT NULL,
+    ano integer NOT NULL,
+    categoria character varying(10) DEFAULT 'custeio'::character varying NOT NULL,
+    grupo character varying(255),
+    programa character varying(255) NOT NULL,
+    percentual numeric(8,4),
+    valor numeric(14,2),
+    subunidade_id integer,
+    subunidade_texto character varying(255),
+    origem_aba character varying(80) NOT NULL,
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: orcamento_dotacoes_id_dotacao_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.orcamento_dotacoes_id_dotacao_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: orcamento_dotacoes_id_dotacao_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.orcamento_dotacoes_id_dotacao_seq OWNED BY public.orcamento_dotacoes.id_dotacao;
 
 
 --
@@ -892,6 +1139,52 @@ ALTER SEQUENCE public.salas_tipo_sala_tipo_id_seq OWNED BY public.salas_tipo.sal
 
 
 --
+-- Name: scdp_viagens; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.scdp_viagens (
+    id_viagem integer NOT NULL,
+    ano integer NOT NULL,
+    data_cadastro date,
+    pcdp character varying(30),
+    solicitante character varying(255),
+    grupo_tipo character varying(120),
+    cpf character varying(20),
+    proposto character varying(255),
+    subunidade_id integer,
+    subunidade_texto character varying(255),
+    fonte_recurso character varying(120),
+    num_diarias numeric(8,2),
+    valor_diarias numeric(14,2),
+    valor_passagens_aereas numeric(14,2),
+    valor_passagens_rodoviarias numeric(14,2),
+    periodo_viagem character varying(120),
+    origem_aba character varying(80) NOT NULL,
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: scdp_viagens_id_viagem_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.scdp_viagens_id_viagem_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: scdp_viagens_id_viagem_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.scdp_viagens_id_viagem_seq OWNED BY public.scdp_viagens.id_viagem;
+
+
+--
 -- Name: subunidades; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -909,6 +1202,38 @@ CREATE TABLE public.subunidades (
     chefe integer,
     is_direcao_centro boolean DEFAULT false NOT NULL
 );
+
+
+--
+-- Name: subunidades_apelidos; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.subunidades_apelidos (
+    id_apelido integer NOT NULL,
+    apelido character varying(255) NOT NULL,
+    subunidade_id integer NOT NULL,
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: subunidades_apelidos_id_apelido_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.subunidades_apelidos_id_apelido_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: subunidades_apelidos_id_apelido_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.subunidades_apelidos_id_apelido_seq OWNED BY public.subunidades_apelidos.id_apelido;
 
 
 --
@@ -991,6 +1316,50 @@ CREATE SEQUENCE public.tipos_recursos_id_tipo_recurso_seq
 --
 
 ALTER SEQUENCE public.tipos_recursos_id_tipo_recurso_seq OWNED BY public.tipos_recursos.id_tipo_recurso;
+
+
+--
+-- Name: transferencias_recurso; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.transferencias_recurso (
+    id_transferencia integer NOT NULL,
+    ano integer NOT NULL,
+    data date,
+    num_transferencia character varying(30),
+    subunidade_id integer,
+    subunidade_texto character varying(255),
+    solicitante character varying(255),
+    usuario_sie character varying(255),
+    gestora_destino character varying(255),
+    cod_natureza character varying(20),
+    tipo_despesa character varying(120),
+    valor numeric(14,2),
+    contado_em_outra_guia boolean,
+    observacao text,
+    origem_aba character varying(80) NOT NULL,
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: transferencias_recurso_id_transferencia_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.transferencias_recurso_id_transferencia_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: transferencias_recurso_id_transferencia_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.transferencias_recurso_id_transferencia_seq OWNED BY public.transferencias_recurso.id_transferencia;
 
 
 --
@@ -1196,6 +1565,13 @@ ALTER TABLE ONLY public.agendamentos_ocorrencias ALTER COLUMN id_ocorrencia SET 
 
 
 --
+-- Name: almoxarifado_requisicoes id_requisicao; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.almoxarifado_requisicoes ALTER COLUMN id_requisicao SET DEFAULT nextval('public.almoxarifado_requisicoes_id_requisicao_seq'::regclass);
+
+
+--
 -- Name: api_keys id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1238,6 +1614,13 @@ ALTER TABLE ONLY public.disciplinas ALTER COLUMN id_disciplina SET DEFAULT nextv
 
 
 --
+-- Name: empenhos id_empenho; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.empenhos ALTER COLUMN id_empenho SET DEFAULT nextval('public.empenhos_id_empenho_seq'::regclass);
+
+
+--
 -- Name: funcionalidades id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1245,10 +1628,24 @@ ALTER TABLE ONLY public.funcionalidades ALTER COLUMN id SET DEFAULT nextval('pub
 
 
 --
+-- Name: importacoes_financeiro id_importacao; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.importacoes_financeiro ALTER COLUMN id_importacao SET DEFAULT nextval('public.importacoes_financeiro_id_importacao_seq'::regclass);
+
+
+--
 -- Name: itens_pedido_almoxarifado id_item; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.itens_pedido_almoxarifado ALTER COLUMN id_item SET DEFAULT nextval('public.itens_pedido_almoxarifado_id_item_seq'::regclass);
+
+
+--
+-- Name: licitacoes_itens id_item; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.licitacoes_itens ALTER COLUMN id_item SET DEFAULT nextval('public.licitacoes_itens_id_item_seq'::regclass);
 
 
 --
@@ -1263,6 +1660,20 @@ ALTER TABLE ONLY public.manutencao_tipos ALTER COLUMN id_tipo SET DEFAULT nextva
 --
 
 ALTER TABLE ONLY public.manutencoes ALTER COLUMN id_manutencao SET DEFAULT nextval('public.manutencoes_id_manutencao_seq'::regclass);
+
+
+--
+-- Name: naturezas_despesa id_natureza; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.naturezas_despesa ALTER COLUMN id_natureza SET DEFAULT nextval('public.naturezas_despesa_id_natureza_seq'::regclass);
+
+
+--
+-- Name: orcamento_dotacoes id_dotacao; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orcamento_dotacoes ALTER COLUMN id_dotacao SET DEFAULT nextval('public.orcamento_dotacoes_id_dotacao_seq'::regclass);
 
 
 --
@@ -1343,10 +1754,24 @@ ALTER TABLE ONLY public.salas_tipo ALTER COLUMN sala_tipo_id SET DEFAULT nextval
 
 
 --
+-- Name: scdp_viagens id_viagem; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.scdp_viagens ALTER COLUMN id_viagem SET DEFAULT nextval('public.scdp_viagens_id_viagem_seq'::regclass);
+
+
+--
 -- Name: subunidades subunidade_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.subunidades ALTER COLUMN subunidade_id SET DEFAULT nextval('public.subunidades_subunidade_id_seq'::regclass);
+
+
+--
+-- Name: subunidades_apelidos id_apelido; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subunidades_apelidos ALTER COLUMN id_apelido SET DEFAULT nextval('public.subunidades_apelidos_id_apelido_seq'::regclass);
 
 
 --
@@ -1361,6 +1786,13 @@ ALTER TABLE ONLY public.tipos_despesas ALTER COLUMN id_tipo_despesa SET DEFAULT 
 --
 
 ALTER TABLE ONLY public.tipos_recursos ALTER COLUMN id_tipo_recurso SET DEFAULT nextval('public.tipos_recursos_id_tipo_recurso_seq'::regclass);
+
+
+--
+-- Name: transferencias_recurso id_transferencia; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.transferencias_recurso ALTER COLUMN id_transferencia SET DEFAULT nextval('public.transferencias_recurso_id_transferencia_seq'::regclass);
 
 
 --
@@ -1428,6 +1860,14 @@ ALTER TABLE ONLY public.agendamentos_ocorrencias
 
 ALTER TABLE ONLY public.agendamentos
     ADD CONSTRAINT agendamentos_pkey PRIMARY KEY (id_agendamento);
+
+
+--
+-- Name: almoxarifado_requisicoes almoxarifado_requisicoes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.almoxarifado_requisicoes
+    ADD CONSTRAINT almoxarifado_requisicoes_pkey PRIMARY KEY (id_requisicao);
 
 
 --
@@ -1511,6 +1951,14 @@ ALTER TABLE ONLY public.disciplinas
 
 
 --
+-- Name: empenhos empenhos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.empenhos
+    ADD CONSTRAINT empenhos_pkey PRIMARY KEY (id_empenho);
+
+
+--
 -- Name: funcionalidades funcionalidades_nome_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1527,11 +1975,27 @@ ALTER TABLE ONLY public.funcionalidades
 
 
 --
+-- Name: importacoes_financeiro importacoes_financeiro_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.importacoes_financeiro
+    ADD CONSTRAINT importacoes_financeiro_pkey PRIMARY KEY (id_importacao);
+
+
+--
 -- Name: itens_pedido_almoxarifado itens_pedido_almoxarifado_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.itens_pedido_almoxarifado
     ADD CONSTRAINT itens_pedido_almoxarifado_pkey PRIMARY KEY (id_item);
+
+
+--
+-- Name: licitacoes_itens licitacoes_itens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.licitacoes_itens
+    ADD CONSTRAINT licitacoes_itens_pkey PRIMARY KEY (id_item);
 
 
 --
@@ -1548,6 +2012,30 @@ ALTER TABLE ONLY public.manutencao_tipos
 
 ALTER TABLE ONLY public.manutencoes
     ADD CONSTRAINT manutencoes_pkey PRIMARY KEY (id_manutencao);
+
+
+--
+-- Name: naturezas_despesa naturezas_despesa_codigo_nome_unico; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.naturezas_despesa
+    ADD CONSTRAINT naturezas_despesa_codigo_nome_unico UNIQUE (codigo, nome);
+
+
+--
+-- Name: naturezas_despesa naturezas_despesa_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.naturezas_despesa
+    ADD CONSTRAINT naturezas_despesa_pkey PRIMARY KEY (id_natureza);
+
+
+--
+-- Name: orcamento_dotacoes orcamento_dotacoes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orcamento_dotacoes
+    ADD CONSTRAINT orcamento_dotacoes_pkey PRIMARY KEY (id_dotacao);
 
 
 --
@@ -1655,6 +2143,30 @@ ALTER TABLE ONLY public.salas_tipo
 
 
 --
+-- Name: scdp_viagens scdp_viagens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.scdp_viagens
+    ADD CONSTRAINT scdp_viagens_pkey PRIMARY KEY (id_viagem);
+
+
+--
+-- Name: subunidades_apelidos subunidades_apelidos_apelido_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subunidades_apelidos
+    ADD CONSTRAINT subunidades_apelidos_apelido_key UNIQUE (apelido);
+
+
+--
+-- Name: subunidades_apelidos subunidades_apelidos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subunidades_apelidos
+    ADD CONSTRAINT subunidades_apelidos_pkey PRIMARY KEY (id_apelido);
+
+
+--
 -- Name: subunidades subunidades_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1676,6 +2188,14 @@ ALTER TABLE ONLY public.tipos_despesas
 
 ALTER TABLE ONLY public.tipos_recursos
     ADD CONSTRAINT tipos_recursos_pkey PRIMARY KEY (id_tipo_recurso);
+
+
+--
+-- Name: transferencias_recurso transferencias_recurso_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.transferencias_recurso
+    ADD CONSTRAINT transferencias_recurso_pkey PRIMARY KEY (id_transferencia);
 
 
 --
@@ -1791,6 +2311,27 @@ CREATE INDEX agendamentos_turma_horario_id ON public.agendamentos USING btree (t
 
 
 --
+-- Name: almoxarifado_requisicoes_ano; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX almoxarifado_requisicoes_ano ON public.almoxarifado_requisicoes USING btree (ano);
+
+
+--
+-- Name: almoxarifado_requisicoes_origem_aba; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX almoxarifado_requisicoes_origem_aba ON public.almoxarifado_requisicoes USING btree (origem_aba);
+
+
+--
+-- Name: almoxarifado_requisicoes_subunidade_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX almoxarifado_requisicoes_subunidade_id ON public.almoxarifado_requisicoes USING btree (subunidade_id);
+
+
+--
 -- Name: bens_permanentes_sala_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1802,6 +2343,76 @@ CREATE INDEX bens_permanentes_sala_id ON public.bens_permanentes USING btree (sa
 --
 
 CREATE INDEX disciplinas_subunidade_id ON public.disciplinas USING btree (subunidade_id);
+
+
+--
+-- Name: empenhos_ano; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX empenhos_ano ON public.empenhos USING btree (ano);
+
+
+--
+-- Name: empenhos_num_sie; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX empenhos_num_sie ON public.empenhos USING btree (num_sie);
+
+
+--
+-- Name: empenhos_origem_aba; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX empenhos_origem_aba ON public.empenhos USING btree (origem_aba);
+
+
+--
+-- Name: empenhos_subunidade_entrega_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX empenhos_subunidade_entrega_id ON public.empenhos USING btree (subunidade_entrega_id);
+
+
+--
+-- Name: empenhos_tipo_despesa; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX empenhos_tipo_despesa ON public.empenhos USING btree (tipo_despesa);
+
+
+--
+-- Name: importacoes_financeiro_origem_aba; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX importacoes_financeiro_origem_aba ON public.importacoes_financeiro USING btree (origem_aba);
+
+
+--
+-- Name: licitacoes_itens_ano; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX licitacoes_itens_ano ON public.licitacoes_itens USING btree (ano);
+
+
+--
+-- Name: licitacoes_itens_origem_aba; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX licitacoes_itens_origem_aba ON public.licitacoes_itens USING btree (origem_aba);
+
+
+--
+-- Name: licitacoes_itens_subunidade_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX licitacoes_itens_subunidade_id ON public.licitacoes_itens USING btree (subunidade_id);
+
+
+--
+-- Name: licitacoes_itens_tipo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX licitacoes_itens_tipo ON public.licitacoes_itens USING btree (tipo);
 
 
 --
@@ -1823,6 +2434,20 @@ CREATE INDEX manutencoes_status ON public.manutencoes USING btree (status);
 --
 
 CREATE INDEX manutencoes_tipo_id ON public.manutencoes USING btree (tipo_id);
+
+
+--
+-- Name: orcamento_dotacoes_ano; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX orcamento_dotacoes_ano ON public.orcamento_dotacoes USING btree (ano);
+
+
+--
+-- Name: orcamento_dotacoes_origem_aba; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX orcamento_dotacoes_origem_aba ON public.orcamento_dotacoes USING btree (origem_aba);
 
 
 --
@@ -1858,6 +2483,48 @@ CREATE INDEX salas_historico_sala_id ON public.salas_historico USING btree (sala
 --
 
 CREATE UNIQUE INDEX salas_nome_unico ON public.salas USING btree (lower(TRIM(BOTH FROM sala_nome)));
+
+
+--
+-- Name: scdp_viagens_ano; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX scdp_viagens_ano ON public.scdp_viagens USING btree (ano);
+
+
+--
+-- Name: scdp_viagens_origem_aba; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX scdp_viagens_origem_aba ON public.scdp_viagens USING btree (origem_aba);
+
+
+--
+-- Name: scdp_viagens_subunidade_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX scdp_viagens_subunidade_id ON public.scdp_viagens USING btree (subunidade_id);
+
+
+--
+-- Name: transferencias_recurso_ano; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX transferencias_recurso_ano ON public.transferencias_recurso USING btree (ano);
+
+
+--
+-- Name: transferencias_recurso_origem_aba; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX transferencias_recurso_origem_aba ON public.transferencias_recurso USING btree (origem_aba);
+
+
+--
+-- Name: transferencias_recurso_subunidade_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX transferencias_recurso_subunidade_id ON public.transferencias_recurso USING btree (subunidade_id);
 
 
 --
@@ -1929,6 +2596,14 @@ ALTER TABLE ONLY public.agendamentos
 
 
 --
+-- Name: almoxarifado_requisicoes almoxarifado_requisicoes_subunidade_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.almoxarifado_requisicoes
+    ADD CONSTRAINT almoxarifado_requisicoes_subunidade_id_fkey FOREIGN KEY (subunidade_id) REFERENCES public.subunidades(subunidade_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
 -- Name: api_keys api_keys_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1985,6 +2660,22 @@ ALTER TABLE ONLY public.disciplinas
 
 
 --
+-- Name: empenhos empenhos_subunidade_entrega_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.empenhos
+    ADD CONSTRAINT empenhos_subunidade_entrega_id_fkey FOREIGN KEY (subunidade_entrega_id) REFERENCES public.subunidades(subunidade_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: empenhos empenhos_subunidade_pagadora_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.empenhos
+    ADD CONSTRAINT empenhos_subunidade_pagadora_id_fkey FOREIGN KEY (subunidade_pagadora_id) REFERENCES public.subunidades(subunidade_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
 -- Name: funcionalidades funcionalidades_subunidade_responsavel_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1993,11 +2684,27 @@ ALTER TABLE ONLY public.funcionalidades
 
 
 --
+-- Name: importacoes_financeiro importacoes_financeiro_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.importacoes_financeiro
+    ADD CONSTRAINT importacoes_financeiro_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
 -- Name: itens_pedido_almoxarifado itens_pedido_almoxarifado_pedido_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.itens_pedido_almoxarifado
     ADD CONSTRAINT itens_pedido_almoxarifado_pedido_id_fkey FOREIGN KEY (pedido_id) REFERENCES public.pedidos_almoxarifado(id_pedido) ON DELETE CASCADE;
+
+
+--
+-- Name: licitacoes_itens licitacoes_itens_subunidade_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.licitacoes_itens
+    ADD CONSTRAINT licitacoes_itens_subunidade_id_fkey FOREIGN KEY (subunidade_id) REFERENCES public.subunidades(subunidade_id) ON UPDATE CASCADE ON DELETE SET NULL;
 
 
 --
@@ -2030,6 +2737,14 @@ ALTER TABLE ONLY public.manutencoes
 
 ALTER TABLE ONLY public.manutencoes
     ADD CONSTRAINT manutencoes_tipo_id_fkey FOREIGN KEY (tipo_id) REFERENCES public.manutencao_tipos(id_tipo) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: orcamento_dotacoes orcamento_dotacoes_subunidade_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orcamento_dotacoes
+    ADD CONSTRAINT orcamento_dotacoes_subunidade_id_fkey FOREIGN KEY (subunidade_id) REFERENCES public.subunidades(subunidade_id) ON UPDATE CASCADE ON DELETE SET NULL;
 
 
 --
@@ -2153,6 +2868,30 @@ ALTER TABLE ONLY public.salas_historico
 
 
 --
+-- Name: scdp_viagens scdp_viagens_subunidade_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.scdp_viagens
+    ADD CONSTRAINT scdp_viagens_subunidade_id_fkey FOREIGN KEY (subunidade_id) REFERENCES public.subunidades(subunidade_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: subunidades_apelidos subunidades_apelidos_subunidade_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subunidades_apelidos
+    ADD CONSTRAINT subunidades_apelidos_subunidade_id_fkey FOREIGN KEY (subunidade_id) REFERENCES public.subunidades(subunidade_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: transferencias_recurso transferencias_recurso_subunidade_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.transferencias_recurso
+    ADD CONSTRAINT transferencias_recurso_subunidade_id_fkey FOREIGN KEY (subunidade_id) REFERENCES public.subunidades(subunidade_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
 -- Name: turmas turmas_curso_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2228,5 +2967,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Yi1L8LB3atBEfCDNF9mysgjNqobZCkUyzjRMyWerMSxKcvMXt7doh1MGadSNpBi
+\unrestrict rxCNTofhrH8iRjhpjC0F3UzB5D2Ye0WyNPrQSKAP0ZZtM21g4dKTUvI5Y2MsIgk
 
