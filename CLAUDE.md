@@ -220,6 +220,30 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 - **itens_pedido_almoxarifado** — `id_item`, `pedido_id`(FK), `produto`, `quantidade`, ... (itens normalizados; substituiu colunas legadas em pedidos_almoxarifado)
 - **previsoes_despesas** — `id_previsao`, `subunidade_id`(FK), `id_tipo_despesa`(FK), `valor_previsto`, `ano_referencia`, `observacao`, `createdat`
 
+### Execução orçamentária (importada da planilha do financeiro)
+Fonte: **`Transparência NOr_CCR.xlsx`** (~26 abas, layout diferente por ano). As abas de
+**fato** viram tabelas; as de **resumo/saldo** (Resumo YYYY, Saldos unidades, Almoxarifado 2026,
+SCDP 2024) **não são importadas** — são pivôs e o sistema recalcula tudo a partir dos fatos.
+
+- **empenhos** — `id_empenho`, `ano`, `data_cadastro`, `num_sie`, `num_siafi`, `especie`(Empenho/Dispensa/Transferência), `cod_natureza`, `tipo_despesa`, `estimativo`(bool), `fornecedor`, `subunidade_pagadora_id`/`_texto`, `subunidade_entrega_id`/`_texto`, `resumo`, `valor_empenhado`, `valor_liquidado`, `processo`, `observacao`, `origem_aba`
+- **almoxarifado_requisicoes** — `id_requisicao`, `ano`, `data_lancamento`, `num_requisicao`, `tipo_movimento`(Saída/Entrada e Saída Direta/Estorno de Saída — só no dump cru do SIE), `subunidade_id`/`_texto`, `solicitante`, `valor_total`, `local_entrega`, `situacao`, `origem_aba`
+- **scdp_viagens** — `id_viagem`, `ano`, `pcdp`, `data_cadastro`, `proposto`, `cpf`, `subunidade_id`/`_texto`, `fonte_recurso`, `num_diarias`, `valor_diarias`, `valor_passagens_aereas`, `valor_passagens_rodoviarias`, `periodo_viagem`(texto livre na origem), `origem_aba`
+- **licitacoes_itens** — `id_item`, `ano`, `data`, `tipo`, `subunidade_id`/`_texto`, `interessado`, `cod_reduzido`, `descricao`, `unidades`, `valor_unitario`, `valor_total`, `dfd`, `etp`, `solicitacao_sie`, `origem_aba`
+- **transferencias_recurso** — `id_transferencia`, `ano`, `data`, `num_transferencia`, `subunidade_id`/`_texto`, `gestora_destino`, `cod_natureza`, `tipo_despesa`, `valor`, `contado_em_outra_guia`(bool), `origem_aba`
+- **orcamento_dotacoes** — `id_dotacao`, `ano`, `categoria`(`custeio`|`capital`), `grupo`, `programa`, `percentual`, `valor`, `subunidade_id`/`_texto`, `origem_aba`. A aba "Orçamento" traz **duas** tabelas empilhadas (custeio por programa/ação e permanente por departamento) e **não tem ano no nome** — o front pergunta.
+- **naturezas_despesa** — `codigo`, `nome`. Catálogo (aba "Página43"); unique `(codigo, nome)` porque `3.3.9.0.39.00` serve PJ **e** PF. Os fatos guardam natureza/tipo como **texto**, sem FK.
+- **subunidades_apelidos** — `apelido`(normalizado, unique), `subunidade_id`. De-para: a planilha chama a subunidade de 4 jeitos (código estruturado, sigla, nome, `UFSM - XXX`) e as siglas divergem entre abas (`DZ` × `DZOT`). A aba **"Subunidades CCR"** é importada como fonte automática de apelidos (~52 de uma vez); o que sobra o usuário mapeia na tela e fica guardado.
+- **importacoes_financeiro** — log: `origem_aba`, `tipo`, `ano`, `linhas_gravadas`, `user_id`, `createdat`.
+
+**Idempotência:** cada importação **substitui o bloco inteiro** identificado por `origem_aba`
+(DELETE + INSERT, uma transação por aba, sucesso parcial). As linhas não têm chave estável
+(o mesmo nº SIE aparece em várias naturezas), então substituir a aba é mais honesto que casar linha a linha.
+
+**Abas sobrepostas:** `SIE 2024` está inteiramente contida em `Empenhos 2024`, e
+`Valores SPROJ 2024` em `Empenhos SPROJ 2024`. O preview detecta isso (compara os
+conjuntos de chave) e desmarca a aba contida, senão o valor dobra.
+
+
 ---
 
 ## Rotas da API
@@ -254,6 +278,8 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 | `/api/pedidos-almoxarifado` | chefe | routes/pedidos-almoxarifado.js |
 | `/api/previsoes-despesas` | chefe | routes/previsoes-despesas.js |
 | `/api/relatorios` | chefe | routes/relatorios.js |
+| `/api/execucao-orcamentaria` | chefe (direção vê tudo; chefe só a própria subunidade) | routes/execucao-orcamentaria.js |
+| `/api/importacao/financeiro` | super_admin | routes/importacao-financeiro.js |
 | `/api/agendamentos` | servidor* | routes/agendamentos.js |
 | `/api/periodos-letivos` | chefe | routes/periodos-letivos.js |
 | `/api/disciplinas` | chefe | routes/disciplinas.js |
@@ -291,6 +317,31 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 
 `/api/cursos`: `GET /` (lista p/ filtro; pós excluída salvo `?incluir_pos=1`), `PATCH /:id` (ajuste manual do `nivel`).
 
+`/api/execucao-orcamentaria` (chefe+; **direção vê o centro todo, chefe só a própria subunidade**):
+`GET /anos` (exercícios com dado), `GET /resumo?ano=&incluir_estimativos=` (reconstrói as abas
+"Resumo YYYY"/"Saldos unidades": aplicado por subunidade × tipo, dotação, saldo custeio/permanente,
+série mensal, top fornecedores, agregados de SCDP e licitações), `GET /dotacoes?ano=`, e as listagens
+detalhadas `GET /empenhos|almoxarifado|scdp|licitacoes|transferencias?ano=&subunidade_id=&tipo=&q=&limit=`.
+
+**Como o "aplicado" é composto** (validado coluna a coluna contra a aba Resumo da planilha):
+empenhos **não estimativos** (uma coluna por tipo de despesa) **+** requisições de almoxarifado
+(coluna "Almoxarifado", excluindo estorno/cancelada/recusada) **+** diárias e passagens do SCDP
+**apenas quando os empenhos do ano não registram essa natureza de verdade**.
+⚠️ Essa última condição não é firula: em **2026** as diárias só aparecem no empenho como
+`Estimativo - Diárias` (reserva) e o gasto real está no SCDP; em **2025** o empenho já traz
+`Diárias - Civil`/`Passagens` como natureza efetiva, e somar o SCDP contaria duas vezes.
+O `NOT EXISTS` resolve pelo dado, sem depender do ano.
+Empenhos `Estimativo - X` ficam **fora** do aplicado por padrão (`?incluir_estimativos=1` traz de volta,
+só para conferência — nessa visão **há dupla contagem**, e a tela avisa).
+Atribuição por **unidade de entrega** (pagadora como reserva). `valor_liquidado` só existe para empenho.
+Capital = natureza `4.x` ou tipo casando `equipamento|permanente|obra`; o resto é custeio.
+
+`/api/importacao/financeiro` (super_admin): `POST /preview` (classifica as 26 abas, extrai, resolve
+subunidades e devolve por aba: tipo, ano, registros, valor, quantos ficaram sem subunidade, se está
+contida noutra aba e quando foi importada antes — **sem gravar**), `POST /` (grava as abas escolhidas,
+aplicando o de-para informado), `GET /historico`.
+
+
 `/api/aniversariantes`: `GET /?mes=` (mural do mês, logado), `GET /hoje` (aniversariantes de hoje, logado), e — **só direção** — `POST /parabenizar` (envia parabéns por e-mail aos de hoje, agora), `GET/PATCH /config` (liga/desliga o **envio automático diário**). Lógica em `lib/aniversarios.js`; agendador (setInterval) iniciado no `server.js` roda ~08:00 BRT se o automático estiver ligado (guard por data em `configuracoes`). Painel de disparo/toggle no topo de `/aniversariantes` (visível só p/ direção). Tabela **configuracoes** (chave/valor) guarda o flag e o "último envio".
 
 `/api/comunicados` (diretor): `GET /destinatarios` (servidores c/ email, subunidades c/ contagem, totais chefes/todos), `POST /preview` (resolve destinatários e conta, sem enviar), `POST /` (envia comunicado em **BCC por lote** de 45 via `lib/email.js` e registra em `comunicados`), `GET /` (histórico). Painel em `/comunicados` (direção; link no menu Administrativo). Destinatários: individuais (lista/e-mail avulso) + grupos (subunidades, chefes, todos), com dedup. **Corpo com formatação** (editor contenteditable: negrito/itálico/listas/link) — o backend **linkifica URLs soltas** e **sanitiza** o HTML (`sanitize-html`, allowlist); logo do SICCR embutido por CID. Envia HTML + fallback texto.
@@ -300,7 +351,7 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 "Direção" = `super_admin`/`diretor`/`vice_diretor`, ou `is_direcao_centro=true`, ou funcionalidade `aprovar_agendamento`/`ver_todos_agendamentos`.
 
 ### Páginas do painel admin (`/adm/*`)
-unidades, subunidades, usuários, prédios, salas, salas-tipo, **periodos-letivos**, **disciplinas**, **turmas**, api-keys. Menu em `js/components/menu-navegacao-adm.js`. (Ensalamento **não** fica aqui — é uma página de direção no menu Administrativo público, `/ensalamento`.)
+unidades, subunidades, usuários, prédios, salas, salas-tipo, **periodos-letivos**, **disciplinas**, **turmas**, **importar-financeiro**, api-keys. Menu em `js/components/menu-navegacao-adm.js`. (Ensalamento **não** fica aqui — é uma página de direção no menu Administrativo público, `/ensalamento`.)
 
 ---
 
@@ -331,6 +382,15 @@ Funções utilitárias:
 - `carregarDados(endpoint)` — GET, retorna `dados.data`
 - `excluirDado(id, endpoint)` — DELETE
 - `formatarData(valor)` — converte ISO/DATEONLY → "dd/mm/yyyy"
+
+### Gráficos (Chart.js)
+A paleta categórica de `/execucao-orcamentaria` (`CORES` no bloco da página) foi validada para
+daltonismo e contraste: `#009536 #1971c2 #e8590c #9c36b5 #00949b #c2255c #8a6d00 #5f3dc4`, nessa
+**ordem fixa**, com `#adb5bd` reservado para "Outros". A `CORES_GRAFICOS` antiga (usada em
+`/relatorios`) **reprova**: os quatro primeiros verdes são indistinguíveis entre si
+(ΔE 8,3 com visão normal). Ao mexer em gráficos, prefira a paleta nova.
+Regras que valem em qualquer gráfico: no máximo 8 fatias categóricas (o resto vira "Outros"),
+nunca dois eixos Y, série única não leva legenda, e a cor segue a categoria — nunca a posição no ranking.
 
 ### CSS — variáveis globais (style.css)
 ```css
@@ -375,6 +435,8 @@ Cor primária: `#009536` (verde CCR). Fonte padrão: `verdana, sans-serif`.
 | `/solicitacoes-de-agendamento` | direção | Aprovar/rejeitar; rejeição mostra motivo inline |
 | `/relatorios-salas` | direção | Gráficos (Chart.js) + tabelas + PDF via `window.print()` |
 | `/painel-tv` | link p/ portaria/direção | Kiosk público p/ TV no hall (`?predio=ID`); standalone (sem scripts.js), auto-refresh 60s. JS em `js/painel-tv.js` |
+| `/execucao-orcamentaria` | chefe+ (menu **Financeiro**) | Execução orçamentária: tiles, 4 gráficos, tabela pivô subunidade × tipo e detalhe por origem (empenhos/almoxarifado/SCDP/licitações/transferências/orçamento) com busca e filtros. Imprimível. |
+| `/adm/importar-financeiro` | super_admin | Importa a planilha do financeiro (SheetJS lê todas as abas → preview com detecção de duplicata e de-para de subunidade → grava) |
 
 No calendário e na portaria, aulas (origem='aula') aparecem distintas de reservas: calendário pinta aula em azul e mostra disciplina/turma/professor; portaria idem.
 
@@ -403,4 +465,25 @@ Impressão/PDF: páginas usam `@media print` p/ esconder menu/toolbar.
 - ~~Ensalamento em massa: falta tela dedicada~~ **FEITO** (jul/2026): tela `/ensalamento` (menu **Administrativo**, **só direção**) — manual em lote + sugestão automática por capacidade/dry-run; auditórios ficam fora. Ver sub-rotas de `/api/turmas`.
 - Leitura de código de barras do patrimônio via câmera exige **HTTPS** (contexto seguro). O **VPS de produção roda com SSL**, então a câmera funciona lá; só o **dev local em HTTP** fica limitado ao cadastro manual.
 - **Matrícula real no ensalamento** (aberto, aguardando dado): o auto usa **vagas da turma × `sala_capacidade`** como proxy. Para usar o nº real de alunos matriculados falta a fonte — um **xlsx de matrículas** (a obter). Quando existir, importar por turma e o guloso passa a usá-lo no lugar de `vagas`.
+- **Execução orçamentária — pontos em aberto com o setor financeiro** (ago/2026). A importação está
+  validada contra as abas Resumo (2026: 8/11 colunas idênticas ao centavo; 2024: 8/11; 2025: 6/11).
+  As diferenças restantes são **da planilha**, não do sistema, e precisam de decisão do NOr:
+  1. **Almoxarifado 2026 não existe em nível de linha** — a aba `Almoxarifado 2026` é só um pivô por
+     setor (total R$ 98.147,47). Falta pedir ao financeiro o **export por requisição**, no mesmo
+     formato da aba `Almoxarifado 2025`. Sem isso a coluna Almoxarifado de 2026 fica zerada.
+  2. **Passagens 2026**: a planilha soma empenho + SCDP (R$ 41.366,81); o sistema conta só o empenho
+     (R$ 20.341,18) porque 2026 tem empenho não-estimativo de passagens — somar os dois conta duas
+     vezes (inclusive um mesmo item de R$ 232,00 que aparece nos dois lados). Confirmar a regra.
+  3. **Diárias 2025**: planilha R$ 61.805,50 × sistema R$ 139.793,23 (soma dos empenhos
+     `Diárias - Civil` do ano). A fórmula da planilha parece pegar um subconjunto.
+  4. **Renovação/atualização 2026**: a coluna da planilha está `#N/A` (fórmula quebrada) e soma 0;
+     o sistema acha R$ 4.374,96 (empenho 004129/2026, "CORRIMÃO CCR").
+  5. **Almoxarifado 2024**: o dump cru traz `Entrada e Saída Direta` (R$ 1,44 mi) além das saídas
+     por requisição. Definir quais tipos de movimento entram no "aplicado".
+  6. **Subunidades faltando no cadastro**: cursos e PPGs (CA, CEFL, CMV, CZ, CSTA, CPPGAGRO…)
+     aparecem na planilha mas não existem em `subunidades`, então o gasto deles fica "Não atribuído".
+     Cadastrar, ou aceitar que fiquem fora do recorte por departamento.
+- **Abas ainda não importadas** (Fase 3): `Sol de empenho via Forms` (Google Forms — forte candidata a
+  virar fluxo nativo no SICCR, com aprovação igual à de agendamento) e `Liquidados 2024`/`Liquidados
+  SPROJ 2024` (notas fiscais; hoje só o `valor_liquidado` do empenho é usado).
 - **Quadro de horários "por cohort/semestre"** (melhoria futura): o modo **por curso** do `/quadro-de-horarios` mistura todos os semestres do curso (não há modelo de cohort) → cursos grandes ficam densos. Para a grade limpa estilo "SALA 5134", rastrear o semestre/cohort da turma — opções: **derivar do prefixo de `nome_turma`** (ex.: "9º-M3" → 9º sem.; inconsistente, algumas são "T10"/"M1"/"99" sem prefixo) e oferecer filtro "por semestre", **ou** um campo explícito de cohort/turma-base nas turmas. Decidido em jul/2026 deixar para depois.
