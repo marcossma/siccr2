@@ -17,7 +17,6 @@ class MenuNavegacaoAdm extends HTMLElement {
             { href: "/adm/importar-servidores", icone: "bi-file-earmark-arrow-up", label: "Importar servidores" },
             { href: "/adm/importar-subunidades", icone: "bi-diagram-3", label: "Importar subunidades" },
             { href: "/adm/importar-disciplinas", icone: "bi-calendar3", label: "Importar disciplinas" },
-            { href: "/adm/importar-financeiro", icone: "bi-cash-stack", label: "Importar financeiro" },
             { href: "/adm/api-keys",    icone: "bi-key",            label: "API Keys" },
         ];
 

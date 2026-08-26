@@ -250,7 +250,9 @@ app.use("/api/manutencao",           autenticar, autorizar("servidor"),     manu
 // Importação de dados em massa (planilhas) — restrito ao super_admin
 // A planilha do financeiro é um caso à parte (26 abas num arquivo só) e tem
 // router próprio; monta antes para o prefixo mais específico vencer.
-app.use("/api/importacao/financeiro", autenticar, autorizar("super_admin"), importacaoFinanceiro);
+// A guarda fica dentro do router (direção OU funcionalidade importar_financeiro),
+// porque o autorizar() não cobre "funcionalidade em qualquer nível".
+app.use("/api/importacao/financeiro", autenticar, importacaoFinanceiro);
 app.use("/api/importacao",           autenticar, autorizar("super_admin"),  importacao);
 
 // Execução orçamentária: direção vê tudo, chefe vê a própria subunidade

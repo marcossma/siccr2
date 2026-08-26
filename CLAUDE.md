@@ -189,7 +189,7 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 
 ### Usuários
 - **users** — `user_id`, `nome`, `siape`, `email`, `senha`(bcrypt), `whatsapp`, `data_nascimento`, `permissao`, `subunidade_id`, `unidade_id`
-- **funcionalidades** — `id`, `nome`, `descricao`, `modulo` (ex: `"criar_despesa"`, `"aprovar_agendamento"`, `"ver_agenda_portaria"`, `"atender_pedido_almoxarifado"`, `"fazer_levantamento"`, `"cadastrar_salas"`)
+- **funcionalidades** — `id`, `nome`, `descricao`, `modulo` (ex: `"criar_despesa"`, `"aprovar_agendamento"`, `"ver_agenda_portaria"`, `"atender_pedido_almoxarifado"`, `"fazer_levantamento"`, `"cadastrar_salas"`, `"importar_financeiro"`)
 - **permissoes_usuario** — `id`, `user_id`, `funcionalidade_id`
 - **api_keys** — chaves p/ rotas RPA (validadas via `X-Api-Key`)
 
@@ -235,9 +235,17 @@ SCDP 2024) **não são importadas** — são pivôs e o sistema recalcula tudo a
 - **subunidades_apelidos** — `apelido`(normalizado, unique), `subunidade_id`. De-para: a planilha chama a subunidade de 4 jeitos (código estruturado, sigla, nome, `UFSM - XXX`) e as siglas divergem entre abas (`DZ` × `DZOT`). A aba **"Subunidades CCR"** é importada como fonte automática de apelidos (~52 de uma vez); o que sobra o usuário mapeia na tela e fica guardado.
 - **importacoes_financeiro** — log: `origem_aba`, `tipo`, `ano`, `linhas_gravadas`, `user_id`, `createdat`.
 
-**Idempotência:** cada importação **substitui o bloco inteiro** identificado por `origem_aba`
-(DELETE + INSERT, uma transação por aba, sucesso parcial). As linhas não têm chave estável
-(o mesmo nº SIE aparece em várias naturezas), então substituir a aba é mais honesto que casar linha a linha.
+**`origem` (`importado` | `manual`) + `created_by_user_id`** em todas as tabelas de fato:
+`importado` veio da planilha e a importação é dona dele; `manual` foi lançado na plataforma e a
+importação **não encosta**. É o que permite os dois mundos coexistirem (migration `...000002`).
+
+**Idempotência:** cada importação **substitui o bloco** identificado por `origem_aba`
+— `DELETE ... WHERE origem_aba = $1 AND origem = 'importado'` seguido de INSERT, uma transação por
+aba, sucesso parcial. As linhas não têm chave estável (o mesmo nº SIE aparece em várias naturezas),
+então substituir a aba é mais honesto que casar linha a linha. O filtro por `origem` é o que impede
+que um lançamento feito na plataforma suma na próxima reimportação. ⚠️ Qualquer escrita nova nessas
+tabelas **precisa** gravar `origem='manual'` — o DEFAULT da coluna é `'importado'`, pensado para a
+importação, que por isso nem lista a coluna no INSERT.
 
 **Abas sobrepostas:** `SIE 2024` está inteiramente contida em `Empenhos 2024`, e
 `Valores SPROJ 2024` em `Empenhos SPROJ 2024`. O preview detecta isso (compara os
@@ -279,7 +287,7 @@ conjuntos de chave) e desmarca a aba contida, senão o valor dobra.
 | `/api/previsoes-despesas` | chefe | routes/previsoes-despesas.js |
 | `/api/relatorios` | chefe | routes/relatorios.js |
 | `/api/execucao-orcamentaria` | chefe (direção vê tudo; chefe só a própria subunidade) | routes/execucao-orcamentaria.js |
-| `/api/importacao/financeiro` | super_admin | routes/importacao-financeiro.js |
+| `/api/importacao/financeiro` | direção **ou** `importar_financeiro` (guarda dentro do router) | routes/importacao-financeiro.js |
 | `/api/agendamentos` | servidor* | routes/agendamentos.js |
 | `/api/periodos-letivos` | chefe | routes/periodos-letivos.js |
 | `/api/disciplinas` | chefe | routes/disciplinas.js |
@@ -336,7 +344,11 @@ só para conferência — nessa visão **há dupla contagem**, e a tela avisa).
 Atribuição por **unidade de entrega** (pagadora como reserva). `valor_liquidado` só existe para empenho.
 Capital = natureza `4.x` ou tipo casando `equipamento|permanente|obra`; o resto é custeio.
 
-`/api/importacao/financeiro` (super_admin): `POST /preview` (classifica as 26 abas, extrai, resolve
+`/api/importacao/financeiro` — **direção OU quem tiver a funcionalidade `importar_financeiro`**
+(tipicamente o pessoal do NOr). A guarda é o middleware `podeImportar` dentro do próprio router, e
+não `autorizar(...)`: naquele middleware o fallback por funcionalidade só roda quando o nível efetivo
+é `servidor`, então um **chefe** do NOr seria barrado; e abrir para `chefe` em geral seria demais,
+porque a importação substitui blocos inteiros. Sub-rotas: `POST /preview` (classifica as 26 abas, extrai, resolve
 subunidades e devolve por aba: tipo, ano, registros, valor, quantos ficaram sem subunidade, se está
 contida noutra aba e quando foi importada antes — **sem gravar**), `POST /` (grava as abas escolhidas,
 aplicando o de-para informado), `GET /historico`.
@@ -351,7 +363,7 @@ aplicando o de-para informado), `GET /historico`.
 "Direção" = `super_admin`/`diretor`/`vice_diretor`, ou `is_direcao_centro=true`, ou funcionalidade `aprovar_agendamento`/`ver_todos_agendamentos`.
 
 ### Páginas do painel admin (`/adm/*`)
-unidades, subunidades, usuários, prédios, salas, salas-tipo, **periodos-letivos**, **disciplinas**, **turmas**, **importar-financeiro**, api-keys. Menu em `js/components/menu-navegacao-adm.js`. (Ensalamento **não** fica aqui — é uma página de direção no menu Administrativo público, `/ensalamento`.)
+unidades, subunidades, usuários, prédios, salas, salas-tipo, **periodos-letivos**, **disciplinas**, **turmas**, api-keys. Menu em `js/components/menu-navegacao-adm.js`. (Ensalamento **não** fica aqui — é uma página de direção no menu Administrativo público, `/ensalamento`.)
 
 ---
 
@@ -436,7 +448,7 @@ Cor primária: `#009536` (verde CCR). Fonte padrão: `verdana, sans-serif`.
 | `/relatorios-salas` | direção | Gráficos (Chart.js) + tabelas + PDF via `window.print()` |
 | `/painel-tv` | link p/ portaria/direção | Kiosk público p/ TV no hall (`?predio=ID`); standalone (sem scripts.js), auto-refresh 60s. JS em `js/painel-tv.js` |
 | `/execucao-orcamentaria` | chefe+ (menu **Financeiro**) | Execução orçamentária: tiles, 4 gráficos, tabela pivô subunidade × tipo e detalhe por origem (empenhos/almoxarifado/SCDP/licitações/transferências/orçamento) com busca e filtros. Imprimível. |
-| `/adm/importar-financeiro` | super_admin | Importa a planilha do financeiro (SheetJS lê todas as abas → preview com detecção de duplicata e de-para de subunidade → grava) |
+| `/importar-financeiro` | direção ou `importar_financeiro` (menu **Financeiro**) | Importa a planilha do financeiro (SheetJS lê todas as abas → preview com detecção de duplicata e de-para de subunidade → grava). **Não fica em `/adm/`**: o `guard.js` de lá exige `super_admin` e *desloga* quem não for — mesmo motivo do `/ensalamento`. |
 
 No calendário e na portaria, aulas (origem='aula') aparecem distintas de reservas: calendário pinta aula em azul e mostra disciplina/turma/professor; portaria idem.
 

@@ -26,6 +26,10 @@ class ResponsiveMenu extends HTMLElement {
         // Portaria / quem pode ver a agenda da semana
         const ehPortaria = nivel >= 2 || funcs.includes("ver_agenda_portaria");
 
+        // Importação da planilha do financeiro: direção ou pessoal do NOr.
+        // Espelha o guard podeImportar de routes/importacao-financeiro.js.
+        const podeImportarFinanceiro = nivel >= 3 || funcs.includes("importar_financeiro");
+
         // Levantamento patrimonial: aberto a qualquer servidor logado (auditado)
         const podeLevantamento = nivel >= 1;
 
@@ -67,6 +71,7 @@ class ResponsiveMenu extends HTMLElement {
                     <li><a href="/previsao-despesas">Previsão de despesas</a></li>
                     <li><a href="/relatorios">Relatórios</a></li>
                     <li><a href="/execucao-orcamentaria">Execução orçamentária</a></li>
+                    ${podeImportarFinanceiro ? `<li><a href="/importar-financeiro">Importar planilha do financeiro</a></li>` : ""}
                 </ul>
             </li>` : "";
 

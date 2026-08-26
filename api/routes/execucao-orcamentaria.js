@@ -21,6 +21,10 @@
  *
  * RBAC: direção vê tudo; chefe/servidor vê apenas a própria subunidade
  * (mesma regra dos relatórios financeiros já existentes).
+ *
+ * Cada registro carrega `origem` ('importado' | 'manual'): o resumo soma os
+ * dois, e as listagens devolvem o campo para a tela marcar o que foi lançado
+ * na plataforma. Ver a migration 20260826000002.
  */
 const express = require("express");
 const pool = require("../config/database.js");
@@ -356,7 +360,7 @@ const LISTAGENS = {
         select: `e.id_empenho AS id, e.ano, e.data_cadastro AS data, e.num_sie, e.num_siafi,
                  e.especie, e.cod_natureza, e.tipo_despesa, e.estimativo, e.fornecedor,
                  e.resumo, e.valor_empenhado, e.valor_liquidado, e.processo,
-                 e.subunidade_entrega_texto AS subunidade_texto, s.subunidade_sigla`,
+                 e.subunidade_entrega_texto AS subunidade_texto, s.subunidade_sigla, e.origem`,
         join: JOIN_SIGLA("COALESCE(e.subunidade_entrega_id, e.subunidade_pagadora_id)"),
         filtros: { tipo: "e.tipo_despesa", especie: "e.especie" },
         valor: "e.valor_empenhado",
@@ -368,7 +372,7 @@ const LISTAGENS = {
         busca: ["e.num_requisicao", "e.solicitante", "e.local_entrega", "e.observacao"],
         select: `e.id_requisicao AS id, e.ano, e.data_lancamento AS data, e.num_requisicao,
                  e.tipo_movimento, e.solicitante, e.usuario_sie, e.valor_total, e.local_entrega,
-                 e.situacao, e.observacao, e.subunidade_texto, s.subunidade_sigla`,
+                 e.situacao, e.observacao, e.subunidade_texto, s.subunidade_sigla, e.origem`,
         join: JOIN_SIGLA("e.subunidade_id"),
         filtros: { tipo: "e.tipo_movimento" },
         valor: "e.valor_total",
@@ -381,7 +385,7 @@ const LISTAGENS = {
         select: `e.id_viagem AS id, e.ano, e.data_cadastro AS data, e.pcdp, e.proposto,
                  e.solicitante, e.grupo_tipo, e.fonte_recurso, e.num_diarias, e.valor_diarias,
                  e.valor_passagens_aereas, e.valor_passagens_rodoviarias, e.periodo_viagem,
-                 e.subunidade_texto, s.subunidade_sigla`,
+                 e.subunidade_texto, s.subunidade_sigla, e.origem`,
         join: JOIN_SIGLA("e.subunidade_id"),
         filtros: {},
         valor: "e.valor_diarias",
@@ -393,7 +397,7 @@ const LISTAGENS = {
         busca: ["e.descricao", "e.interessado", "e.cod_reduzido", "e.solicitacao_sie"],
         select: `e.id_item AS id, e.ano, e.data, e.tipo, e.interessado, e.elaborador_etp,
                  e.cod_reduzido, e.descricao, e.unidades, e.valor_unitario, e.valor_total,
-                 e.dfd, e.etp, e.solicitacao_sie, e.subunidade_texto, s.subunidade_sigla`,
+                 e.dfd, e.etp, e.solicitacao_sie, e.subunidade_texto, s.subunidade_sigla, e.origem`,
         join: JOIN_SIGLA("e.subunidade_id"),
         filtros: { tipo: "e.tipo" },
         valor: "e.valor_total",
@@ -405,7 +409,7 @@ const LISTAGENS = {
         busca: ["e.observacao", "e.gestora_destino", "e.num_transferencia", "e.solicitante"],
         select: `e.id_transferencia AS id, e.ano, e.data, e.num_transferencia, e.solicitante,
                  e.gestora_destino, e.cod_natureza, e.tipo_despesa, e.valor,
-                 e.contado_em_outra_guia, e.observacao, e.subunidade_texto, s.subunidade_sigla`,
+                 e.contado_em_outra_guia, e.observacao, e.subunidade_texto, s.subunidade_sigla, e.origem`,
         join: JOIN_SIGLA("e.subunidade_id"),
         filtros: { tipo: "e.tipo_despesa" },
         valor: "e.valor",
@@ -482,7 +486,7 @@ router.get("/dotacoes", async (req, res) => {
     try {
         const { rows } = await pool.query(
             `SELECT d.id_dotacao, d.categoria, d.grupo, d.programa, d.percentual, d.valor,
-                    d.subunidade_texto, s.subunidade_sigla
+                    d.subunidade_texto, s.subunidade_sigla, d.origem
                FROM orcamento_dotacoes d
                LEFT JOIN (${SQL_SUBUNIDADES}) s ON s.subunidade_id = d.subunidade_id
               WHERE d.ano = $1

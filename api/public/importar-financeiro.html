@@ -4,15 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SICCR - Importar Planilha do Financeiro</title>
-    <link rel="shortcut icon" href="../img/favicon.png" type="image/x-icon">
-    <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="../css/dialogs.css">
+    <link rel="shortcut icon" href="./img/favicon.png" type="image/x-icon">
     <link rel="stylesheet" href="./css/style.css">
-    <link rel="stylesheet" href="./css/ui-kit.css">
     <link rel="stylesheet" href="./css/dialogs.css">
-    <script src="./js/guard.js"></script>
+    <link rel="stylesheet" href="./adm/css/style.css">
+    <link rel="stylesheet" href="./adm/css/dialogs.css">
+    <link rel="stylesheet" href="./css/ui-kit.css">
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script type="module" src="./js/script.js"></script>
+    <script type="module" src="./js/scripts.js"></script>
     <style>
         .imp-dropzone { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border:2px dashed #009536; border-radius:10px; padding:30px; text-align:center; background:#f5fbf7; cursor:pointer; }
         .imp-dropzone input { display:none; }
@@ -39,20 +38,34 @@
     </style>
 </head>
 <body>
+    <!-- Formulário de Login DIALOG -->
+    <dialog id="dialogLogin">
+        <fieldset>
+            <legend>Login</legend>
+            <form id="frmLogin">
+                <div class="row"><input type="text" name="txtLogin" id="txtLogin" class="formInput" placeholder="Digite o seu login"></div>
+                <div class="row"><input type="password" name="txtSenha" id="txtSenha" class="formInput" placeholder="Digite a sua senha"></div>
+                <p id="loginErro" class="login-erro" hidden></p>
+                <div class="row">
+                    <button id="btnLogin" type="button">Entrar</button>
+                    <button id="btnCancelarLogin" type="button">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+
     <div class="container">
         <header>
-            <a href="/"><img src="../img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo"></a>
-            <div class="acesso"><span id="adminNome"></span><a href="#" id="btnSair">Sair</a></div>
+            <a href="/"><img src="./img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo"></a>
+            <div class="acesso"><a href="#" id="btnEntrar" class="">Entrar</a></div>
         </header>
         <div><responsive-menu></responsive-menu></div>
         <main class="flex flex--column">
-            <section class="titulo_painel flex justify--space--between align--items--center">
-                <h1 class="flex align--items--center gap--15">
-                    <i class="bi bi-cash-stack font--size--40"></i>
-                    Painel Administrativo - Importar Planilha do Financeiro
+            <section class="titulo_secao flex justify--space--between align--items--center" style="flex-wrap:wrap;gap:10px">
+                <h1 class="flex align--items--center gap--10">
+                    <i class="bi bi-cash-stack"></i> Importar Planilha do Financeiro
                 </h1>
             </section>
-            <div><menu-navegacao-adm></menu-navegacao-adm></div>
 
             <section class="informacoes_painel" style="padding:16px">
                 <p style="margin-bottom:12px;font-size:13px;color:#555">
@@ -142,6 +155,6 @@
         </main>
         <footer>Rodapé</footer>
     </div>
-    <script type="module" src="../js/components/index.js"></script>
+    <script type="module" src="./js/components/index.js"></script>
 </body>
 </html>

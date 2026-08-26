@@ -4801,11 +4801,20 @@ document.addEventListener("DOMContentLoaded", function() {
 
             detalheCorpo.innerHTML = itens.length === 0
                 ? `<tr><td colspan="${cfg.campos.length}" class="eo-vazio">Nenhum registro encontrado.</td></tr>`
-                : itens.map((r) => `<tr>${cfg.campos.map(([, render, classe]) => {
-                    const valor = render(r);
-                    const estilo = classe === "largo" ? ' style="white-space:normal;max-width:380px"' : "";
-                    return `<td class="${classe === "num" ? "num" : ""}"${estilo}>${valor}</td>`;
-                }).join("")}</tr>`).join("");
+                : itens.map((r) => {
+                    // Registro lançado na plataforma (não veio da planilha) ganha
+                    // marca: ele sobrevive à reimportação, e isso precisa ser óbvio.
+                    const manual = r.origem === "manual";
+                    const celulas = cfg.campos.map(([, render, classe], i) => {
+                        const valor = render(r);
+                        const estilo = classe === "largo" ? ' style="white-space:normal;max-width:380px"' : "";
+                        const marca = manual && i === 0
+                            ? '<span class="eo-badge-manual" title="Lançado na plataforma — a reimportação da planilha não apaga">manual</span> '
+                            : "";
+                        return `<td class="${classe === "num" ? "num" : ""}"${estilo}>${marca}${valor}</td>`;
+                    }).join("");
+                    return `<tr${manual ? ' class="eo-manual"' : ""}>${celulas}</tr>`;
+                }).join("");
 
             detalheResumo.textContent = `${total} registro(s) · ${brl(soma)}`;
             notaDetalhe.textContent = (!Array.isArray(resp) && resp.truncado)
@@ -4858,5 +4867,291 @@ document.addEventListener("DOMContentLoaded", function() {
             await carregarDetalhe();
         })();
     } // fim /execucao-orcamentaria
+
+    // =========================================================================
+    // IMPORTAR PLANILHA DO FINANCEIRO — /importar-financeiro
+    // Um arquivo, ~26 abas, layout diferente por ano. Mandamos TODAS as abas
+    // cruas (array de arrays) e o backend classifica; aqui só apresentamos o
+    // que ele reconheceu e coletamos as decisões do usuário (quais abas gravar
+    // e o de-para das subunidades que não casaram).
+    // Fica fora do /adm porque quem importa é a direção e o pessoal do NOr
+    // (funcionalidade importar_financeiro), não o super_admin — o guard do
+    // painel admin desloga qualquer um que não seja super_admin.
+    // =========================================================================
+    if (urlParam === "/importar-financeiro") {
+        const inputArquivo  = document.querySelector("#impArquivo");
+        const dropTexto     = document.querySelector("#impDropTexto");
+        const resultado     = document.querySelector("#impResultado");
+        const corpo         = document.querySelector("#impCorpo");
+        const aviso         = document.querySelector("#impAviso");
+        const marcarTodas   = document.querySelector("#impMarcarTodas");
+        const secaoOrcamento = document.querySelector("#impSecaoOrcamento");
+        const selAnoOrcamento = document.querySelector("#impAnoOrcamento");
+        const secaoDepara   = document.querySelector("#impSecaoDepara");
+        const depara        = document.querySelector("#impDepara");
+        const btnConfirmar  = document.querySelector("#impConfirmar");
+        const btnCancelar   = document.querySelector("#impCancelar");
+        const historico     = document.querySelector("#impHistorico");
+
+        let blocosArquivo = [];   // [{ aba, aoa }] — o que veio do arquivo
+        let previa = null;        // resposta do /preview
+
+        const brl = (n) =>
+            n === null || n === undefined
+                ? "—"
+                : Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+        const ROTULO_TIPO = {
+            empenhos: "Empenhos / dispensas",
+            almoxarifado: "Requisições de almoxarifado",
+            scdp: "Viagens e diárias (SCDP)",
+            licitacoes: "Itens de licitação",
+            transferencias: "Transferências de recurso",
+            orcamento: "Orçamento (dotação)",
+            naturezas: "Catálogo de naturezas",
+        };
+
+        // Preenche o seletor de ano do orçamento (ano atual → 4 anos atrás)
+        (function preencherAnos() {
+            const atual = new Date().getFullYear();
+            for (let a = atual + 1; a >= atual - 4; a--) {
+                const opt = document.createElement("option");
+                opt.value = a;
+                opt.textContent = a;
+                if (a === atual) opt.selected = true;
+                selAnoOrcamento.appendChild(opt);
+            }
+        })();
+
+        function resetar(texto) {
+            resultado.hidden = true;
+            blocosArquivo = [];
+            previa = null;
+            inputArquivo.value = "";
+            dropTexto.textContent = texto || "Clique para escolher o arquivo (.xlsx)";
+        }
+
+        // ── Leitura do arquivo ────────────────────────────────────────────
+        inputArquivo.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            dropTexto.textContent = `${file.name} — lendo…`;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    const wb = XLSX.read(new Uint8Array(ev.target.result), { type: "array", cellDates: true });
+                    blocosArquivo = wb.SheetNames.map((nome) => ({
+                        aba: nome,
+                        // header:1 → array de arrays. O backend acha o cabeçalho
+                        // sozinho (em várias abas ele não está na 1ª linha).
+                        aoa: XLSX.utils.sheet_to_json(wb.Sheets[nome], {
+                            header: 1, defval: "", raw: true, blankrows: false,
+                        }),
+                    }));
+                    const linhas = blocosArquivo.reduce((s, b) => s + b.aoa.length, 0);
+                    dropTexto.textContent = `${file.name} — ${blocosArquivo.length} aba(s), ${linhas} linha(s)`;
+                    enviarPreview();
+                } catch (err) {
+                    console.error("Erro ao ler planilha:", err);
+                    alert("Não foi possível ler o arquivo. Verifique se é um .xlsx válido.");
+                    resetar();
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // ── Preview ───────────────────────────────────────────────────────
+        async function enviarPreview() {
+            dropTexto.textContent += " — analisando…";
+            try {
+                const r = await fetch(`${apiUrl}/importacao/financeiro/preview`, {
+                    method: "POST",
+                    body: JSON.stringify({ blocos: blocosArquivo, ano_orcamento: Number(selAnoOrcamento.value) }),
+                });
+                const resp = await r.json();
+                if (!r.ok) { alert(resp.message || "Erro no preview."); return; }
+                previa = resp.data;
+                renderizar();
+                resultado.hidden = false;
+            } catch (err) {
+                console.error("Erro no preview:", err);
+                alert("Erro de comunicação ao analisar a planilha.");
+            }
+        }
+
+        function renderizar() {
+            const { blocos, nao_resolvidos: naoResolvidos, subunidades, totais } = previa;
+
+            document.querySelector("#impAbas").textContent = totais.abas;
+            document.querySelector("#impReconhecidas").textContent = totais.importaveis;
+
+            corpo.innerHTML = blocos.map((b, i) => {
+                const importavel = Boolean(b.tipo) && b.itens > 0;
+                const classe = !importavel ? "ignorada" : (b.contido_em ? "duplicada" : "");
+                let situacao;
+                if (!importavel) {
+                    situacao = `<span class="imp-badge neutro">ignorada</span> <span style="color:#999">${b.motivo || "sem registros"}</span>`;
+                } else if (b.contido_em) {
+                    situacao = `<span class="imp-badge aviso">duplicada</span> conteúdo já está em <strong>${b.contido_em}</strong>`;
+                } else if (b.ja_importada) {
+                    const quando = new Date(b.ja_importada.em).toLocaleDateString("pt-BR");
+                    situacao = `<span class="imp-badge">substitui</span> importada em ${quando} (${b.ja_importada.linhas} linhas)`;
+                } else {
+                    situacao = `<span class="imp-badge">nova</span>`;
+                }
+                return `
+                    <tr class="${classe}">
+                        <td>${importavel
+                            ? `<input type="checkbox" class="imp-chk" data-aba="${i}" ${b.recomendado ? "checked" : ""}>`
+                            : ""}</td>
+                        <td><strong>${b.aba}</strong></td>
+                        <td>${b.tipo ? (ROTULO_TIPO[b.tipo] || b.tipo) : "—"}</td>
+                        <td>${b.ano || "—"}</td>
+                        <td class="num">${importavel ? b.itens : "—"}${b.ignoradas ? ` <span style="color:#bbb">(+${b.ignoradas} desc.)</span>` : ""}</td>
+                        <td class="num">${b.valor_total !== null && importavel ? brl(b.valor_total) : "—"}</td>
+                        <td class="num">${importavel && b.sem_subunidade ? `<span style="color:#e8590c">${b.sem_subunidade}</span>` : (importavel ? "0" : "—")}</td>
+                        <td>${situacao}</td>
+                    </tr>`;
+            }).join("");
+
+            // A aba Orçamento não tem ano no nome — só pergunta se ela veio
+            const temOrcamento = blocos.some((b) => b.tipo === "orcamento" && b.itens > 0);
+            secaoOrcamento.hidden = !temOrcamento;
+
+            // De-para de subunidades não reconhecidas
+            if (naoResolvidos.length > 0) {
+                const opcoes = subunidades
+                    .map((s) => `<option value="${s.subunidade_id}">${s.sigla ? `${s.sigla} — ` : ""}${s.nome}</option>`)
+                    .join("");
+                depara.innerHTML = naoResolvidos.map((n) => `
+                    <div><strong>${n.texto}</strong><div class="ocorr">${n.ocorrencias} registro(s) · ${n.abas.join(", ")}</div></div>
+                    <div style="color:#aaa">→</div>
+                    <div><select class="imp-depara-sel" data-chave="${encodeURIComponent(n.chave)}">
+                        <option value="">— deixar sem subunidade —</option>${opcoes}
+                    </select></div>`).join("");
+                secaoDepara.hidden = false;
+            } else {
+                depara.innerHTML = "";
+                secaoDepara.hidden = true;
+            }
+
+            atualizarSelecao();
+        }
+
+        // Recalcula os cartões conforme o que está marcado
+        function atualizarSelecao() {
+            const marcados = [...document.querySelectorAll(".imp-chk:checked")]
+                .map((c) => previa.blocos[Number(c.dataset.aba)]);
+            const itens = marcados.reduce((s, b) => s + b.itens, 0);
+            const semSub = marcados.reduce((s, b) => s + b.sem_subunidade, 0);
+
+            document.querySelector("#impSelecionadas").textContent = marcados.length;
+            document.querySelector("#impItens").textContent = itens;
+            document.querySelector("#impSemSub").textContent = semSub;
+            btnConfirmar.disabled = marcados.length === 0;
+
+            // Avisa se o usuário marcou duas abas que carregam o mesmo fato
+            const duplicadasMarcadas = marcados.filter((b) => b.contido_em);
+            const substituicoes = marcados.filter((b) => b.ja_importada);
+            let html = "";
+            if (duplicadasMarcadas.length > 0) {
+                html += `<div style="color:#c92a2a"><strong>⚠ Risco de valores dobrados:</strong> ` +
+                    duplicadasMarcadas.map((b) => `<strong>${b.aba}</strong> já está contida em ${b.contido_em}`).join("; ") +
+                    `. Importar as duas soma o mesmo empenho duas vezes.</div>`;
+            }
+            if (substituicoes.length > 0) {
+                html += `<div style="margin-top:6px;color:#555"><strong>${substituicoes.length} aba(s)</strong> ` +
+                    `já importadas antes serão <strong>substituídas por completo</strong>: ` +
+                    substituicoes.map((b) => b.aba).join(", ") + `.</div>`;
+            }
+            aviso.innerHTML = html;
+            aviso.hidden = html === "";
+        }
+
+        corpo.addEventListener("change", (e) => {
+            if (e.target.classList.contains("imp-chk")) atualizarSelecao();
+        });
+        marcarTodas.addEventListener("change", () => {
+            document.querySelectorAll(".imp-chk").forEach((c) => { c.checked = marcarTodas.checked; });
+            atualizarSelecao();
+        });
+        // Trocar o ano do orçamento muda o que será gravado → refaz o preview
+        selAnoOrcamento.addEventListener("change", () => { if (blocosArquivo.length) enviarPreview(); });
+
+        // ── Gravação ──────────────────────────────────────────────────────
+        btnConfirmar.addEventListener("click", async () => {
+            const marcados = [...document.querySelectorAll(".imp-chk:checked")]
+                .map((c) => previa.blocos[Number(c.dataset.aba)]);
+            if (marcados.length === 0) return;
+
+            const apelidos = {};
+            document.querySelectorAll(".imp-depara-sel").forEach((sel) => {
+                if (sel.value) apelidos[decodeURIComponent(sel.dataset.chave)] = Number(sel.value);
+            });
+
+            const substituicoes = marcados.filter((b) => b.ja_importada).length;
+            const texto = `Importar ${marcados.length} aba(s)?` +
+                (substituicoes ? `\n\n${substituicoes} delas já tinham sido importadas e serão SUBSTITUÍDAS por completo.` : "");
+            if (!confirm(texto)) return;
+
+            btnConfirmar.disabled = true;
+            const textoOrig = btnConfirmar.textContent;
+            btnConfirmar.textContent = "Importando…";
+            try {
+                const r = await fetch(`${apiUrl}/importacao/financeiro`, {
+                    method: "POST",
+                    body: JSON.stringify({
+                        blocos: blocosArquivo,
+                        abas_selecionadas: marcados.map((b) => b.aba),
+                        ano_orcamento: Number(selAnoOrcamento.value),
+                        apelidos,
+                    }),
+                });
+                const resp = await r.json();
+                if (!r.ok) {
+                    alert(resp.message || "Erro ao importar.");
+                    btnConfirmar.disabled = false;
+                    btnConfirmar.textContent = textoOrig;
+                    return;
+                }
+                const falhas = (resp.data?.resultados || []).filter((x) => !x.ok);
+                alert(resp.message + (falhas.length ? `\n\nFalhas:\n${falhas.map((f) => `• ${f.aba}: ${f.erro}`).join("\n")}` : ""));
+                resetar();
+                btnConfirmar.textContent = textoOrig;
+                carregarHistorico();
+            } catch (err) {
+                console.error("Erro ao importar:", err);
+                alert("Erro de comunicação ao gravar a importação.");
+                btnConfirmar.disabled = false;
+                btnConfirmar.textContent = textoOrig;
+            }
+        });
+
+        btnCancelar.addEventListener("click", () => resetar());
+
+        // ── Histórico ─────────────────────────────────────────────────────
+        async function carregarHistorico() {
+            try {
+                const r = await fetch(`${apiUrl}/importacao/financeiro/historico`);
+                const resp = await r.json();
+                const linhas = resp.data || [];
+                historico.innerHTML = linhas.length === 0
+                    ? `<tr><td colspan="6" style="color:#aaa">Nenhuma importação registrada ainda.</td></tr>`
+                    : linhas.map((h) => `
+                        <tr>
+                            <td>${new Date(h.createdat).toLocaleString("pt-BR")}</td>
+                            <td>${h.origem_aba}</td>
+                            <td>${ROTULO_TIPO[h.tipo] || h.tipo}</td>
+                            <td>${h.ano || "—"}</td>
+                            <td class="num">${h.linhas_gravadas}</td>
+                            <td>${h.usuario || "—"}</td>
+                        </tr>`).join("");
+            } catch (err) {
+                console.error("Erro ao carregar histórico:", err);
+                historico.innerHTML = `<tr><td colspan="6" style="color:#c92a2a">Erro ao carregar.</td></tr>`;
+            }
+        }
+        carregarHistorico();
+    } // fim /importar-financeiro
 
 });

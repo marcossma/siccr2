@@ -1,12 +1,12 @@
 -- Schema dump gerado automaticamente. NÃO editar manualmente.
--- Origem: docker compose db (siccr) — 2026-08-26T13:42:24.868Z
+-- Origem: docker compose db (siccr) — 2026-08-26T14:42:52.332Z
 -- Regenere com: npm run db:dump
 
 --
 -- PostgreSQL database dump
 --
 
-\restrict rxCNTofhrH8iRjhpjC0F3UzB5D2Ye0WyNPrQSKAP0ZZtM21g4dKTUvI5Y2MsIgk
+\restrict PLPpOJFSKsw1nrIrSdq3M029UfB6X6QdQ3we5FMdT41Bym2Hudl0tsqaXPKtV3t
 
 -- Dumped from database version 16.13
 -- Dumped by pg_dump version 16.13
@@ -170,7 +170,9 @@ CREATE TABLE public.almoxarifado_requisicoes (
     observacao text,
     tramitacao character varying(120),
     origem_aba character varying(80) NOT NULL,
-    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    origem character varying(10) DEFAULT 'importado'::character varying NOT NULL,
+    created_by_user_id integer
 );
 
 
@@ -442,7 +444,9 @@ CREATE TABLE public.empenhos (
     processo character varying(255),
     observacao text,
     origem_aba character varying(80) NOT NULL,
-    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    origem character varying(10) DEFAULT 'importado'::character varying NOT NULL,
+    created_by_user_id integer
 );
 
 
@@ -591,7 +595,9 @@ CREATE TABLE public.licitacoes_itens (
     etp character varying(40),
     solicitacao_sie character varying(40),
     origem_aba character varying(80) NOT NULL,
-    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    origem character varying(10) DEFAULT 'importado'::character varying NOT NULL,
+    created_by_user_id integer
 );
 
 
@@ -734,7 +740,9 @@ CREATE TABLE public.orcamento_dotacoes (
     subunidade_id integer,
     subunidade_texto character varying(255),
     origem_aba character varying(80) NOT NULL,
-    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    origem character varying(10) DEFAULT 'importado'::character varying NOT NULL,
+    created_by_user_id integer
 );
 
 
@@ -1160,7 +1168,9 @@ CREATE TABLE public.scdp_viagens (
     valor_passagens_rodoviarias numeric(14,2),
     periodo_viagem character varying(120),
     origem_aba character varying(80) NOT NULL,
-    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    origem character varying(10) DEFAULT 'importado'::character varying NOT NULL,
+    created_by_user_id integer
 );
 
 
@@ -1338,7 +1348,9 @@ CREATE TABLE public.transferencias_recurso (
     contado_em_outra_guia boolean,
     observacao text,
     origem_aba character varying(80) NOT NULL,
-    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    origem character varying(10) DEFAULT 'importado'::character varying NOT NULL,
+    created_by_user_id integer
 );
 
 
@@ -2325,6 +2337,13 @@ CREATE INDEX almoxarifado_requisicoes_origem_aba ON public.almoxarifado_requisic
 
 
 --
+-- Name: almoxarifado_requisicoes_origem_aba_origem; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX almoxarifado_requisicoes_origem_aba_origem ON public.almoxarifado_requisicoes USING btree (origem_aba, origem);
+
+
+--
 -- Name: almoxarifado_requisicoes_subunidade_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2367,6 +2386,13 @@ CREATE INDEX empenhos_origem_aba ON public.empenhos USING btree (origem_aba);
 
 
 --
+-- Name: empenhos_origem_aba_origem; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX empenhos_origem_aba_origem ON public.empenhos USING btree (origem_aba, origem);
+
+
+--
 -- Name: empenhos_subunidade_entrega_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2399,6 +2425,13 @@ CREATE INDEX licitacoes_itens_ano ON public.licitacoes_itens USING btree (ano);
 --
 
 CREATE INDEX licitacoes_itens_origem_aba ON public.licitacoes_itens USING btree (origem_aba);
+
+
+--
+-- Name: licitacoes_itens_origem_aba_origem; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX licitacoes_itens_origem_aba_origem ON public.licitacoes_itens USING btree (origem_aba, origem);
 
 
 --
@@ -2451,6 +2484,13 @@ CREATE INDEX orcamento_dotacoes_origem_aba ON public.orcamento_dotacoes USING bt
 
 
 --
+-- Name: orcamento_dotacoes_origem_aba_origem; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX orcamento_dotacoes_origem_aba_origem ON public.orcamento_dotacoes USING btree (origem_aba, origem);
+
+
+--
 -- Name: patrimonio_historico_bem_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2500,6 +2540,13 @@ CREATE INDEX scdp_viagens_origem_aba ON public.scdp_viagens USING btree (origem_
 
 
 --
+-- Name: scdp_viagens_origem_aba_origem; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX scdp_viagens_origem_aba_origem ON public.scdp_viagens USING btree (origem_aba, origem);
+
+
+--
 -- Name: scdp_viagens_subunidade_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2518,6 +2565,13 @@ CREATE INDEX transferencias_recurso_ano ON public.transferencias_recurso USING b
 --
 
 CREATE INDEX transferencias_recurso_origem_aba ON public.transferencias_recurso USING btree (origem_aba);
+
+
+--
+-- Name: transferencias_recurso_origem_aba_origem; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX transferencias_recurso_origem_aba_origem ON public.transferencias_recurso USING btree (origem_aba, origem);
 
 
 --
@@ -2596,6 +2650,14 @@ ALTER TABLE ONLY public.agendamentos
 
 
 --
+-- Name: almoxarifado_requisicoes almoxarifado_requisicoes_created_by_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.almoxarifado_requisicoes
+    ADD CONSTRAINT almoxarifado_requisicoes_created_by_user_id_fkey FOREIGN KEY (created_by_user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
 -- Name: almoxarifado_requisicoes almoxarifado_requisicoes_subunidade_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2660,6 +2722,14 @@ ALTER TABLE ONLY public.disciplinas
 
 
 --
+-- Name: empenhos empenhos_created_by_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.empenhos
+    ADD CONSTRAINT empenhos_created_by_user_id_fkey FOREIGN KEY (created_by_user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
 -- Name: empenhos empenhos_subunidade_entrega_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2700,6 +2770,14 @@ ALTER TABLE ONLY public.itens_pedido_almoxarifado
 
 
 --
+-- Name: licitacoes_itens licitacoes_itens_created_by_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.licitacoes_itens
+    ADD CONSTRAINT licitacoes_itens_created_by_user_id_fkey FOREIGN KEY (created_by_user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
 -- Name: licitacoes_itens licitacoes_itens_subunidade_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2737,6 +2815,14 @@ ALTER TABLE ONLY public.manutencoes
 
 ALTER TABLE ONLY public.manutencoes
     ADD CONSTRAINT manutencoes_tipo_id_fkey FOREIGN KEY (tipo_id) REFERENCES public.manutencao_tipos(id_tipo) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: orcamento_dotacoes orcamento_dotacoes_created_by_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.orcamento_dotacoes
+    ADD CONSTRAINT orcamento_dotacoes_created_by_user_id_fkey FOREIGN KEY (created_by_user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE SET NULL;
 
 
 --
@@ -2868,6 +2954,14 @@ ALTER TABLE ONLY public.salas_historico
 
 
 --
+-- Name: scdp_viagens scdp_viagens_created_by_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.scdp_viagens
+    ADD CONSTRAINT scdp_viagens_created_by_user_id_fkey FOREIGN KEY (created_by_user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
 -- Name: scdp_viagens scdp_viagens_subunidade_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2881,6 +2975,14 @@ ALTER TABLE ONLY public.scdp_viagens
 
 ALTER TABLE ONLY public.subunidades_apelidos
     ADD CONSTRAINT subunidades_apelidos_subunidade_id_fkey FOREIGN KEY (subunidade_id) REFERENCES public.subunidades(subunidade_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: transferencias_recurso transferencias_recurso_created_by_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.transferencias_recurso
+    ADD CONSTRAINT transferencias_recurso_created_by_user_id_fkey FOREIGN KEY (created_by_user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE SET NULL;
 
 
 --
@@ -2967,5 +3069,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict rxCNTofhrH8iRjhpjC0F3UzB5D2Ye0WyNPrQSKAP0ZZtM21g4dKTUvI5Y2MsIgk
+\unrestrict PLPpOJFSKsw1nrIrSdq3M029UfB6X6QdQ3we5FMdT41Bym2Hudl0tsqaXPKtV3t
 

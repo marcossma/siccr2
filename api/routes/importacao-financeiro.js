@@ -14,8 +14,48 @@ const express = require("express");
 const pool = require("../config/database.js");
 const logger = require("../lib/logger.js");
 const P = require("../lib/planilha-financeiro.js");
+const { getNivelAcesso } = require("../middlewares/autorizar.js");
 
 const router = express.Router();
+
+/**
+ * Quem pode importar: direção OU quem tiver a funcionalidade
+ * `importar_financeiro` concedida — tipicamente o pessoal do NOr.
+ *
+ * Não dá para usar `autorizar("diretor", "importar_financeiro")`: naquele
+ * middleware o fallback por funcionalidade só é avaliado quando o nível
+ * efetivo é "servidor", então um chefe do NOr seria barrado. E abrir para
+ * "chefe" em geral seria demais — a importação substitui blocos inteiros.
+ */
+async function podeImportar(req, res, next) {
+    try {
+        const nivel = getNivelAcesso(req.usuario);
+        if (nivel === "super_admin" || nivel === "diretor") {
+            req.nivelAcesso = nivel;
+            return next();
+        }
+        const { rows } = await pool.query(
+            `SELECT 1 FROM permissoes_usuario pu
+               JOIN funcionalidades f ON f.id = pu.funcionalidade_id
+              WHERE pu.user_id = $1 AND f.nome = 'importar_financeiro'`,
+            [req.usuario.id]
+        );
+        if (rows.length > 0) {
+            req.nivelAcesso = nivel;
+            return next();
+        }
+        return res.status(403).json({
+            status: "error",
+            message: "Acesso negado. A importação é restrita à direção ou a quem tem a permissão de importar dados do financeiro.",
+            data: null,
+        });
+    } catch (error) {
+        logger.error({ err: error }, "Erro ao verificar permissão de importação financeira");
+        return res.status(500).json({ status: "error", message: "Erro ao verificar permissões.", data: null });
+    }
+}
+
+router.use(podeImportar);
 
 const MAX_LINHAS_TOTAL = 60000; // a planilha inteira tem ~14 mil linhas úteis
 
@@ -423,8 +463,15 @@ router.post("/", async (req, res) => {
                         gravadas += r.rowCount;
                     }
                 } else {
-                    // Fatos: substitui o bloco inteiro
-                    await client.query(`DELETE FROM ${destino.tabela} WHERE origem_aba = $1`, [bloco.aba]);
+                    // Fatos: substitui o bloco, mas SÓ o que veio da planilha.
+                    // Lançamento feito na plataforma (origem='manual') sobrevive
+                    // à reimportação — ver migration 20260826000002.
+                    await client.query(
+                        `DELETE FROM ${destino.tabela} WHERE origem_aba = $1 AND origem = 'importado'`,
+                        [bloco.aba]
+                    );
+                    // `origem` não vai na lista de colunas: o DEFAULT da tabela
+                    // já é 'importado', que é exatamente o que esta rota grava.
                     gravadas = await inserirEmLote(client, destino.tabela, destino.colunas, bloco.itens);
                 }
 
