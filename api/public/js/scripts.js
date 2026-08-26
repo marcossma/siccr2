@@ -4415,4 +4415,448 @@ document.addEventListener("DOMContentLoaded", function() {
         (async () => { await carregarPeriodos(); await Promise.all([carregarSalas(), carregarCursos()]); })();
     } // fim /quadro-de-horarios
 
+    // =========================================================================
+    // EXECUÇÃO ORÇAMENTÁRIA — /execucao-orcamentaria
+    // Recalcula, a partir dos fatos importados da planilha do financeiro, o que
+    // lá eram as abas "Resumo YYYY" e "Saldos unidades", e dá acesso ao detalhe
+    // de cada origem (empenhos, almoxarifado, SCDP, licitações, transferências).
+    // =========================================================================
+    if (urlParam === "/execucao-orcamentaria") {
+        const selAno       = document.querySelector("#eoAno");
+        const chkEstimativos = document.querySelector("#eoEstimativos");
+        const btnImprimir  = document.querySelector("#eoImprimir");
+        const contexto     = document.querySelector("#eoContexto");
+        const semDados     = document.querySelector("#eoSemDados");
+        const conteudo     = document.querySelector("#eoConteudo");
+        const tiles        = document.querySelector("#eoTiles");
+        const resumoCabecalho = document.querySelector("#eoResumoCabecalho");
+        const resumoCorpo  = document.querySelector("#eoResumoCorpo");
+        const resumoRodape = document.querySelector("#eoResumoRodape");
+        const notaResumo   = document.querySelector("#eoNotaResumo");
+        const abas         = document.querySelector("#eoAbas");
+        const busca        = document.querySelector("#eoBusca");
+        const filtroSub    = document.querySelector("#eoFiltroSub");
+        const filtroTipo   = document.querySelector("#eoFiltroTipo");
+        const detalheResumo = document.querySelector("#eoDetalheResumo");
+        const detalheCabecalho = document.querySelector("#eoDetalheCabecalho");
+        const detalheCorpo = document.querySelector("#eoDetalheCorpo");
+        const notaDetalhe  = document.querySelector("#eoNotaDetalhe");
+
+        // Paleta categórica validada (separação para daltonismo verificada com
+        // o validador; o verde do CCR fica no 1º slot). Ordem FIXA — a cor
+        // segue a categoria, nunca a posição no ranking.
+        const CORES = ["#009536", "#1971c2", "#e8590c", "#9c36b5", "#00949b", "#c2255c", "#8a6d00", "#5f3dc4"];
+        const COR_NEUTRA = "#adb5bd"; // "Outros"
+        const CINZA_GRADE = "#e9ecef";
+
+        let dadosResumo = null;
+        let fonteAtiva = "empenhos";
+        let temporizadorBusca = null;
+        const graficos = {};
+
+        const brl = (n) => Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+        const brlCurto = (n) => {
+            const v = Number(n || 0);
+            if (Math.abs(v) >= 1e6) return `R$ ${(v / 1e6).toFixed(1).replace(".", ",")} mi`;
+            if (Math.abs(v) >= 1e3) return `R$ ${Math.round(v / 1e3)} mil`;
+            return brl(v);
+        };
+        const dataBr = (v) => (v ? formatarData(v) : "—");
+        const destruir = (chave) => { if (graficos[chave]) { graficos[chave].destroy(); graficos[chave] = null; } };
+
+        // ── Seletor de exercício ──────────────────────────────────────────
+        async function carregarAnos() {
+            const anos = (await carregarDados("execucao-orcamentaria/anos")) || [];
+            if (anos.length === 0) {
+                selAno.innerHTML = `<option>${new Date().getFullYear()}</option>`;
+                return false;
+            }
+            selAno.innerHTML = anos
+                .map((a) => `<option value="${a.ano}">${a.ano} (${a.registros} registros)</option>`)
+                .join("");
+            return true;
+        }
+
+        // ── Resumo ────────────────────────────────────────────────────────
+        async function carregarResumo() {
+            const params = new URLSearchParams({ ano: selAno.value });
+            if (chkEstimativos.checked) params.set("incluir_estimativos", "1");
+            dadosResumo = await carregarDados(`execucao-orcamentaria/resumo?${params}`);
+            if (!dadosResumo) return;
+
+            const vazio = dadosResumo.por_subunidade.length === 0;
+            semDados.hidden = !vazio;
+            conteudo.hidden = vazio;
+
+            contexto.textContent = dadosResumo.escopo_restrito
+                ? "Você está vendo apenas os dados da sua subunidade."
+                : "Visão de todo o centro. Os saldos comparam a dotação do exercício com o que já foi aplicado.";
+
+            if (vazio) return;
+            renderTiles();
+            renderTabelaResumo();
+            renderGraficos();
+            preencherFiltros();
+        }
+
+        function renderTiles() {
+            const t = dadosResumo.totais;
+            const s = dadosResumo.scdp;
+            const cartoes = [
+                { l: "Dotação do exercício", v: brl(t.dotacao_custeio + t.dotacao_capital) },
+                { l: "Aplicado", v: brl(t.aplicado) },
+                { l: "Liquidado", v: brl(t.liquidado), classe: "info" },
+                { l: "Saldo custeio", v: brl(t.saldo_custeio), classe: t.saldo_custeio < 0 ? "neg" : "" },
+                { l: "Saldo permanente", v: brl(t.saldo_capital), classe: t.saldo_capital < 0 ? "neg" : "" },
+                { l: "Diárias (SCDP)", v: brl(s.diarias), classe: "info", sub: `${s.viagens} viagem(ns)` },
+                { l: "Itens licitados", v: brl(dadosResumo.licitacoes.total), classe: "info", sub: `${dadosResumo.licitacoes.itens} item(ns)` },
+            ];
+            tiles.innerHTML = cartoes.map((c) => `
+                <div class="eo-tile ${c.classe || ""}">
+                    <div class="n">${c.v}</div>
+                    <div class="l">${c.l}</div>
+                    ${c.sub ? `<div class="l" style="text-transform:none;color:#aaa">${c.sub}</div>` : ""}
+                </div>`).join("");
+        }
+
+        // Tabela pivô: subunidade × tipo de despesa (é a aba "Resumo" da planilha)
+        function renderTabelaResumo() {
+            const tipos = dadosResumo.tipos.map((t) => t.tipo);
+            const linhas = dadosResumo.por_subunidade;
+
+            resumoCabecalho.innerHTML = `
+                <tr>
+                    <th style="left:0;z-index:3">Subunidade</th>
+                    ${tipos.map((t) => `<th class="num">${t}</th>`).join("")}
+                    <th class="num">Total aplicado</th>
+                    <th class="num">Dotação</th>
+                    <th class="num">Saldo</th>
+                </tr>`;
+
+            resumoCorpo.innerHTML = linhas.map((l) => {
+                const dotacao = l.dotacao_custeio + l.dotacao_capital;
+                return `
+                <tr>
+                    <th title="${l.nome}">${l.sigla || l.nome}</th>
+                    ${tipos.map((t) => {
+                        const v = l.valores[t];
+                        return `<td class="num ${v ? "" : "eo-zero"}">${v ? brl(v) : "—"}</td>`;
+                    }).join("")}
+                    <td class="num"><strong>${brl(l.total_aplicado)}</strong></td>
+                    <td class="num">${dotacao ? brl(dotacao) : "—"}</td>
+                    <td class="num ${l.saldo_total < 0 ? "neg" : ""}">${dotacao || l.total_aplicado ? brl(l.saldo_total) : "—"}</td>
+                </tr>`;
+            }).join("");
+
+            const t = dadosResumo.totais;
+            resumoRodape.innerHTML = `
+                <tr>
+                    <th style="left:0;z-index:3">TOTAL</th>
+                    ${tipos.map((tipo) => {
+                        const soma = linhas.reduce((s, l) => s + (l.valores[tipo] || 0), 0);
+                        return `<td class="num">${brl(soma)}</td>`;
+                    }).join("")}
+                    <td class="num">${brl(t.aplicado)}</td>
+                    <td class="num">${brl(t.dotacao_custeio + t.dotacao_capital)}</td>
+                    <td class="num ${t.saldo_total < 0 ? "neg" : ""}">${brl(t.saldo_total)}</td>
+                </tr>`;
+
+            notaResumo.innerHTML =
+                `O gasto é atribuído à subunidade de <strong>entrega</strong>. "Almoxarifado" vem das requisições; ` +
+                `as demais colunas, dos empenhos. ` +
+                (dadosResumo.incluir_estimativos
+                    ? `<strong>Estimativos incluídos</strong> — atenção: empenhos "Estimativo - X" provisionam recurso que ` +
+                      `reaparece como requisição ou viagem, então há dupla contagem nesta visão.`
+                    : `Empenhos do tipo "Estimativo - X" estão <strong>fora</strong> da conta: eles apenas reservam recurso ` +
+                      `que já é contado quando vira requisição de almoxarifado ou viagem do SCDP.`);
+        }
+
+        // ── Gráficos ──────────────────────────────────────────────────────
+        function renderGraficos() {
+            const eixoMoeda = {
+                grid: { color: CINZA_GRADE }, border: { display: false },
+                ticks: { callback: (v) => brlCurto(v), font: { size: 10 }, color: "#868e96" },
+            };
+            const eixoCategoria = {
+                grid: { display: false }, border: { display: false },
+                ticks: { font: { size: 10 }, color: "#868e96" },
+            };
+            const tooltipMoeda = {
+                callbacks: { label: (c) => ` ${c.dataset.label ? `${c.dataset.label}: ` : ""}${brl(c.parsed.y ?? c.parsed.x ?? c.parsed)}` },
+            };
+
+            // 1) Execução mensal — duas séries, mesma unidade, MESMO eixo
+            const meses = dadosResumo.serie_mensal;
+            destruir("mensal");
+            graficos.mensal = new Chart(document.getElementById("gMensal"), {
+                type: "bar",
+                data: {
+                    labels: meses.map((m) => m.mes.slice(5) + "/" + m.mes.slice(2, 4)),
+                    datasets: [
+                        { label: "Empenhado", data: meses.map((m) => m.empenhado), backgroundColor: CORES[0], borderRadius: 4, borderSkipped: false },
+                        { label: "Liquidado", data: meses.map((m) => m.liquidado), backgroundColor: CORES[1], borderRadius: 4, borderSkipped: false },
+                    ],
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, animation: false,
+                    plugins: {
+                        legend: { position: "bottom", labels: { font: { size: 11 }, boxWidth: 12, usePointStyle: true, pointStyle: "rectRounded" } },
+                        tooltip: tooltipMoeda,
+                    },
+                    scales: { x: eixoCategoria, y: eixoMoeda },
+                },
+            });
+
+            // 2) Por tipo de despesa — categórico, no máximo 8 fatias + "Outros"
+            const tipos = [...dadosResumo.tipos].filter((t) => t.total > 0).sort((a, b) => b.total - a.total);
+            const principais = tipos.slice(0, 7);
+            const resto = tipos.slice(7).reduce((s, t) => s + t.total, 0);
+            const rotulos = principais.map((t) => t.tipo);
+            const valores = principais.map((t) => t.total);
+            const cores = principais.map((_, i) => CORES[i]);
+            if (resto > 0) { rotulos.push(`Outros (${tipos.length - 7})`); valores.push(resto); cores.push(COR_NEUTRA); }
+
+            destruir("tipo");
+            graficos.tipo = new Chart(document.getElementById("gTipo"), {
+                type: "doughnut",
+                data: { labels: rotulos, datasets: [{ data: valores, backgroundColor: cores, borderColor: "#fff", borderWidth: 2 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false, animation: false,
+                    plugins: {
+                        legend: { position: "bottom", labels: { font: { size: 10 }, boxWidth: 10, usePointStyle: true, pointStyle: "circle" } },
+                        tooltip: { callbacks: { label: (c) => ` ${c.label}: ${brl(c.parsed)}` } },
+                    },
+                },
+            });
+
+            // 3) Aplicado por subunidade — série única, uma cor só (sem legenda)
+            const topSub = dadosResumo.por_subunidade.filter((s) => s.total_aplicado > 0).slice(0, 12);
+            destruir("subunidade");
+            graficos.subunidade = new Chart(document.getElementById("gSubunidade"), {
+                type: "bar",
+                data: {
+                    // Sem sigla o nome por extenso estoura o eixo — encurta e o
+                    // tooltip mostra o nome completo.
+                    labels: topSub.map((s) => {
+                        const r = s.sigla || s.nome;
+                        return r.length > 24 ? `${r.slice(0, 23)}…` : r;
+                    }),
+                    datasets: [{ data: topSub.map((s) => s.total_aplicado), backgroundColor: CORES[0], borderRadius: 4, borderSkipped: false }],
+                },
+                options: {
+                    indexAxis: "y", responsive: true, maintainAspectRatio: false, animation: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                title: (c) => topSub[c[0].dataIndex].nome,
+                                label: (c) => ` ${brl(c.parsed.x)}`,
+                            },
+                        },
+                    },
+                    scales: { x: eixoMoeda, y: eixoCategoria },
+                },
+            });
+
+            // 4) Maiores fornecedores — série única
+            const forn = dadosResumo.top_fornecedores;
+            destruir("fornecedor");
+            graficos.fornecedor = new Chart(document.getElementById("gFornecedor"), {
+                type: "bar",
+                data: {
+                    labels: forn.map((f) => (f.fornecedor.length > 42 ? `${f.fornecedor.slice(0, 40)}…` : f.fornecedor)),
+                    datasets: [{ data: forn.map((f) => f.total), backgroundColor: CORES[1], borderRadius: 4, borderSkipped: false }],
+                },
+                options: {
+                    indexAxis: "y", responsive: true, maintainAspectRatio: false, animation: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { title: (c) => forn[c[0].dataIndex].fornecedor, label: (c) => ` ${brl(c.parsed.x)} · ${forn[c.dataIndex].itens} empenho(s)` } },
+                    },
+                    scales: { x: eixoMoeda, y: eixoCategoria },
+                },
+            });
+        }
+
+        function preencherFiltros() {
+            const atual = filtroSub.value;
+            filtroSub.innerHTML = `<option value="">Todas as subunidades</option>` +
+                dadosResumo.por_subunidade
+                    .filter((s) => s.subunidade_id)
+                    .map((s) => `<option value="${s.subunidade_id}">${s.sigla || s.nome}</option>`)
+                    .join("");
+            filtroSub.value = atual;
+            filtroSub.disabled = dadosResumo.escopo_restrito;
+        }
+
+        // ── Detalhe por origem ────────────────────────────────────────────
+        // Cada fonte tem suas colunas; `campos` mapeia rótulo → como renderizar.
+        const COLUNAS = {
+            empenhos: {
+                filtroTipo: () => dadosResumo.tipos.map((t) => t.tipo),
+                campos: [
+                    ["Data", (r) => dataBr(r.data)],
+                    ["Nº SIE", (r) => r.num_sie || "—"],
+                    ["SIAFI", (r) => r.num_siafi || "—"],
+                    ["Espécie", (r) => r.especie || "—"],
+                    ["Tipo de despesa", (r) => r.tipo_despesa || "—"],
+                    ["Subunidade", (r) => r.subunidade_sigla || r.subunidade_texto || "—"],
+                    ["Fornecedor", (r) => r.fornecedor || "—"],
+                    ["Resumo", (r) => r.resumo || "—", "largo"],
+                    ["Empenhado", (r) => brl(r.valor_empenhado), "num"],
+                    ["Liquidado", (r) => (r.valor_liquidado === null ? "—" : brl(r.valor_liquidado)), "num"],
+                ],
+            },
+            almoxarifado: {
+                filtroTipo: "tipo",
+                campos: [
+                    ["Data", (r) => dataBr(r.data)],
+                    ["Requisição", (r) => r.num_requisicao || "—"],
+                    ["Movimento", (r) => r.tipo_movimento || "—"],
+                    ["Subunidade", (r) => r.subunidade_sigla || r.subunidade_texto || "—"],
+                    ["Solicitante", (r) => r.solicitante || "—"],
+                    ["Local de entrega", (r) => r.local_entrega || "—"],
+                    ["Situação", (r) => r.situacao || "—"],
+                    ["Observação", (r) => r.observacao || "—", "largo"],
+                    ["Valor", (r) => brl(r.valor_total), "num"],
+                ],
+            },
+            scdp: {
+                filtroTipo: null,
+                campos: [
+                    ["Data", (r) => dataBr(r.data)],
+                    ["PCDP", (r) => r.pcdp || "—"],
+                    ["Proposto", (r) => r.proposto || "—"],
+                    ["Subunidade", (r) => r.subunidade_sigla || r.subunidade_texto || "—"],
+                    ["Fonte", (r) => r.fonte_recurso || "—"],
+                    ["Período", (r) => r.periodo_viagem || "—"],
+                    ["Nº diárias", (r) => (r.num_diarias === null ? "—" : Number(r.num_diarias).toLocaleString("pt-BR")), "num"],
+                    ["Diárias", (r) => brl(r.valor_diarias), "num"],
+                    ["Passagens", (r) => brl(Number(r.valor_passagens_aereas || 0) + Number(r.valor_passagens_rodoviarias || 0)), "num"],
+                ],
+            },
+            licitacoes: {
+                filtroTipo: "tipo",
+                campos: [
+                    ["Data", (r) => dataBr(r.data)],
+                    ["Tipo", (r) => r.tipo || "—"],
+                    ["Subunidade", (r) => r.subunidade_sigla || r.subunidade_texto || "—"],
+                    ["Interessado", (r) => r.interessado || "—"],
+                    ["Cód. red.", (r) => r.cod_reduzido || "—"],
+                    ["Descrição", (r) => r.descricao || "—", "largo"],
+                    ["Qtd", (r) => (r.unidades === null ? "—" : Number(r.unidades).toLocaleString("pt-BR")), "num"],
+                    ["Vl. unit.", (r) => brl(r.valor_unitario), "num"],
+                    ["Total", (r) => brl(r.valor_total), "num"],
+                    ["Solicitação SIE", (r) => r.solicitacao_sie || "—"],
+                ],
+            },
+            transferencias: {
+                filtroTipo: "tipo",
+                campos: [
+                    ["Data", (r) => dataBr(r.data)],
+                    ["Nº transf.", (r) => r.num_transferencia || "—"],
+                    ["Subunidade", (r) => r.subunidade_sigla || r.subunidade_texto || "—"],
+                    ["Gestora destino", (r) => r.gestora_destino || "—"],
+                    ["Natureza", (r) => r.tipo_despesa || "—"],
+                    ["Contado em outra guia", (r) => (r.contado_em_outra_guia === null ? "—" : r.contado_em_outra_guia ? "Sim" : "Não")],
+                    ["Observação", (r) => r.observacao || "—", "largo"],
+                    ["Valor", (r) => brl(r.valor), "num"],
+                ],
+            },
+            dotacoes: {
+                filtroTipo: null,
+                campos: [
+                    ["Categoria", (r) => (r.categoria === "capital" ? "Permanente" : "Custeio")],
+                    ["Grupo", (r) => r.grupo || "—"],
+                    ["Programa / ação", (r) => r.programa, "largo"],
+                    ["Subunidade responsável", (r) => r.subunidade_sigla || r.subunidade_texto || "—"],
+                    ["%", (r) => (r.percentual === null ? "—" : `${Number(r.percentual).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`), "num"],
+                    ["Valor", (r) => brl(r.valor), "num"],
+                ],
+            },
+        };
+
+        async function carregarDetalhe() {
+            const cfg = COLUNAS[fonteAtiva];
+            const params = new URLSearchParams({ ano: selAno.value });
+            if (fonteAtiva !== "dotacoes") {
+                if (busca.value.trim()) params.set("q", busca.value.trim());
+                if (filtroSub.value) params.set("subunidade_id", filtroSub.value);
+                if (filtroTipo.value) params.set("tipo", filtroTipo.value);
+                if (fonteAtiva === "empenhos" && chkEstimativos.checked) params.set("incluir_estimativos", "1");
+            }
+
+            detalheCorpo.innerHTML = `<tr><td colspan="${cfg.campos.length}" class="eo-vazio">Carregando…</td></tr>`;
+            const resp = await carregarDados(`execucao-orcamentaria/${fonteAtiva}?${params}`);
+            if (!resp) return;
+
+            // /dotacoes devolve o array direto; as listagens devolvem {itens,...}
+            const itens = Array.isArray(resp) ? resp : resp.itens;
+            const total = Array.isArray(resp) ? resp.length : resp.total;
+            const soma = Array.isArray(resp) ? resp.reduce((s, r) => s + Number(r.valor || 0), 0) : resp.soma;
+
+            detalheCabecalho.innerHTML = `<tr>${cfg.campos
+                .map(([rotulo, , classe]) => `<th class="${classe === "num" ? "num" : ""}">${rotulo}</th>`)
+                .join("")}</tr>`;
+
+            detalheCorpo.innerHTML = itens.length === 0
+                ? `<tr><td colspan="${cfg.campos.length}" class="eo-vazio">Nenhum registro encontrado.</td></tr>`
+                : itens.map((r) => `<tr>${cfg.campos.map(([, render, classe]) => {
+                    const valor = render(r);
+                    const estilo = classe === "largo" ? ' style="white-space:normal;max-width:380px"' : "";
+                    return `<td class="${classe === "num" ? "num" : ""}"${estilo}>${valor}</td>`;
+                }).join("")}</tr>`).join("");
+
+            detalheResumo.textContent = `${total} registro(s) · ${brl(soma)}`;
+            notaDetalhe.textContent = (!Array.isArray(resp) && resp.truncado)
+                ? "Mostrando apenas os primeiros registros — refine a busca para ver o restante. Os totais acima consideram todos."
+                : "";
+
+            // Filtro de tipo depende da fonte
+            if (cfg.filtroTipo) {
+                const campoOpcao = fonteAtiva === "almoxarifado" ? "tipo_movimento" : "tipo";
+                const opcoes = typeof cfg.filtroTipo === "function"
+                    ? cfg.filtroTipo()
+                    : [...new Set(itens.map((r) => r[campoOpcao]).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+                const atual = filtroTipo.value;
+                filtroTipo.innerHTML = `<option value="">Todos os tipos</option>` +
+                    opcoes.map((t) => `<option value="${t}">${t}</option>`).join("");
+                filtroTipo.value = atual;
+                filtroTipo.hidden = false;
+            } else {
+                filtroTipo.hidden = true;
+                filtroTipo.value = "";
+            }
+            busca.hidden = fonteAtiva === "dotacoes";
+            filtroSub.hidden = fonteAtiva === "dotacoes";
+        }
+
+        // ── Eventos ───────────────────────────────────────────────────────
+        abas.addEventListener("click", (e) => {
+            const botao = e.target.closest(".eo-aba");
+            if (!botao) return;
+            abas.querySelectorAll(".eo-aba").forEach((b) => b.classList.toggle("ativa", b === botao));
+            fonteAtiva = botao.dataset.fonte;
+            filtroTipo.value = "";
+            carregarDetalhe();
+        });
+
+        selAno.addEventListener("change", async () => { await carregarResumo(); await carregarDetalhe(); });
+        chkEstimativos.addEventListener("change", async () => { await carregarResumo(); await carregarDetalhe(); });
+        filtroSub.addEventListener("change", () => carregarDetalhe());
+        filtroTipo.addEventListener("change", () => carregarDetalhe());
+        busca.addEventListener("input", () => {
+            clearTimeout(temporizadorBusca);
+            temporizadorBusca = setTimeout(() => carregarDetalhe(), 350);
+        });
+        btnImprimir.addEventListener("click", () => window.print());
+
+        (async () => {
+            const temDados = await carregarAnos();
+            if (!temDados) { semDados.hidden = false; conteudo.hidden = true; return; }
+            await carregarResumo();
+            await carregarDetalhe();
+        })();
+    } // fim /execucao-orcamentaria
+
 });

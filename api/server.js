@@ -56,6 +56,12 @@ const manutencao = require("./routes/manutencao.js");
 const emailOauth = require("./routes/email-oauth.js");
 // Importar rota de importação de dados (super_admin)
 const importacao = require("./routes/importacao.js");
+
+// Importação da planilha do setor financeiro (execução orçamentária)
+const importacaoFinanceiro = require("./routes/importacao-financeiro.js");
+
+// Leitura da execução orçamentária (empenhos, almoxarifado, SCDP, licitações)
+const execucaoOrcamentaria = require("./routes/execucao-orcamentaria.js");
 // Importar rota pública do painel de TV (hall dos prédios)
 const painelTv = require("./routes/painel-tv.js");
 // Importar rotas para notícias (proxy WordPress)
@@ -242,7 +248,14 @@ app.use("/api/comunicados",          autenticar, autorizar("diretor"),      comu
 app.use("/api/manutencao",           autenticar, autorizar("servidor"),     manutencao);
 
 // Importação de dados em massa (planilhas) — restrito ao super_admin
+// A planilha do financeiro é um caso à parte (26 abas num arquivo só) e tem
+// router próprio; monta antes para o prefixo mais específico vencer.
+app.use("/api/importacao/financeiro", autenticar, autorizar("super_admin"), importacaoFinanceiro);
 app.use("/api/importacao",           autenticar, autorizar("super_admin"),  importacao);
+
+// Execução orçamentária: direção vê tudo, chefe vê a própria subunidade
+// (o recorte por subunidade é feito dentro da rota)
+app.use("/api/execucao-orcamentaria", autenticar, autorizar("chefe"),       execucaoOrcamentaria);
 
 // Funcionalidades: leitura para chefe+, gestão do catálogo apenas via painel super_admin
 app.use("/api/funcionalidades",   autenticar, autorizar("chefe"),        funcionalidades);

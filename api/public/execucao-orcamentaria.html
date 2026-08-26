@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICCR - Execução Orçamentária</title>
+    <link rel="shortcut icon" href="./img/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/dialogs.css">
+    <link rel="stylesheet" href="./adm/css/style.css">
+    <link rel="stylesheet" href="./adm/css/dialogs.css">
+    <link rel="stylesheet" href="./css/ui-kit.css">
+    <script src="./js/vendor/chart.min.js"></script>
+    <script type="module" src="./js/scripts.js"></script>
+    <style>
+        .eo-toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+        .eo-toolbar select, .eo-toolbar button, .eo-toolbar input { padding:7px 12px; border-radius:5px; border:1px solid #ccc; font:12px verdana,sans-serif; background:#fff; }
+        .eo-toolbar label { font:12px verdana,sans-serif; color:#555; display:flex; align-items:center; gap:5px; }
+        .btn-aplicar { background:#007a2e !important; color:#fff !important; border-color:#007a2e !important; cursor:pointer; }
+        .btn-imprimir { background:#555 !important; color:#fff !important; border-color:#555 !important; cursor:pointer; }
+
+        .eo-tiles { display:flex; gap:12px; flex-wrap:wrap; margin:16px 0; }
+        .eo-tile { flex:1 1 178px; min-width:178px; background:#fff; border-radius:8px; padding:14px 16px; box-shadow:0 1px 4px rgba(0,0,0,.08); border-left:4px solid #009536; }
+        /* valores como "R$ 1.718.023,67" nao cabem em 20px — 17px + nowrap evita
+           que o sinal negativo quebre para a linha de cima */
+        .eo-tile .n { font-size:17px; font-weight:bold; color:#009536; font-variant-numeric:tabular-nums; white-space:nowrap; }
+        .eo-tile .l { font-size:11px; color:#777; text-transform:uppercase; letter-spacing:.4px; }
+        .eo-tile.neg { border-left-color:#c92a2a; } .eo-tile.neg .n { color:#c92a2a; }
+        .eo-tile.info { border-left-color:#1971c2; } .eo-tile.info .n { color:#1971c2; }
+
+        .eo-graficos { display:flex; gap:20px; flex-wrap:wrap; margin:1rem 0; width:100%; }
+        .eo-box { flex:1; min-width:300px; background:#fff; border-radius:8px; padding:16px; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+        .eo-box.full { flex-basis:100%; }
+        .eo-box h3 { font-size:13px; color:#555; margin:0 0 12px; text-transform:uppercase; letter-spacing:.5px; }
+        .grafico-wrap { position:relative; height:280px; }
+        .grafico-wrap.alto { height:330px; }
+
+        .eo-tabela-wrap { overflow:auto; max-height:560px; border:1px solid #eee; border-radius:6px; background:#fff; }
+        .eo-tabela { width:100%; border-collapse:collapse; font-size:12px; }
+        .eo-tabela th, .eo-tabela td { padding:6px 9px; border-bottom:1px solid #eee; text-align:left; white-space:nowrap; }
+        .eo-tabela thead th { position:sticky; top:0; background:#009536; color:#fff; z-index:2; font-size:11px; }
+        .eo-tabela tbody th { position:sticky; left:0; background:#fff; z-index:1; font-weight:bold; }
+        .eo-tabela .num { text-align:right; font-variant-numeric:tabular-nums; }
+        .eo-tabela .neg { color:#c92a2a; }
+        .eo-tabela tr:hover td { background:#f7fbf8; }
+        .eo-tabela tfoot td, .eo-tabela tfoot th { position:sticky; bottom:0; background:#f1f3f5; font-weight:bold; border-top:2px solid #009536; }
+        .eo-zero { color:#ccc; }
+
+        .eo-abas { display:flex; gap:4px; flex-wrap:wrap; margin:18px 0 0; border-bottom:2px solid #e9ecef; }
+        .eo-aba { padding:8px 14px; font:12px verdana,sans-serif; border:none; background:none; cursor:pointer; color:#666; border-bottom:2px solid transparent; margin-bottom:-2px; }
+        .eo-aba.ativa { color:#007a2e; border-bottom-color:#009536; font-weight:bold; }
+        .eo-detalhe-toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:12px 0; }
+        .eo-detalhe-toolbar input, .eo-detalhe-toolbar select { padding:6px 10px; border-radius:5px; border:1px solid #ccc; font:12px verdana,sans-serif; }
+        .eo-resumo-linha { font-size:12px; color:#555; margin:8px 0; }
+
+        .eo-nota { font-size:11px; color:#888; margin-top:6px; line-height:1.5; }
+        .eo-vazio { padding:30px; text-align:center; color:#aaa; font-size:13px; }
+
+        @media print {
+            header, footer, .eo-toolbar, responsive-menu, #btnEntrar, .eo-abas, .eo-detalhe-toolbar { display:none !important; }
+            body { background:#fff; } .container { box-shadow:none; }
+            .eo-box, .eo-tabela-wrap { break-inside:avoid; }
+            .eo-tabela-wrap { max-height:none; overflow:visible; }
+        }
+        @media (max-width:600px) { .eo-box { min-width:0; } }
+    </style>
+</head>
+<body>
+    <!-- Formulário de Login DIALOG -->
+    <dialog id="dialogLogin">
+        <fieldset>
+            <legend>Login</legend>
+            <form id="frmLogin">
+                <div class="row"><input type="text" name="txtLogin" id="txtLogin" class="formInput" placeholder="Digite o seu login"></div>
+                <div class="row"><input type="password" name="txtSenha" id="txtSenha" class="formInput" placeholder="Digite a sua senha"></div>
+                <p id="loginErro" class="login-erro" hidden></p>
+                <div class="row">
+                    <button id="btnLogin" type="button">Entrar</button>
+                    <button id="btnCancelarLogin" type="button">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+
+    <div class="container">
+        <header>
+            <a href="/"><img src="./img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo"></a>
+            <div class="acesso"><a href="#" id="btnEntrar" class="">Entrar</a></div>
+        </header>
+        <div><responsive-menu></responsive-menu></div>
+
+        <main class="flex flex--column">
+            <section class="titulo_secao flex justify--space--between align--items--center" style="flex-wrap:wrap;gap:10px">
+                <h1 class="flex align--items--center gap--10"><i class="bi bi-cash-stack"></i> Execução Orçamentária</h1>
+                <div class="eo-toolbar">
+                    <label for="eoAno">Exercício:</label>
+                    <select id="eoAno"></select>
+                    <label title="Empenhos do tipo 'Estimativo - X' reservam recurso que depois é consumido como requisição de almoxarifado ou viagem do SCDP. Contá-los junto dobraria o gasto.">
+                        <input type="checkbox" id="eoEstimativos"> incluir estimativos
+                    </label>
+                    <button type="button" id="eoImprimir" class="btn-imprimir">🖨 Imprimir / PDF</button>
+                </div>
+            </section>
+
+            <p class="eo-resumo-linha" id="eoContexto"></p>
+
+            <div id="eoSemDados" class="eo-vazio" hidden>
+                Nenhum dado importado para este exercício.
+                <br><br>
+                <a href="/adm/importar-financeiro">Importar a planilha do financeiro</a>
+            </div>
+
+            <div id="eoConteudo" hidden>
+                <div class="eo-tiles" id="eoTiles"></div>
+
+                <div class="eo-graficos">
+                    <div class="eo-box full">
+                        <h3>Execução mensal (empenhado × liquidado)</h3>
+                        <div class="grafico-wrap alto"><canvas id="gMensal"></canvas></div>
+                    </div>
+                </div>
+                <div class="eo-graficos">
+                    <div class="eo-box"><h3>Por tipo de despesa</h3><div class="grafico-wrap"><canvas id="gTipo"></canvas></div></div>
+                    <div class="eo-box"><h3>Aplicado por subunidade (top 12)</h3><div class="grafico-wrap"><canvas id="gSubunidade"></canvas></div></div>
+                </div>
+                <div class="eo-graficos">
+                    <div class="eo-box full"><h3>Maiores fornecedores</h3><div class="grafico-wrap"><canvas id="gFornecedor"></canvas></div></div>
+                </div>
+
+                <div class="eo-box full" style="margin-top:8px">
+                    <h3>Aplicado por subunidade e tipo de despesa</h3>
+                    <div class="eo-tabela-wrap">
+                        <table class="eo-tabela" id="eoTabelaResumo">
+                            <thead id="eoResumoCabecalho"></thead>
+                            <tbody id="eoResumoCorpo"></tbody>
+                            <tfoot id="eoResumoRodape"></tfoot>
+                        </table>
+                    </div>
+                    <p class="eo-nota" id="eoNotaResumo"></p>
+                </div>
+
+                <div class="eo-abas" id="eoAbas">
+                    <button type="button" class="eo-aba ativa" data-fonte="empenhos">Empenhos</button>
+                    <button type="button" class="eo-aba" data-fonte="almoxarifado">Almoxarifado</button>
+                    <button type="button" class="eo-aba" data-fonte="scdp">Viagens / diárias</button>
+                    <button type="button" class="eo-aba" data-fonte="licitacoes">Licitações</button>
+                    <button type="button" class="eo-aba" data-fonte="transferencias">Transferências</button>
+                    <button type="button" class="eo-aba" data-fonte="dotacoes">Orçamento</button>
+                </div>
+
+                <div class="eo-detalhe-toolbar">
+                    <input type="search" id="eoBusca" placeholder="Buscar (descrição, fornecedor, nº…)" style="min-width:260px">
+                    <select id="eoFiltroSub"><option value="">Todas as subunidades</option></select>
+                    <select id="eoFiltroTipo"><option value="">Todos os tipos</option></select>
+                    <span id="eoDetalheResumo" style="font-size:12px;color:#555;margin-left:auto"></span>
+                </div>
+
+                <div class="eo-tabela-wrap">
+                    <table class="eo-tabela" id="eoTabelaDetalhe">
+                        <thead id="eoDetalheCabecalho"></thead>
+                        <tbody id="eoDetalheCorpo"></tbody>
+                    </table>
+                </div>
+                <p class="eo-nota" id="eoNotaDetalhe"></p>
+            </div>
+        </main>
+        <footer>Rodapé</footer>
+    </div>
+
+    <script type="module" src="./js/components/index.js"></script>
+</body>
+</html>

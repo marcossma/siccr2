@@ -66,6 +66,7 @@ class ResponsiveMenu extends HTMLElement {
                     ${ehSID ? `<hr><li><a href="/verificar-pedidos">Verificar pedidos</a></li>` : ""}
                     <li><a href="/previsao-despesas">Previsão de despesas</a></li>
                     <li><a href="/relatorios">Relatórios</a></li>
+                    <li><a href="/execucao-orcamentaria">Execução orçamentária</a></li>
                 </ul>
             </li>` : "";
 
