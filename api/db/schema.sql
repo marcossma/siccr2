@@ -1,12 +1,12 @@
 -- Schema dump gerado automaticamente. NÃO editar manualmente.
--- Origem: docker compose db (siccr) — 2026-09-03T19:18:04.295Z
+-- Origem: docker compose db (siccr) — 2026-09-03T19:24:22.285Z
 -- Regenere com: npm run db:dump
 
 --
 -- PostgreSQL database dump
 --
 
-\restrict Kle7SFOJ04fa7iZacdjlHEBK6HFrcT46rWhWrsqlvsi5uCm2eIbB3eno6KgNuRB
+\restrict kzP1SYOCyjZ9449OmUx5N6YqT8b4f05yzUhMuLs85oldkSp2zfbhR7MgJrrdImS
 
 -- Dumped from database version 16.13
 -- Dumped by pg_dump version 16.13
@@ -3198,5 +3198,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Kle7SFOJ04fa7iZacdjlHEBK6HFrcT46rWhWrsqlvsi5uCm2eIbB3eno6KgNuRB
+\unrestrict kzP1SYOCyjZ9449OmUx5N6YqT8b4f05yzUhMuLs85oldkSp2zfbhR7MgJrrdImS
 

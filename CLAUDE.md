@@ -412,12 +412,13 @@ de ferramenta), `GET /conversas`, `GET /conversas/:id`, `DELETE /conversas/:id`.
 (default é por data). Existe por causa do assistente: sem isso ele respondia "as maiores
 compras" com as mais **recentes**. Perguntas com "maiores/principais/top" exigem esse parâmetro.
 
-⚠️ **Limitação conhecida — agregação por pessoa/entidade.** As ferramentas devolvem
-registros individuais; não há agregação por proposto, por solicitante etc. Então "quem mais
-recebeu diárias" só pode ser respondido como "as maiores viagens individuais" (a mesma
-pessoa aparece duas vezes se viajou duas vezes). O prompt obriga o modelo a declarar isso,
-mas a correção de verdade é um endpoint de agregação (`GET /scdp/por-proposto?ano=`) e a
-ferramenta correspondente. Fica para quando surgir a necessidade.
+**Agregação:** `GET /api/execucao-orcamentaria/:fonte/agrupado?por=&ano=&subunidade_id=&q=&limit=`
+soma por pessoa, fornecedor, setor ou categoria (ferramenta `somar_por`). É a única forma
+correta de responder "quem mais...": ordenar a listagem daria o maior registro isolado, e
+quem aparece várias vezes ficaria fora do topo. `por` sai de **whitelist** (`AGRUPAMENTOS`)
+— é a única defesa possível para um trecho de SQL dinâmico, ainda mais com um modelo de IA
+escolhendo o valor do outro lado. `soma` e `total` usam funções de janela e valem para
+**todos** os grupos, não só os que o `limit` devolve.
 
 **Frontend:** `<assistente-ia>` (`js/components/assistente-ia.js`) — um componente, dois
 modos: botão flutuante (injetado automaticamente em toda página por `components/index.js`,

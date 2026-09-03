@@ -35,9 +35,11 @@ const brl = (n) => Number(n || 0).toLocaleString("pt-BR", { style: "currency", c
     let falhas = 0;
 
     console.log("═══ 1. Todas as ferramentas respondem (perfil direção) ═══\n");
+    // Argumentos mínimos por ferramenta; as que não aparecem aqui só precisam do ano
+    const ARGS = { somar_por: { fonte: "empenhos", por: "fornecedor" } };
     for (const f of FERRAMENTAS) {
-        const r = await executar(f.nome, { ano: 2026 }, { baseUrl: BASE_URL, token: PERFIS.diretor });
-        const linhas = Array.isArray(r.paraTela?.itens) ? r.paraTela.itens.length : "—";
+        const r = await executar(f.nome, { ano: 2026, ...(ARGS[f.nome] || {}) }, { baseUrl: BASE_URL, token: PERFIS.diretor });
+        const linhas = Array.isArray(r.linhas) ? r.linhas.length : "—";
         console.log(`  ${r.ok ? "ok " : "ERR"} ${f.nome.padEnd(24)} linhas=${String(linhas).padStart(5)}  ${r.erro || ""}`);
         if (!r.ok) falhas++;
     }
@@ -84,6 +86,32 @@ const brl = (n) => Number(n || 0).toLocaleString("pt-BR", { style: "currency", c
         falhas++;
     } else {
         console.log("  >>> ok: negado, e com orientação para o modelo explicar em vez de contornar");
+    }
+
+    console.log("\n═══ 4b. Agregação também respeita o escopo ═══\n");
+    // O agrupamento é onde um vazamento seria mais grave: um chefe veria o
+    // ranking do centro inteiro numa tacada.
+    const aggDiretor = await executar("somar_por", { fonte: "almoxarifado", por: "subunidade", ano: 2025 }, { baseUrl: BASE_URL, token: PERFIS.diretor });
+    const aggChefe = await executar("somar_por", { fonte: "almoxarifado", por: "subunidade", ano: 2025 }, { baseUrl: BASE_URL, token: PERFIS.chefeDFT });
+    const gruposDiretor = aggDiretor.paraModelo?.grupos_no_total ?? 0;
+    const gruposChefe = aggChefe.paraModelo?.grupos_no_total ?? 0;
+    console.log(`  direção  → ${gruposDiretor} grupo(s), soma ${brl(aggDiretor.paraModelo?.soma_de_todos_os_grupos)}`);
+    console.log(`  chefe DFT→ ${gruposChefe} grupo(s), soma ${brl(aggChefe.paraModelo?.soma_de_todos_os_grupos)}`);
+    if (gruposChefe > 1) {
+        console.log("  >>> FALHA: o chefe está vendo o ranking de outras subunidades");
+        falhas++;
+    } else {
+        console.log("  >>> ok: o agrupamento fica restrito ao escopo do usuário");
+    }
+
+    // O `por` é interpolado no SQL — só pode sair de whitelist
+    const injecao = await executar("somar_por", { fonte: "scdp", por: "proposto) FROM users--", ano: 2025 }, { baseUrl: BASE_URL, token: PERFIS.diretor });
+    console.log(`  agrupamento forjado → ok=${injecao.ok} · ${String(injecao.erro || "").slice(0, 70)}`);
+    if (injecao.ok) {
+        console.log("  >>> FALHA: agrupamento fora da whitelist foi aceito");
+        falhas++;
+    } else {
+        console.log("  >>> ok: recusado pela whitelist");
     }
 
     console.log("\n═══ 5. Dado pessoal não sai da plataforma (duas camadas) ═══\n");

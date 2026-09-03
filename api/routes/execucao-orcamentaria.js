@@ -416,38 +416,47 @@ const LISTAGENS = {
     },
 };
 
+/**
+ * Monta o WHERE de uma listagem: ano + escopo RBAC + filtros + busca.
+ * Extraído para que a listagem e a agregação apliquem exatamente as mesmas
+ * regras — sobretudo o recorte por subunidade, que é o que garante que um
+ * chefe não veja o centro inteiro num agrupamento.
+ */
+function montarFiltro(req, nome, cfg) {
+    const ano = anoValido(req.query.ano, new Date().getFullYear());
+    const condicoes = ["e.ano = $1"];
+    const params = [ano];
+    const add = (sql, valor) => { params.push(valor); condicoes.push(sql.replace("$?", `$${params.length}`)); };
+
+    // Escopo RBAC + filtro explícito de subunidade
+    const nivel = getNivelAcesso(req.usuario);
+    if (nivel !== "super_admin" && nivel !== "diretor") {
+        add(`${cfg.colunaSub} = $?`, req.usuario.subunidade);
+    } else if (req.query.subunidade_id) {
+        const id = parseInt(req.query.subunidade_id, 10);
+        if (Number.isInteger(id)) add(`${cfg.colunaSub} = $?`, id);
+    }
+
+    for (const [chave, coluna] of Object.entries(cfg.filtros)) {
+        if (req.query[chave]) add(`${coluna} = $?`, String(req.query[chave]));
+    }
+    if (nome === "empenhos" && req.query.incluir_estimativos !== "1") {
+        condicoes.push("e.estimativo = FALSE");
+    }
+    const busca = String(req.query.q || "").trim();
+    if (busca) {
+        params.push(`%${busca}%`);
+        const i = params.length;
+        condicoes.push(`(${cfg.busca.map((c) => `${c} ILIKE $${i}`).join(" OR ")})`);
+    }
+
+    return { where: `WHERE ${condicoes.join(" AND ")}`, params, ano };
+}
+
 for (const [nome, cfg] of Object.entries(LISTAGENS)) {
     router.get(`/${nome}`, async (req, res) => {
-        const ano = anoValido(req.query.ano, new Date().getFullYear());
         const limite = Math.min(Math.max(parseInt(req.query.limit, 10) || 300, 1), 2000);
-
-        const condicoes = ["e.ano = $1"];
-        const params = [ano];
-        const add = (sql, valor) => { params.push(valor); condicoes.push(sql.replace("$?", `$${params.length}`)); };
-
-        // Escopo RBAC + filtro explícito de subunidade
-        const nivel = getNivelAcesso(req.usuario);
-        if (nivel !== "super_admin" && nivel !== "diretor") {
-            add(`${cfg.colunaSub} = $?`, req.usuario.subunidade);
-        } else if (req.query.subunidade_id) {
-            const id = parseInt(req.query.subunidade_id, 10);
-            if (Number.isInteger(id)) add(`${cfg.colunaSub} = $?`, id);
-        }
-
-        for (const [chave, coluna] of Object.entries(cfg.filtros)) {
-            if (req.query[chave]) add(`${coluna} = $?`, String(req.query[chave]));
-        }
-        if (nome === "empenhos" && req.query.incluir_estimativos !== "1") {
-            condicoes.push("e.estimativo = FALSE");
-        }
-        const busca = String(req.query.q || "").trim();
-        if (busca) {
-            params.push(`%${busca}%`);
-            const i = params.length;
-            condicoes.push(`(${cfg.busca.map((c) => `${c} ILIKE $${i}`).join(" OR ")})`);
-        }
-
-        const where = `WHERE ${condicoes.join(" AND ")}`;
+        const { where, params } = montarFiltro(req, nome, cfg);
         // "as maiores compras" precisa de ordenação por valor, não por data.
         // Sem isto o consumidor (inclusive o assistente de IA) apresenta as
         // mais recentes como se fossem as maiores.
@@ -480,6 +489,134 @@ for (const [nome, cfg] of Object.entries(LISTAGENS)) {
         } catch (error) {
             logger.error({ err: error, listagem: nome }, "Erro ao listar execução orçamentária");
             return res.status(500).json({ status: "error", message: "Erro ao listar registros.", data: null });
+        }
+    });
+}
+
+// ───────────────────────────────────────────────────────────────
+// GET /:fonte/agrupado?por=&ano=&...  — soma por pessoa, fornecedor, setor…
+//
+// "Quem mais recebeu diárias" e "qual fornecedor vendeu mais" NÃO se respondem
+// ordenando a listagem: aquilo dá o maior registro isolado, e quem apareceu
+// várias vezes some do topo. Aqui o banco agrupa e soma de verdade.
+//
+// `por` é resolvido por WHITELIST (AGRUPAMENTOS), nunca interpolado a partir da
+// query — é a única defesa possível quando um trecho de SQL precisa ser dinâmico,
+// ainda mais com um modelo de IA escolhendo o valor do outro lado.
+// ───────────────────────────────────────────────────────────────
+
+// Coluna a agrupar → { sql, rotulo }. O que não estiver aqui é recusado.
+const AGRUPAMENTOS = {
+    empenhos: {
+        fornecedor: { sql: "e.fornecedor", rotulo: "Fornecedor" },
+        tipo_despesa: { sql: "e.tipo_despesa", rotulo: "Tipo de despesa" },
+        especie: { sql: "e.especie", rotulo: "Espécie" },
+        natureza: { sql: "e.cod_natureza", rotulo: "Natureza" },
+        subunidade: { sql: "COALESCE(s.subunidade_sigla, e.subunidade_entrega_texto)", rotulo: "Subunidade" },
+    },
+    almoxarifado: {
+        solicitante: { sql: "e.solicitante", rotulo: "Solicitante" },
+        tipo_movimento: { sql: "e.tipo_movimento", rotulo: "Movimento" },
+        local_entrega: { sql: "e.local_entrega", rotulo: "Local de entrega" },
+        subunidade: { sql: "COALESCE(s.subunidade_sigla, e.subunidade_texto)", rotulo: "Subunidade" },
+    },
+    scdp: {
+        proposto: { sql: "e.proposto", rotulo: "Proposto" },
+        solicitante: { sql: "e.solicitante", rotulo: "Solicitante" },
+        fonte_recurso: { sql: "e.fonte_recurso", rotulo: "Fonte do recurso" },
+        subunidade: { sql: "COALESCE(s.subunidade_sigla, e.subunidade_texto)", rotulo: "Subunidade" },
+    },
+    licitacoes: {
+        tipo: { sql: "e.tipo", rotulo: "Tipo" },
+        interessado: { sql: "e.interessado", rotulo: "Interessado" },
+        elaborador_etp: { sql: "e.elaborador_etp", rotulo: "Elaborador ETP" },
+        subunidade: { sql: "COALESCE(s.subunidade_sigla, e.subunidade_texto)", rotulo: "Subunidade" },
+    },
+    transferencias: {
+        gestora_destino: { sql: "e.gestora_destino", rotulo: "Gestora destino" },
+        tipo_despesa: { sql: "e.tipo_despesa", rotulo: "Natureza" },
+        subunidade: { sql: "COALESCE(s.subunidade_sigla, e.subunidade_texto)", rotulo: "Subunidade" },
+    },
+};
+
+// Métricas somadas em cada grupo. O SCDP tem duas que interessam separadas.
+const METRICAS = {
+    scdp: [
+        { nome: "diarias", sql: "COALESCE(SUM(e.valor_diarias), 0)" },
+        { nome: "passagens", sql: "COALESCE(SUM(COALESCE(e.valor_passagens_aereas,0) + COALESCE(e.valor_passagens_rodoviarias,0)), 0)" },
+        { nome: "num_diarias", sql: "COALESCE(SUM(e.num_diarias), 0)" },
+    ],
+};
+
+for (const [nome, cfg] of Object.entries(LISTAGENS)) {
+    router.get(`/${nome}/agrupado`, async (req, res) => {
+        const opcoes = AGRUPAMENTOS[nome] || {};
+        const por = String(req.query.por || "");
+        const grupo = Object.prototype.hasOwnProperty.call(opcoes, por) ? opcoes[por] : null;
+
+        if (!grupo) {
+            return res.status(400).json({
+                status: "error",
+                message: `Agrupamento inválido para ${nome}. Use um destes: ${Object.keys(opcoes).join(", ")}.`,
+                data: { agrupamentos_validos: Object.keys(opcoes) },
+            });
+        }
+
+        const limite = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 200);
+        const { where, params } = montarFiltro(req, nome, cfg);
+
+        // Métrica principal: sempre presente, é por ela que se ordena
+        const extras = (METRICAS[nome] || [])
+            .map((m) => `${m.sql} AS ${m.nome}`)
+            .join(", ");
+
+        try {
+            const { rows } = await pool.query(
+                `SELECT ${grupo.sql} AS chave,
+                        COUNT(*) AS quantidade,
+                        COALESCE(SUM(${cfg.valor}), 0) AS total
+                        ${extras ? `, ${extras}` : ""},
+                        -- janelas após o GROUP BY: valem para TODOS os grupos,
+                        -- não só os que o LIMIT devolve. Sem isto a "soma"
+                        -- seria a dos exibidos e induziria a erro.
+                        SUM(COALESCE(SUM(${cfg.valor}), 0)) OVER () AS soma_geral,
+                        COUNT(*) OVER () AS grupos_no_total
+                   FROM ${cfg.tabela} ${cfg.join} ${where}
+                    AND ${grupo.sql} IS NOT NULL AND ${grupo.sql} <> ''
+                  GROUP BY ${grupo.sql}
+                  ORDER BY total DESC
+                  LIMIT ${limite}`,
+                params
+            );
+
+            const itens = rows.map((r) => {
+                const item = {
+                    [por]: r.chave,
+                    quantidade: Number(r.quantidade) || 0,
+                    total: Number(r.total) || 0,
+                };
+                for (const m of METRICAS[nome] || []) item[m.nome] = Number(r[m.nome]) || 0;
+                return item;
+            });
+
+            return res.status(200).json({
+                status: "success",
+                message: "",
+                data: {
+                    fonte: nome,
+                    por,
+                    rotulo: grupo.rotulo,
+                    itens,
+                    // quantos grupos existem no total × quantos vieram
+                    total: Number(rows[0]?.grupos_no_total) || 0,
+                    exibidos: itens.length,
+                    soma: Number(rows[0]?.soma_geral) || 0,
+                    truncado: itens.length < (Number(rows[0]?.grupos_no_total) || 0),
+                },
+            });
+        } catch (error) {
+            logger.error({ err: error, listagem: nome, por }, "Erro ao agrupar execução orçamentária");
+            return res.status(500).json({ status: "error", message: "Erro ao agrupar registros.", data: null });
         }
     });
 }

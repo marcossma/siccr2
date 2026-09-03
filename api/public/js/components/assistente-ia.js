@@ -35,7 +35,8 @@ const ROTULOS = {
     origem: "Origem", cpf: "CPF", grupo_tipo: "Grupo/tipo", usuario_sie: "Usuário SIE",
     elaborador_etp: "Elaborador ETP", contado_em_outra_guia: "Contado em outra guia",
     subunidade: "Subunidade", aplicado: "Aplicado", dotacao: "Dotação", saldo: "Saldo",
-    registros: "Registros",
+    registros: "Registros", quantidade: "Qtd.", diarias: "Diárias", passagens: "Passagens",
+    natureza: "Natureza",
 };
 
 // Colunas que nunca precisam aparecer na tabela
@@ -45,6 +46,7 @@ const TITULO_BLOCO = {
     listar_empenhos: "Empenhos", listar_almoxarifado: "Requisições de almoxarifado",
     listar_viagens: "Viagens e diárias", listar_licitacoes: "Itens de licitação",
     listar_transferencias: "Transferências de recurso", listar_dotacoes: "Orçamento",
+    somar_por: "Totais agrupados",
 };
 
 const ehMoeda = (k) => /^(valor|soma|total)/.test(k) || ["soma", "total", "aplicado", "dotacao", "saldo"].includes(k);

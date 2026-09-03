@@ -225,6 +225,61 @@ const FERRAMENTAS = [
     },
 
     {
+        nome: "somar_por",
+        descricao:
+            "SOMA os valores agrupando por pessoa, fornecedor, setor ou categoria — e é a única " +
+            "forma correta de responder 'quem mais...', 'qual fornecedor mais...', 'qual setor mais...'. " +
+            "Ordenar uma listagem NÃO serve para isso: aquilo dá o maior registro isolado, e quem " +
+            "aparece várias vezes fica de fora do topo. Devolve, por grupo, o total somado e a " +
+            "quantidade de registros; para viagens, também diárias, passagens e nº de diárias.",
+        parametros: {
+            type: "object",
+            properties: {
+                fonte: {
+                    type: "string",
+                    enum: ["empenhos", "almoxarifado", "scdp", "licitacoes", "transferencias"],
+                    description: "Onde somar. 'scdp' = viagens e diárias.",
+                },
+                por: {
+                    type: "string",
+                    description:
+                        "Como agrupar. Válidos por fonte — " +
+                        "empenhos: fornecedor, tipo_despesa, especie, natureza, subunidade; " +
+                        "almoxarifado: solicitante, tipo_movimento, local_entrega, subunidade; " +
+                        "scdp: proposto, solicitante, fonte_recurso, subunidade; " +
+                        "licitacoes: tipo, interessado, elaborador_etp, subunidade; " +
+                        "transferencias: gestora_destino, tipo_despesa, subunidade.",
+                },
+                ano: { type: "integer", description: "Exercício. Padrão: ano corrente." },
+                subunidade_id: { type: "integer", description: "Restringe a uma subunidade." },
+                q: { type: "string", description: "Busca livre antes de somar." },
+                limit: { type: "integer", description: "Quantos grupos trazer (padrão 20)." },
+            },
+            required: ["fonte", "por"],
+        },
+        rota: (a) => {
+            const fonte = ["empenhos", "almoxarifado", "scdp", "licitacoes", "transferencias"].includes(a.fonte)
+                ? a.fonte : "empenhos";
+            return `/api/execucao-orcamentaria/${fonte}/agrupado${query({
+                por: a.por, ano: a.ano || ANO_ATUAL(),
+                subunidade_id: a.subunidade_id, q: a.q, limit: a.limit,
+            })}`;
+        },
+        compactar: (d) => ({
+            agrupado_por: d.rotulo,
+            grupos_no_total: d.total,
+            grupos_exibidos: d.exibidos,
+            soma_de_todos_os_grupos: d.soma,
+            itens: d.itens,
+            observacao: d.truncado
+                ? `Mostrando os ${d.exibidos} maiores de ${d.total} grupos. A soma acima é de TODOS.`
+                : undefined,
+        }),
+        linhas: (d) => d?.itens || [],
+        titulo: "Totais agrupados",
+    },
+
+    {
         nome: "listar_dotacoes",
         descricao:
             "Distribuição do orçamento do exercício: por programa/ação (custeio) e por departamento " +
