@@ -119,7 +119,7 @@ class AssistenteIA extends HTMLElement {
                 </div>
                 <div class="ia-mensagens" role="log" aria-live="polite"></div>
                 <form class="ia-entrada">
-                    <textarea rows="1" placeholder="Pergunte, por exemplo: quanto o Departamento de Solos gastou em 2026?"
+                    <textarea rows="1" placeholder="Pergunte em português…"
                               aria-label="Sua pergunta"></textarea>
                     <button type="submit" class="ia-enviar" title="Enviar">Enviar</button>
                 </form>
@@ -163,24 +163,46 @@ class AssistenteIA extends HTMLElement {
         if (botao) botao.addEventListener("click", () => this.alternar(this.painel.hidden));
     }
 
+    /**
+     * Descobre se o assistente pode ser usado — e, quando não pode, diz o
+     * motivo CERTO. Antes qualquer falha (sessão expirada, rede fora, servidor
+     * reiniciando) acusava falta da chave da OpenAI, mandando o usuário atrás
+     * do problema errado.
+     */
     async verificarStatus() {
+        this.habilitado = false;
+        let motivo = "indisponivel";
         try {
             const r = await fetch(`${API}/assistente/status`);
-            const resp = await r.json();
-            this.habilitado = Boolean(resp.data?.habilitado);
+            if (r.status === 401 || r.status === 403) {
+                motivo = "sessao";
+            } else if (!r.ok) {
+                motivo = "servidor";
+            } else {
+                const resp = await r.json();
+                this.habilitado = Boolean(resp.data?.habilitado);
+                motivo = this.habilitado ? null : "sem_chave";
+            }
         } catch {
-            this.habilitado = false;
+            motivo = "rede";
         }
-        if (!this.habilitado) {
-            this.adicionarAviso(
-                "O assistente ainda não está configurado neste servidor. " +
-                "Falta a chave da OpenAI (OPENAI_API_KEY) no .env."
-            );
-            this.form.querySelector("button").disabled = true;
-            this.campo.disabled = true;
-        } else if (this.lista.children.length === 0) {
-            this.adicionarBoasVindas();
+
+        if (this.habilitado) {
+            if (this.lista.children.length === 0) this.adicionarBoasVindas();
+            return;
         }
+
+        const MENSAGENS = {
+            sessao: "Sua sessão expirou. Entre novamente para usar o assistente.",
+            sem_chave: "O assistente ainda não está configurado neste servidor. " +
+                       "Peça ao administrador para cadastrar a chave da OpenAI.",
+            servidor: "O servidor não respondeu à verificação do assistente. Recarregue a página em instantes.",
+            rede: "Não foi possível falar com o servidor. Verifique sua conexão e recarregue a página.",
+            indisponivel: "O assistente está indisponível no momento.",
+        };
+        this.adicionarAviso(MENSAGENS[motivo] || MENSAGENS.indisponivel);
+        this.form.querySelector("button").disabled = true;
+        this.campo.disabled = true;
     }
 
     alternar(abrir) {

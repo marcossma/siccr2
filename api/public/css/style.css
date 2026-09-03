@@ -836,7 +836,11 @@ assistente-ia[modo="pagina"] .ia-painel {
 .ia-entrada textarea {
     flex: 1; resize: none; border: 1px solid #ced4da; border-radius: 8px; padding: 9px 11px;
     font: 13px var(--nav-font, verdana, sans-serif); line-height: 1.4; max-height: 120px;
+    /* o JS cresce o campo conforme o texto; sem isto o placeholder longo
+       fazia aparecer barra de rolagem num campo de uma linha */
+    overflow-y: hidden;
 }
+.ia-entrada textarea:disabled { background: #f8f9fa; color: #adb5bd; cursor: not-allowed; }
 .ia-entrada textarea:focus { outline: none; border-color: #009536; }
 .ia-enviar {
     background: var(--nav-bg, #007a2e); color: #fff; border: none; border-radius: 8px;
