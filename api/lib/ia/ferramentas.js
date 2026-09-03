@@ -49,6 +49,14 @@ const PARAMS_LISTAGEM = {
     subunidade_id: { type: "integer", description: "Filtra por subunidade. Os ids vêm de resumo_execucao (campo por_subunidade)." },
     q: { type: "string", description: "Busca livre em descrição, fornecedor, número de documento etc." },
     limit: { type: "integer", description: "Máximo de registros (padrão 300)." },
+    ordenar: {
+        type: "string", enum: ["data", "valor"],
+        description:
+            "Ordem do resultado. 'data' (padrão) traz os mais recentes; 'valor' traz os de " +
+            "MAIOR valor primeiro. Use 'valor' SEMPRE que a pergunta for sobre 'maiores', " +
+            "'principais', 'mais caros' ou 'top' — senão você apresentará os mais recentes " +
+            "como se fossem os maiores.",
+    },
 };
 
 const FERRAMENTAS = [
@@ -61,6 +69,8 @@ const FERRAMENTAS = [
         parametros: { type: "object", properties: {}, required: [] },
         rota: () => "/api/execucao-orcamentaria/anos",
         compactar: (data) => data,
+        // Consulta auxiliar: o usuário não quer ver "anos disponíveis" como tabela
+        linhas: () => [],
     },
 
     {
@@ -111,6 +121,16 @@ const FERRAMENTAS = [
             serie_mensal: d.serie_mensal,
             top_fornecedores: (d.top_fornecedores || []).slice(0, 8),
         }),
+        // O resumo não é uma listagem, mas tem tabela útil: o quadro por
+        // subunidade. Sem isto o modelo dizia "veja a tabela abaixo" e não
+        // vinha tabela nenhuma.
+        linhas: (d) => (d.por_subunidade || []).map((s) => ({
+            subunidade: s.sigla || s.nome,
+            aplicado: s.total_aplicado,
+            dotacao: s.dotacao_custeio + s.dotacao_capital,
+            saldo: s.saldo_total,
+        })),
+        titulo: "Aplicado por subunidade",
     },
 
     {
@@ -132,7 +152,7 @@ const FERRAMENTAS = [
         rota: (a) => `/api/execucao-orcamentaria/empenhos${query({
             ano: a.ano || ANO_ATUAL(),
             subunidade_id: a.subunidade_id, tipo: a.tipo, especie: a.especie,
-            q: a.q, limit: a.limit,
+            q: a.q, limit: a.limit, ordenar: a.ordenar,
             incluir_estimativos: a.incluir_estimativos ? "1" : undefined,
         })}`,
     },
@@ -152,7 +172,8 @@ const FERRAMENTAS = [
             required: [],
         },
         rota: (a) => `/api/execucao-orcamentaria/almoxarifado${query({
-            ano: a.ano || ANO_ATUAL(), subunidade_id: a.subunidade_id, tipo: a.tipo, q: a.q, limit: a.limit,
+            ano: a.ano || ANO_ATUAL(), subunidade_id: a.subunidade_id, tipo: a.tipo, q: a.q,
+            limit: a.limit, ordenar: a.ordenar,
         })}`,
     },
 
@@ -165,7 +186,8 @@ const FERRAMENTAS = [
             "OBS: o CPF vem mascarado por proteção de dado pessoal — não peça nem tente reconstruir.",
         parametros: { type: "object", properties: { ...PARAMS_LISTAGEM }, required: [] },
         rota: (a) => `/api/execucao-orcamentaria/scdp${query({
-            ano: a.ano || ANO_ATUAL(), subunidade_id: a.subunidade_id, q: a.q, limit: a.limit,
+            ano: a.ano || ANO_ATUAL(), subunidade_id: a.subunidade_id, q: a.q,
+            limit: a.limit, ordenar: a.ordenar,
         })}`,
     },
 
@@ -181,7 +203,8 @@ const FERRAMENTAS = [
             required: [],
         },
         rota: (a) => `/api/execucao-orcamentaria/licitacoes${query({
-            ano: a.ano || ANO_ATUAL(), subunidade_id: a.subunidade_id, tipo: a.tipo, q: a.q, limit: a.limit,
+            ano: a.ano || ANO_ATUAL(), subunidade_id: a.subunidade_id, tipo: a.tipo, q: a.q,
+            limit: a.limit, ordenar: a.ordenar,
         })}`,
     },
 
@@ -196,7 +219,8 @@ const FERRAMENTAS = [
             required: [],
         },
         rota: (a) => `/api/execucao-orcamentaria/transferencias${query({
-            ano: a.ano || ANO_ATUAL(), subunidade_id: a.subunidade_id, tipo: a.tipo, q: a.q, limit: a.limit,
+            ano: a.ano || ANO_ATUAL(), subunidade_id: a.subunidade_id, tipo: a.tipo, q: a.q,
+            limit: a.limit, ordenar: a.ordenar,
         })}`,
     },
 
@@ -212,6 +236,9 @@ const FERRAMENTAS = [
             required: [],
         },
         rota: (a) => `/api/execucao-orcamentaria/dotacoes${query({ ano: a.ano || ANO_ATUAL() })}`,
+        // Esta rota devolve o array direto, não { itens: [...] }
+        compactar: (d) => (Array.isArray(d) ? { total_de_registros: d.length, itens: d } : d),
+        linhas: (d) => (Array.isArray(d) ? d : []),
     },
 ];
 
@@ -289,8 +316,21 @@ async function executar(nome, argumentos, ctx) {
         const dados = corpo?.data ?? null;
         const seguro = redigir(dados);
         const compacto = ferramenta.compactar ? ferramenta.compactar(seguro) : compactarListagem(seguro);
+        // Linhas da tabela que a tela vai montar. Por padrão é uma listagem
+        // ({itens}); ferramentas com formato próprio declaram `linhas`.
+        const linhas = ferramenta.linhas
+            ? ferramenta.linhas(seguro)
+            : (Array.isArray(seguro?.itens) ? seguro.itens : []);
 
-        return { ok: true, rota, paraModelo: compacto, paraTela: seguro };
+        return {
+            ok: true, rota,
+            paraModelo: compacto,
+            paraTela: seguro,
+            linhas,
+            titulo: ferramenta.titulo || null,
+            total: seguro?.total ?? linhas.length,
+            soma: seguro?.soma,
+        };
     } catch (error) {
         logger.error({ err: error, ferramenta: nome }, "Falha ao executar ferramenta do assistente");
         return {

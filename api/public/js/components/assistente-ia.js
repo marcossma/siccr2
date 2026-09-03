@@ -34,6 +34,8 @@ const ROTULOS = {
     categoria: "Categoria", grupo: "Grupo", programa: "Programa / ação", percentual: "%",
     origem: "Origem", cpf: "CPF", grupo_tipo: "Grupo/tipo", usuario_sie: "Usuário SIE",
     elaborador_etp: "Elaborador ETP", contado_em_outra_guia: "Contado em outra guia",
+    subunidade: "Subunidade", aplicado: "Aplicado", dotacao: "Dotação", saldo: "Saldo",
+    registros: "Registros",
 };
 
 // Colunas que nunca precisam aparecer na tabela
@@ -45,7 +47,7 @@ const TITULO_BLOCO = {
     listar_transferencias: "Transferências de recurso", listar_dotacoes: "Orçamento",
 };
 
-const ehMoeda = (k) => /^(valor|soma|total)/.test(k) || k === "soma" || k === "total";
+const ehMoeda = (k) => /^(valor|soma|total)/.test(k) || ["soma", "total", "aplicado", "dotacao", "saldo"].includes(k);
 
 function brl(n) {
     return Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -316,7 +318,7 @@ class AssistenteIA extends HTMLElement {
             ).join("")}</tr>`
         ).join("");
 
-        const titulo = TITULO_BLOCO[bloco.ferramenta] || "Resultado";
+        const titulo = bloco.titulo || TITULO_BLOCO[bloco.ferramenta] || "Resultado";
         const resumo = bloco.total !== undefined
             ? `${bloco.total} registro(s)${bloco.soma !== undefined ? ` · ${brl(bloco.soma)}` : ""}`
             : `${itens.length} registro(s)`;

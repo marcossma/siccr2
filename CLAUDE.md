@@ -69,6 +69,11 @@ OPENAI_API_KEY=sk-...
 # OPENAI_API_URL e OPENAI_TIMEOUT_MS (default 60000) raramente precisam mudar
 ```
 
+> ⚠️ O `docker-compose.yml` mapeia as variáveis **uma a uma** no bloco `environment`.
+> Pôr algo no `.env` **não basta**: a variável precisa estar listada lá também, senão
+> não chega no container. E `docker compose up -d` sozinho não recria o container quando
+> só o `.env` mudou — use `docker compose up -d --force-recreate app`.
+
 ### E-mail (`lib/email.js`, Gmail OAuth2 via nodemailer)
 - Fire-and-forget como o WhatsApp: nunca derruba a request; desabilitado sem credenciais.
 - Setup no Google Cloud Console: ativar a **Gmail API**, criar credencial **OAuth client ID** (tipo *Web application*), registrar o redirect URI e gerar o refresh token. Dois modos:
@@ -402,6 +407,17 @@ amostra.
 Sub-rotas: `GET /status` (a interface pergunta antes de mostrar o chat), `POST /conversar`
 (`{pergunta, conversa_id?}` → `{resposta, blocos, ferramentas, uso}`; laço de até 5 rodadas
 de ferramenta), `GET /conversas`, `GET /conversas/:id`, `DELETE /conversas/:id`.
+
+**Ordenação:** as listagens de `/api/execucao-orcamentaria` aceitam `?ordenar=valor`
+(default é por data). Existe por causa do assistente: sem isso ele respondia "as maiores
+compras" com as mais **recentes**. Perguntas com "maiores/principais/top" exigem esse parâmetro.
+
+⚠️ **Limitação conhecida — agregação por pessoa/entidade.** As ferramentas devolvem
+registros individuais; não há agregação por proposto, por solicitante etc. Então "quem mais
+recebeu diárias" só pode ser respondido como "as maiores viagens individuais" (a mesma
+pessoa aparece duas vezes se viajou duas vezes). O prompt obriga o modelo a declarar isso,
+mas a correção de verdade é um endpoint de agregação (`GET /scdp/por-proposto?ano=`) e a
+ferramenta correspondente. Fica para quando surgir a necessidade.
 
 **Frontend:** `<assistente-ia>` (`js/components/assistente-ia.js`) — um componente, dois
 modos: botão flutuante (injetado automaticamente em toda página por `components/index.js`,

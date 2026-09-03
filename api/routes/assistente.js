@@ -65,11 +65,27 @@ COMO TRABALHAR
   ("Solos", "DSOL", "Departamento de Zootecnia"), chame resumo_execucao: ele traz a lista
   com id, sigla e nome. Depois use o id nas outras ferramentas.
 - As tabelas com os dados completos JÁ SÃO EXIBIDAS ao usuário automaticamente, abaixo da
-  sua resposta. Então NÃO reproduza listas longas nem repita linha por linha: comente,
-  destaque o que importa, aponte o que chama atenção. Diga "a tabela abaixo traz todos".
+  sua resposta — mas SÓ quando você de fato consultou uma ferramenta que devolve linhas.
+  Então NÃO reproduza listas longas nem repita linha por linha: comente, destaque o que
+  importa, aponte o que chama atenção. Só mencione "a tabela abaixo" se realmente houver
+  uma; se você respondeu apenas com totais, não prometa tabela nenhuma.
+- As listagens devolvem REGISTROS INDIVIDUAIS (um empenho, uma viagem, um item), nunca
+  totais por pessoa, por fornecedor ou por setor. Então "quem mais recebeu diárias" ou
+  "qual fornecedor vendeu mais" NÃO se responde ordenando a lista: isso daria a maior
+  viagem isolada, não o maior total de alguém que viajou várias vezes. Nesses casos:
+  diga que está mostrando os maiores registros individuais, ou — quando for por
+  fornecedor — use os maiores fornecedores que resumo_execucao já traz somados.
+- Perguntas com "maiores", "principais", "mais caros" ou "top" EXIGEM ordenar por valor
+  (parâmetro ordenar="valor"). Se você listar por data e chamar de "as maiores", estará
+  dando uma informação errada.
 - Ao citar valores no texto, use no máximo alguns números-chave e sempre em reais
   (R$ 1.234,56). Prefira apoiar-se nos totais que a ferramenta devolveu (total_de_registros,
   soma_dos_valores) em vez de somar a amostra você mesmo.
+
+COMO LER O SALDO (erro fácil de cometer)
+- saldo = dotação − aplicado. Saldo NEGATIVO significa que a subunidade gastou MAIS do que
+  a dotação, ou seja, estourou o orçamento — nunca descreva isso como "dentro da dotação".
+  Saldo positivo significa que ainda há recurso disponível.
 
 CONTAGEM (importante para não dar número errado)
 - Empenhos do tipo "Estimativo - ..." são RESERVA de recurso, não gasto realizado. Ficam de
@@ -217,19 +233,21 @@ router.post("/conversar", async (req, res) => {
                     rota: resultado.rota || null,
                     ok: resultado.ok,
                     erro: resultado.erro || null,
-                    registros: Array.isArray(resultado.paraTela?.itens)
-                        ? resultado.paraTela.itens.length
-                        : null,
+                    registros: Array.isArray(resultado.linhas) ? resultado.linhas.length : null,
                 });
 
-                // Só vira tabela na tela o que tem linhas de fato
-                if (resultado.ok && Array.isArray(resultado.paraTela?.itens) && resultado.paraTela.itens.length > 0) {
+                // Só vira tabela na tela o que tem linhas de fato. Quem define
+                // as linhas é a própria ferramenta (`linhas`), porque nem toda
+                // rota devolve uma listagem — o resumo, por exemplo, rende a
+                // tabela por subunidade.
+                if (resultado.ok && Array.isArray(resultado.linhas) && resultado.linhas.length > 0) {
                     blocos.push({
                         ferramenta: nome,
+                        titulo: resultado.titulo || null,
                         argumentos,
-                        total: resultado.paraTela.total,
-                        soma: resultado.paraTela.soma,
-                        itens: resultado.paraTela.itens,
+                        total: resultado.total,
+                        soma: resultado.soma,
+                        itens: resultado.linhas,
                     });
                 }
 

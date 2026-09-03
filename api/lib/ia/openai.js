@@ -24,6 +24,25 @@ function habilitado() {
 }
 
 /**
+ * Traduz a falha do provedor em algo que o usuário final possa ler — e que não
+ * vaze detalhe de configuração. A OpenAI, por exemplo, devolve a chave
+ * parcialmente mascarada dentro da mensagem de erro de autenticação.
+ */
+function mensagemSegura(status) {
+    if (status === 401 || status === 403) {
+        return "O assistente não está configurado corretamente no servidor. " +
+               "Avise o administrador do sistema.";
+    }
+    if (status === 429) {
+        return "O assistente está sobrecarregado ou atingiu o limite de uso. Tente de novo em instantes.";
+    }
+    if (status >= 500) {
+        return "O serviço de IA está indisponível no momento. Tente de novo mais tarde.";
+    }
+    return "Não foi possível processar a pergunta agora.";
+}
+
+/**
  * Uma rodada de conversa. Não decide nada sobre ferramentas — só repassa o que
  * o modelo respondeu. Quem executa e itera é routes/assistente.js.
  *
@@ -66,9 +85,11 @@ async function conversar(mensagens, ferramentas) {
 
         if (!resposta.ok) {
             const motivo = json?.error?.message || `HTTP ${resposta.status}`;
-            // A chave nunca entra no log
             logger.error({ status: resposta.status, motivo, modelo: MODELO }, "Erro na API da OpenAI");
-            return { ok: false, erro: motivo };
+            // A mensagem crua do provedor NÃO volta para o usuário: ela chega a
+            // conter a chave parcialmente mascarada e nomes de modelo/conta.
+            // O detalhe fica no log, que é onde o administrador vai procurar.
+            return { ok: false, erro: mensagemSegura(resposta.status) };
         }
 
         const escolha = json?.choices?.[0];

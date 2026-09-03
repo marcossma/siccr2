@@ -448,11 +448,17 @@ for (const [nome, cfg] of Object.entries(LISTAGENS)) {
         }
 
         const where = `WHERE ${condicoes.join(" AND ")}`;
+        // "as maiores compras" precisa de ordenação por valor, não por data.
+        // Sem isto o consumidor (inclusive o assistente de IA) apresenta as
+        // mais recentes como se fossem as maiores.
+        const ordem = req.query.ordenar === "valor"
+            ? `${cfg.valor} DESC NULLS LAST`
+            : cfg.ordem;
         try {
             const [lista, agregado] = await Promise.all([
                 pool.query(
                     `SELECT ${cfg.select} FROM ${cfg.tabela} ${cfg.join} ${where}
-                      ORDER BY ${cfg.ordem} LIMIT ${limite}`,
+                      ORDER BY ${ordem} LIMIT ${limite}`,
                     params
                 ),
                 pool.query(
