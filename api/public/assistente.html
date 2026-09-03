@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICCR - Assistente</title>
+    <link rel="shortcut icon" href="./img/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/dialogs.css">
+    <link rel="stylesheet" href="./adm/css/style.css">
+    <link rel="stylesheet" href="./adm/css/dialogs.css">
+    <link rel="stylesheet" href="./css/ui-kit.css">
+    <script type="module" src="./js/scripts.js"></script>
+    <style>
+        .as-layout { display:flex; gap:18px; align-items:flex-start; }
+        .as-lateral { flex:0 0 240px; background:#fff; border:1px solid #e9ecef; border-radius:8px; padding:12px; }
+        .as-lateral h3 { font-size:12px; text-transform:uppercase; letter-spacing:.5px; color:#555; margin:0 0 10px; }
+        .as-conversas { list-style:none; margin:0; padding:0; max-height:60vh; overflow:auto; }
+        .as-conversas li { margin-bottom:4px; }
+        .as-conversas button {
+            width:100%; text-align:left; background:none; border:none; cursor:pointer; border-radius:6px;
+            padding:7px 9px; font:12px verdana,sans-serif; color:#495057;
+            overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+        }
+        .as-conversas button:hover { background:#f1f3f5; }
+        .as-conversas .as-data { display:block; font-size:10px; color:#adb5bd; }
+        .as-vazio { color:#adb5bd; font-size:12px; }
+        .as-chat { flex:1; min-width:0; }
+        .as-nota { font-size:12px; color:#666; margin:6px 0 14px; line-height:1.6; }
+        .as-nota strong { color:#495057; }
+        @media (max-width:820px) { .as-layout { flex-direction:column; } .as-lateral { width:100%; flex:none; } }
+        @media print { .as-lateral, .as-nota, .titulo_secao { display:none !important; } }
+    </style>
+</head>
+<body>
+    <!-- Formulário de Login DIALOG -->
+    <dialog id="dialogLogin">
+        <fieldset>
+            <legend>Login</legend>
+            <form id="frmLogin">
+                <div class="row"><input type="text" name="txtLogin" id="txtLogin" class="formInput" placeholder="Digite o seu login"></div>
+                <div class="row"><input type="password" name="txtSenha" id="txtSenha" class="formInput" placeholder="Digite a sua senha"></div>
+                <p id="loginErro" class="login-erro" hidden></p>
+                <div class="row">
+                    <button id="btnLogin" type="button">Entrar</button>
+                    <button id="btnCancelarLogin" type="button">Cancelar</button>
+                </div>
+            </form>
+        </fieldset>
+    </dialog>
+
+    <div class="container">
+        <header>
+            <a href="/"><img src="./img/logo.png" alt="Logo do CCR" title="Logo do CCR" class="logo"></a>
+            <div class="acesso"><a href="#" id="btnEntrar" class="">Entrar</a></div>
+        </header>
+        <div><responsive-menu></responsive-menu></div>
+
+        <main class="flex flex--column">
+            <section class="titulo_secao flex justify--space--between align--items--center" style="flex-wrap:wrap;gap:10px">
+                <h1 class="flex align--items--center gap--10"><i class="bi bi-stars"></i> Assistente</h1>
+            </section>
+
+            <p class="as-nota">
+                Pergunte em português sobre a <strong>execução orçamentária</strong> do centro e o assistente
+                busca nos dados do sistema. Ele enxerga <strong>exatamente o que você já poderia ver</strong> —
+                nem mais, nem menos. Os números das tabelas vêm direto do sistema; o texto é só o comentário.
+            </p>
+
+            <div class="as-layout">
+                <aside class="as-lateral">
+                    <h3>Suas conversas</h3>
+                    <ul class="as-conversas" id="asConversas"><li class="as-vazio">Carregando…</li></ul>
+                </aside>
+                <div class="as-chat">
+                    <assistente-ia modo="pagina"></assistente-ia>
+                </div>
+            </div>
+        </main>
+        <footer>Rodapé</footer>
+    </div>
+
+    <script type="module" src="./js/components/index.js"></script>
+</body>
+</html>

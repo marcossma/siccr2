@@ -62,6 +62,9 @@ const importacaoFinanceiro = require("./routes/importacao-financeiro.js");
 
 // Leitura da execução orçamentária (empenhos, almoxarifado, SCDP, licitações)
 const execucaoOrcamentaria = require("./routes/execucao-orcamentaria.js");
+
+// Assistente de IA (consulta em linguagem natural sobre os dados da plataforma)
+const assistente = require("./routes/assistente.js");
 // Importar rota pública do painel de TV (hall dos prédios)
 const painelTv = require("./routes/painel-tv.js");
 // Importar rotas para notícias (proxy WordPress)
@@ -258,6 +261,11 @@ app.use("/api/importacao",           autenticar, autorizar("super_admin"),  impo
 // Execução orçamentária: direção vê tudo, chefe vê a própria subunidade
 // (o recorte por subunidade é feito dentro da rota)
 app.use("/api/execucao-orcamentaria", autenticar, autorizar("chefe"),       execucaoOrcamentaria);
+
+// Assistente de IA: exige apenas login. O recorte de acesso NÃO é feito aqui —
+// cada ferramenta chama a própria API com o token do usuário, então quem decide
+// o que ele enxerga é o RBAC das rotas consultadas (ver routes/assistente.js).
+app.use("/api/assistente",           autenticar, autorizar("servidor"),     assistente);
 
 // Funcionalidades: leitura para chefe+, gestão do catálogo apenas via painel super_admin
 app.use("/api/funcionalidades",   autenticar, autorizar("chefe"),        funcionalidades);

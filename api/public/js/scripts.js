@@ -5154,4 +5154,53 @@ document.addEventListener("DOMContentLoaded", function() {
         carregarHistorico();
     } // fim /importar-financeiro
 
+    // =========================================================================
+    // ASSISTENTE — /assistente
+    // O chat em si é o Web Component <assistente-ia modo="pagina">. Aqui só
+    // cuidamos da lista lateral de conversas do próprio usuário.
+    // =========================================================================
+    if (urlParam === "/assistente") {
+        const lista = document.querySelector("#asConversas");
+        const chat = () => document.querySelector("assistente-ia");
+
+        function formatarQuando(iso) {
+            const d = new Date(iso);
+            const hoje = new Date();
+            const mesmoDia = d.toDateString() === hoje.toDateString();
+            return mesmoDia
+                ? d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+                : d.toLocaleDateString("pt-BR");
+        }
+
+        async function carregarConversas() {
+            try {
+                const r = await fetch(`${apiUrl}/assistente/conversas`);
+                const resp = await r.json();
+                const conversas = resp.data || [];
+                lista.innerHTML = conversas.length === 0
+                    ? `<li class="as-vazio">Nenhuma conversa ainda.</li>`
+                    : conversas.map((c) => `
+                        <li>
+                            <button type="button" data-id="${c.id_conversa}" title="${(c.titulo || "").replace(/"/g, "&quot;")}">
+                                ${c.titulo || "Conversa"}
+                                <span class="as-data">${formatarQuando(c.updatedat)}</span>
+                            </button>
+                        </li>`).join("");
+            } catch (err) {
+                console.error("Erro ao carregar conversas:", err);
+                lista.innerHTML = `<li class="as-vazio">Não foi possível carregar.</li>`;
+            }
+        }
+
+        lista.addEventListener("click", (e) => {
+            const botao = e.target.closest("button[data-id]");
+            if (botao) chat()?.abrirConversa(Number(botao.dataset.id));
+        });
+
+        // Quando o componente abre uma conversa nova, a lista precisa refletir
+        window.addEventListener("siccr:assistente_conversa_nova", () => carregarConversas());
+
+        carregarConversas();
+    } // fim /assistente
+
 });

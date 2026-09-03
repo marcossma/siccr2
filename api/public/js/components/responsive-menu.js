@@ -113,6 +113,7 @@ class ResponsiveMenu extends HTMLElement {
                             <li><a href="#">História</a></li>
                         </ul>
                     </li>
+                    ${nivel >= 1 ? `<li><a href="/assistente">Assistente</a></li>` : ""}
                     ${nivel >= 1 ? `<li><a href="/aniversariantes">Aniversariantes</a></li>` : ""}
                     <li><a href="/contato">Contato</a></li>
                     ${token ? `<li><button class="nav-btn-sair" id="nav-logout">Sair</button></li>` : ""}

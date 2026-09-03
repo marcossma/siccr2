@@ -63,6 +63,10 @@ GMAIL_OAUTH_CLIENT_SECRET=...
 GMAIL_OAUTH_REFRESH_TOKEN=...   # gerar com: npm run email:token -- <client_id> <client_secret>
 # EMAIL_FROM tem default = GMAIL_USER (ex.: "SICCR <siccr@ufsm.br>")
 # EMAIL_OAUTH_REDIRECT=...      # só p/ o fluxo por domínio (ex.: https://siccrt.infai.com.br/oauth2callback)
+# Assistente de IA — se vazio, o chat aparece desabilitado (não quebra nada)
+OPENAI_API_KEY=sk-...
+# OPENAI_MODEL tem default gpt-4o-mini; ajuste ao que a conta tiver liberado
+# OPENAI_API_URL e OPENAI_TIMEOUT_MS (default 60000) raramente precisam mudar
 ```
 
 ### E-mail (`lib/email.js`, Gmail OAuth2 via nodemailer)
@@ -220,6 +224,11 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 - **itens_pedido_almoxarifado** — `id_item`, `pedido_id`(FK), `produto`, `quantidade`, ... (itens normalizados; substituiu colunas legadas em pedidos_almoxarifado)
 - **previsoes_despesas** — `id_previsao`, `subunidade_id`(FK), `id_tipo_despesa`(FK), `valor_previsto`, `ano_referencia`, `observacao`, `createdat`
 
+### Assistente de IA
+- **assistente_conversas** — `id_conversa`, `user_id`(FK CASCADE), `titulo`, `createdat`, `updatedat`
+- **assistente_mensagens** — `id_mensagem`, `conversa_id`(FK CASCADE), `papel`(`usuario`|`assistente`), `conteudo`, `ferramentas`(JSONB — auditoria: quais ferramentas rodaram, com quais argumentos e quantos registros), `tokens_entrada`, `tokens_saida`, `createdat`
+  - Guardar `ferramentas` não é firula: num órgão público precisa ficar registrado **quem perguntou o quê e quais dados o sistema entregou**.
+
 ### Execução orçamentária (importada da planilha do financeiro)
 Fonte: **`Transparência NOr_CCR.xlsx`** (~26 abas, layout diferente por ano). As abas de
 **fato** viram tabelas; as de **resumo/saldo** (Resumo YYYY, Saldos unidades, Almoxarifado 2026,
@@ -287,6 +296,7 @@ conjuntos de chave) e desmarca a aba contida, senão o valor dobra.
 | `/api/previsoes-despesas` | chefe | routes/previsoes-despesas.js |
 | `/api/relatorios` | chefe | routes/relatorios.js |
 | `/api/execucao-orcamentaria` | chefe (direção vê tudo; chefe só a própria subunidade) | routes/execucao-orcamentaria.js |
+| `/api/assistente` | servidor (logado) — o recorte vem das rotas consultadas | routes/assistente.js |
 | `/api/importacao/financeiro` | direção **ou** `importar_financeiro` (guarda dentro do router) | routes/importacao-financeiro.js |
 | `/api/agendamentos` | servidor* | routes/agendamentos.js |
 | `/api/periodos-letivos` | chefe | routes/periodos-letivos.js |
@@ -353,6 +363,51 @@ subunidades e devolve por aba: tipo, ano, registros, valor, quantos ficaram sem 
 contida noutra aba e quando foi importada antes — **sem gravar**), `POST /` (grava as abas escolhidas,
 aplicando o de-para informado), `GET /historico`.
 
+
+### Assistente de IA (`/api/assistente`, `lib/ia/`)
+
+Chat em linguagem natural sobre os dados da plataforma. **Fase 1: só leitura, só
+execução orçamentária.** Usa a API da OpenAI via `fetch` puro (sem SDK — evita
+dependência e rebuild da imagem); sem `OPENAI_API_KEY` fica desabilitado em silêncio,
+igual WhatsApp e e-mail.
+
+**A decisão que sustenta a segurança:** nenhuma ferramenta fala com o banco. Cada uma
+chama uma **rota da própria API por HTTP, com o token do usuário que está conversando**
+(`lib/ia/ferramentas.js` → `executar()`). Logo o RBAC que já existe é quem decide o que a
+IA enxerga. Se um chefe do DFT pedir dados do DZOT, a rota devolve só o DFT — e não porque
+o prompt mandou, mas porque o middleware mandou. Verificado em
+`scripts/testar-ferramentas-ia.js` (roda sem precisar da OpenAI).
+
+Três invariantes que **não podem ser afrouxadas**:
+1. **O modelo nunca autoriza.** Um 403 volta ao modelo como texto para ele explicar ao
+   usuário — nunca como algo a contornar.
+2. **Conteúdo de ferramenta é dado, não instrução.** `resumo`, `observacao` e `fornecedor`
+   são texto livre digitado/importado: é vetor real de injeção de prompt. O system prompt
+   avisa, e o item (1) garante que, mesmo se o modelo cair na conversa, não acessa nada
+   além do permitido.
+3. **Número não passa pelo modelo para ser exibido.** O texto dele é narrativa; os valores
+   que o usuário vê saem de `blocos[].itens` (dado cru da rota) renderizados pelo front.
+   LLM erra ao transcrever número — e isto é um sistema financeiro.
+
+**Dado pessoal** (`lib/ia/redacao.js`): CPF é mascarado antes de sair da plataforma, no
+campo próprio e em texto livre (gente digita CPF em observação). Nomes de servidor ficam —
+a fonte é um documento de transparência e sem eles perguntas legítimas parariam de
+funcionar. Duas camadas: as listagens nem selecionam CPF, e a redação cobre o resto.
+
+**Custo/contexto:** cada ferramenta devolve `paraModelo` (compacto: amostra de 25 linhas +
+totais) e `paraTela` (completo). Sem isso, 595 itens de licitação virariam dezenas de
+milhares de tokens por pergunta. O modelo é instruído a usar os **totais**, não a somar a
+amostra.
+
+Sub-rotas: `GET /status` (a interface pergunta antes de mostrar o chat), `POST /conversar`
+(`{pergunta, conversa_id?}` → `{resposta, blocos, ferramentas, uso}`; laço de até 5 rodadas
+de ferramenta), `GET /conversas`, `GET /conversas/:id`, `DELETE /conversas/:id`.
+
+**Frontend:** `<assistente-ia>` (`js/components/assistente-ia.js`) — um componente, dois
+modos: botão flutuante (injetado automaticamente em toda página por `components/index.js`,
+sem editar cada HTML) e `modo="pagina"` na tela `/assistente`, que tem lista lateral de
+conversas. Impressão de uma tabela usa `body.ia-modo-impressao` + `@media print` em vez de
+abrir janela nova (popup costuma ser bloqueado).
 
 `/api/aniversariantes`: `GET /?mes=` (mural do mês, logado), `GET /hoje` (aniversariantes de hoje, logado), e — **só direção** — `POST /parabenizar` (envia parabéns por e-mail aos de hoje, agora), `GET/PATCH /config` (liga/desliga o **envio automático diário**). Lógica em `lib/aniversarios.js`; agendador (setInterval) iniciado no `server.js` roda ~08:00 BRT se o automático estiver ligado (guard por data em `configuracoes`). Painel de disparo/toggle no topo de `/aniversariantes` (visível só p/ direção). Tabela **configuracoes** (chave/valor) guarda o flag e o "último envio".
 
@@ -448,6 +503,7 @@ Cor primária: `#009536` (verde CCR). Fonte padrão: `verdana, sans-serif`.
 | `/relatorios-salas` | direção | Gráficos (Chart.js) + tabelas + PDF via `window.print()` |
 | `/painel-tv` | link p/ portaria/direção | Kiosk público p/ TV no hall (`?predio=ID`); standalone (sem scripts.js), auto-refresh 60s. JS em `js/painel-tv.js` |
 | `/execucao-orcamentaria` | chefe+ (menu **Financeiro**) | Execução orçamentária: tiles, 4 gráficos, tabela pivô subunidade × tipo e detalhe por origem (empenhos/almoxarifado/SCDP/licitações/transferências/orçamento) com busca e filtros. Imprimível. |
+| `/assistente` | todos logados (menu principal) | Chat com o assistente de IA + histórico de conversas. O widget flutuante do mesmo componente aparece em todas as páginas. |
 | `/importar-financeiro` | direção ou `importar_financeiro` (menu **Financeiro**) | Importa a planilha do financeiro (SheetJS lê todas as abas → preview com detecção de duplicata e de-para de subunidade → grava). **Não fica em `/adm/`**: o `guard.js` de lá exige `super_admin` e *desloga* quem não for — mesmo motivo do `/ensalamento`. |
 
 No calendário e na portaria, aulas (origem='aula') aparecem distintas de reservas: calendário pinta aula em azul e mostra disciplina/turma/professor; portaria idem.

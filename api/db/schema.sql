@@ -1,12 +1,12 @@
 -- Schema dump gerado automaticamente. NÃO editar manualmente.
--- Origem: docker compose db (siccr) — 2026-08-26T14:42:52.332Z
+-- Origem: docker compose db (siccr) — 2026-09-03T18:03:57.237Z
 -- Regenere com: npm run db:dump
 
 --
 -- PostgreSQL database dump
 --
 
-\restrict PLPpOJFSKsw1nrIrSdq3M029UfB6X6QdQ3we5FMdT41Bym2Hudl0tsqaXPKtV3t
+\restrict omnZuVdhcancGuuCEnammakQsLay02c478jmFlr2HK1c3aYV0aFbhVIUL8JAakC
 
 -- Dumped from database version 16.13
 -- Dumped by pg_dump version 16.13
@@ -229,6 +229,75 @@ CREATE SEQUENCE public.api_keys_id_seq
 --
 
 ALTER SEQUENCE public.api_keys_id_seq OWNED BY public.api_keys.id;
+
+
+--
+-- Name: assistente_conversas; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.assistente_conversas (
+    id_conversa integer NOT NULL,
+    user_id integer NOT NULL,
+    titulo character varying(120),
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updatedat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: assistente_conversas_id_conversa_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.assistente_conversas_id_conversa_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: assistente_conversas_id_conversa_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.assistente_conversas_id_conversa_seq OWNED BY public.assistente_conversas.id_conversa;
+
+
+--
+-- Name: assistente_mensagens; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.assistente_mensagens (
+    id_mensagem integer NOT NULL,
+    conversa_id integer NOT NULL,
+    papel character varying(12) NOT NULL,
+    conteudo text,
+    ferramentas jsonb,
+    tokens_entrada integer,
+    tokens_saida integer,
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: assistente_mensagens_id_mensagem_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.assistente_mensagens_id_mensagem_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: assistente_mensagens_id_mensagem_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.assistente_mensagens_id_mensagem_seq OWNED BY public.assistente_mensagens.id_mensagem;
 
 
 --
@@ -1591,6 +1660,20 @@ ALTER TABLE ONLY public.api_keys ALTER COLUMN id SET DEFAULT nextval('public.api
 
 
 --
+-- Name: assistente_conversas id_conversa; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.assistente_conversas ALTER COLUMN id_conversa SET DEFAULT nextval('public.assistente_conversas_id_conversa_seq'::regclass);
+
+
+--
+-- Name: assistente_mensagens id_mensagem; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.assistente_mensagens ALTER COLUMN id_mensagem SET DEFAULT nextval('public.assistente_mensagens_id_mensagem_seq'::regclass);
+
+
+--
 -- Name: bens_permanentes id_bem; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1896,6 +1979,22 @@ ALTER TABLE ONLY public.api_keys
 
 ALTER TABLE ONLY public.api_keys
     ADD CONSTRAINT api_keys_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: assistente_conversas assistente_conversas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.assistente_conversas
+    ADD CONSTRAINT assistente_conversas_pkey PRIMARY KEY (id_conversa);
+
+
+--
+-- Name: assistente_mensagens assistente_mensagens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.assistente_mensagens
+    ADD CONSTRAINT assistente_mensagens_pkey PRIMARY KEY (id_mensagem);
 
 
 --
@@ -2351,6 +2450,20 @@ CREATE INDEX almoxarifado_requisicoes_subunidade_id ON public.almoxarifado_requi
 
 
 --
+-- Name: assistente_conversas_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX assistente_conversas_user_id ON public.assistente_conversas USING btree (user_id);
+
+
+--
+-- Name: assistente_mensagens_conversa_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX assistente_mensagens_conversa_id ON public.assistente_mensagens USING btree (conversa_id);
+
+
+--
 -- Name: bens_permanentes_sala_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2679,6 +2792,22 @@ ALTER TABLE ONLY public.api_keys
 
 ALTER TABLE ONLY public.api_keys
     ADD CONSTRAINT api_keys_subunidade_id_fkey FOREIGN KEY (subunidade_id) REFERENCES public.subunidades(subunidade_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: assistente_conversas assistente_conversas_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.assistente_conversas
+    ADD CONSTRAINT assistente_conversas_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: assistente_mensagens assistente_mensagens_conversa_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.assistente_mensagens
+    ADD CONSTRAINT assistente_mensagens_conversa_id_fkey FOREIGN KEY (conversa_id) REFERENCES public.assistente_conversas(id_conversa) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -3069,5 +3198,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict PLPpOJFSKsw1nrIrSdq3M029UfB6X6QdQ3we5FMdT41Bym2Hudl0tsqaXPKtV3t
+\unrestrict omnZuVdhcancGuuCEnammakQsLay02c478jmFlr2HK1c3aYV0aFbhVIUL8JAakC
 
