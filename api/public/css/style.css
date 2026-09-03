@@ -757,6 +757,12 @@ footer {
 .ia-flutuante:hover { background: var(--nav-hover, #009536); transform: scale(1.06); }
 .ia-flutuante:focus-visible { outline: 3px solid #9c36b5; outline-offset: 2px; }
 
+/* `display:flex` abaixo vence a regra padrão do navegador para [hidden]
+   (`display:none`), então o atributo hidden não escondia nada — o botão de
+   fechar "não funcionava" e o painel nascia aberto. Esta regra devolve o
+   comportamento esperado do atributo. */
+.ia-painel[hidden] { display: none; }
+
 .ia-painel {
     position: fixed; right: 22px; bottom: 88px; z-index: 901;
     width: min(560px, calc(100vw - 44px)); height: min(640px, calc(100vh - 130px));
