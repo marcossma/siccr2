@@ -442,10 +442,17 @@ router.post("/enviar-email", async (req, res) => {
         logger.error({ err: error }, "Falha ao registrar envio do assistente");
     }
 
-    logger.info(
-        { userId: req.usuario.id, linhas: itens.length, comAnexo: Boolean(anexos), ok: Boolean(resultado.ok) },
-        "E-mail enviado pelo assistente"
-    );
+    // A mensagem acompanha o resultado: logar "E-mail enviado" numa falha faz o
+    // log mentir justamente onde ele serve de trilha de auditoria.
+    const dadosLog = {
+        userId: req.usuario.id, linhas: itens.length,
+        comAnexo: Boolean(anexos), destinatario: para,
+    };
+    if (resultado.ok) {
+        logger.info(dadosLog, "E-mail enviado pelo assistente");
+    } else {
+        logger.error({ ...dadosLog, motivo: resultado.motivo }, "Falha ao enviar e-mail do assistente");
+    }
 
     if (!resultado.ok) {
         return res.status(502).json({
