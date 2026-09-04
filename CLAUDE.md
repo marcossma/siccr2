@@ -463,6 +463,15 @@ embaixo de qualquer resposta, inclusive de pergunta cuja resposta era um número
 `selecionarColunas()` casa sem acento/maiúscula (o modelo pode mandar "Fornecedor") e, se
 nenhuma coluna pedida existir, devolve todas — tabela com coluna demais é melhor que vazia.
 
+⚠️ **Ação pendurada em parâmetro de consulta é frágil.** `enviar_email` e `exportar` são
+parâmetros das ferramentas de dados, e o modelo às vezes ANUNCIA que preparou o e-mail sem
+tê-los passado — o usuário lê "confirme na tela" e não há nada para confirmar. Duas defesas:
+o prompt traz um exemplo explícito do caso de continuação ("envie esses dados" → repetir a
+mesma consulta com o parâmetro), e a rota detecta a incoerência (texto promete e-mail mas
+nenhum bloco tem `emailProposto`) e dá **uma rodada extra** instruindo o modelo a refazer.
+Se ainda assim falhar, a resposta é trocada — o assistente não pode afirmar ter feito o que
+não fez.
+
 **Envio por e-mail — a única ação do assistente que sai da instituição.**
 `enviar_email`/`assunto_email` fazem a ferramenta devolver um `emailProposto`; o front
 abre uma **confirmação** com destinatário (em destaque e editável), assunto e opção de

@@ -79,11 +79,16 @@ COMO TRABALHAR
 - Quando você pedir a tabela, ela é exibida logo abaixo da sua resposta — então NÃO repita
   as linhas no texto: comente, destaque o que importa e diga "a tabela abaixo traz todos".
   Quando NÃO pedir, não mencione tabela nenhuma.
-- E-MAIL: quando o usuário pedir para enviar os dados por e-mail, passe o endereço em
-  enviar_email (e um assunto curto em assunto_email). Isso NÃO envia: abre uma confirmação
-  na tela com destinatário, assunto e prévia, e quem envia é o usuário. Então diga
-  "preparei o e-mail, confirme na tela" — nunca "enviei". Se for continuação de uma
-  resposta anterior, refaça a mesma consulta com o parâmetro.
+- E-MAIL: para enviar dados por e-mail você PRECISA chamar uma ferramenta de consulta
+  passando enviar_email. Não existe outro jeito — sem essa chamada nada é preparado e o
+  usuário fica olhando para uma tela vazia.
+  Exemplo do caso mais comum, a continuação:
+    usuário: "quais salas existem no prédio 42?"   → você: listar_salas(q="42")
+    usuário: "envie esses dados para joao@ufsm.br" → você: listar_salas(q="42",
+                enviar_email="joao@ufsm.br", assunto_email="Salas do prédio 42")
+  Repare que a segunda chamada REPETE a consulta: você não guarda os dados da rodada
+  anterior. Isso NÃO envia — abre uma confirmação na tela, e quem envia é o usuário.
+  Diga "preparei o e-mail, confirme na tela", nunca "enviei".
 - ARQUIVO: quando o usuário pedir para gerar/exportar/baixar ("gere um excel", "exporta em
   pdf", "quero uma planilha disso"), passe exportar="excel" ou exportar="pdf". O download
   começa sozinho e a tabela também aparece. Se o pedido for continuação de uma resposta
@@ -298,9 +303,65 @@ router.post("/conversar", async (req, res) => {
             }
         }
 
+        // O modelo às vezes ANUNCIA que preparou o e-mail sem ter passado
+        // enviar_email na chamada — e aí o usuário lê "confirme na tela" sem
+        // ter nada para confirmar. Pendurar uma ação como parâmetro de uma
+        // ferramenta de consulta é frágil justamente por isso, então em vez de
+        // confiar no prompt, detectamos a incoerência e damos uma rodada extra
+        // com a instrução explícita.
+        const prometeuEmail = /e-?mail/i.test(textoFinal || "")
+            && /(prepar|confirm|envi)/i.test(textoFinal || "");
+        const temProposta = blocos.some((b) => b.emailProposto);
+        if (textoFinal !== null && prometeuEmail && !temProposta) {
+            logger.warn({ conversaId }, "Modelo anunciou e-mail sem preparar — corrigindo");
+            mensagens.push({ role: "assistant", content: textoFinal });
+            mensagens.push({
+                role: "system",
+                content:
+                    "Você disse que preparou o e-mail, mas NÃO passou o parâmetro enviar_email " +
+                    "em nenhuma chamada de ferramenta, então nada foi preparado e o usuário não " +
+                    "tem o que confirmar. Refaça AGORA a mesma consulta que você usou para " +
+                    "responder, acrescentando enviar_email com o endereço que o usuário pediu " +
+                    "e um assunto curto em assunto_email.",
+            });
+            const r2 = await ia.conversar(mensagens, ferramentas);
+            if (r2.ok && (r2.mensagem.tool_calls || []).length > 0) {
+                for (const chamada of r2.mensagem.tool_calls) {
+                    let argumentos = {};
+                    try { argumentos = JSON.parse(chamada.function?.arguments || "{}"); } catch { argumentos = {}; }
+                    const resultado = await executar(chamada.function?.name, argumentos, { baseUrl: BASE_URL, token });
+                    auditoria.push({
+                        nome: chamada.function?.name, argumentos, rota: resultado.rota || null,
+                        ok: resultado.ok, erro: resultado.erro || null, correcao: true,
+                        registros: Array.isArray(resultado.linhas) ? resultado.linhas.length : null,
+                    });
+                    if (resultado.ok && resultado.exibirTabela
+                        && Array.isArray(resultado.linhas) && resultado.linhas.length > 0) {
+                        blocos.push({
+                            ferramenta: chamada.function?.name,
+                            titulo: resultado.titulo || null,
+                            argumentos,
+                            total: resultado.total, soma: resultado.soma,
+                            exportar: resultado.exportar,
+                            emailProposto: resultado.emailProposto,
+                            itens: resultado.linhas,
+                        });
+                    }
+                }
+                uso = { entrada: uso.entrada + (r2.uso?.entrada || 0), saida: uso.saida + (r2.uso?.saida || 0) };
+            }
+            // Se ainda assim não houve proposta, a resposta não pode mentir
+            if (!blocos.some((b) => b.emailProposto)) {
+                textoFinal = "Não consegui preparar o e-mail. Tente pedir de novo dizendo o que " +
+                    "enviar e para qual endereço, por exemplo: \"envie as salas do prédio 42 " +
+                    "para fulano@ufsm.br\".";
+            }
+        }
+
         if (textoFinal === null) {
-            textoFinal = "Não consegui concluir a consulta — a pergunta exigiu buscas demais. " +
-                "Pode tentar de novo de forma mais específica?";
+            textoFinal = "Não consegui montar a resposta: precisei de consultas demais e parei por " +
+                "segurança. Tente pedir uma coisa de cada vez — por exemplo, primeiro os dados e " +
+                "depois o envio.";
         }
 
         // 4) Registra (auditoria + histórico)
