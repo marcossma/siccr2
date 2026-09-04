@@ -116,6 +116,39 @@ const brl = (n) => Number(n || 0).toLocaleString("pt-BR", { style: "currency", c
         console.log("  >>> ok: lista de servidores exige chefe+, como a rota já define");
     }
 
+    console.log("\n═══ 3b2. Busca alcança quem está fora das primeiras linhas ═══\n");
+    // O modelo só recebe 25 linhas de amostra. Sem busca, procurar alguém que
+    // esteja na posição 280 de 485 é impossível — foi assim que o assistente
+    // "não encontrou" um servidor que existe.
+    const semBusca = await executar("listar_servidores", {}, { baseUrl: BASE_URL, token: PERFIS.diretor });
+    const amostraSem = semBusca.paraModelo?.amostra_dos_primeiros || [];
+    const achouSemBusca = amostraSem.some((u) => /MAICO/i.test(u.nome || ""));
+    const comBusca = await executar("listar_servidores", { q: "maico" }, { baseUrl: BASE_URL, token: PERFIS.diretor });
+    const achouComBusca = (comBusca.linhas || []).some((u) => /MAICO/i.test(u.nome || ""));
+    console.log(`  sem busca  → ${semBusca.paraModelo?.total_de_registros} servidores, amostra de ${amostraSem.length}; encontra "maico"? ${achouSemBusca ? "sim" : "não"}`);
+    console.log(`  q="maico"  → ${(comBusca.linhas || []).length} resultado(s); encontra? ${achouComBusca ? "sim" : "não"}`);
+    if (!achouComBusca) {
+        console.log("  >>> FALHA: a busca por nome não encontrou quem existe");
+        falhas++;
+    } else {
+        console.log("  >>> ok: busca insensível a maiúsculas alcança a lista inteira");
+    }
+
+    console.log("\n═══ 3b3. Salas trazem o NOME do prédio, não só o id ═══\n");
+    const salas = await executar("listar_salas", {}, { baseUrl: BASE_URL, token: PERFIS.diretor });
+    const primeira = (salas.linhas || [])[0] || {};
+    console.log(`  campos: ${Object.keys(primeira).slice(0, 10).join(", ")}…`);
+    if (primeira.predio === undefined) {
+        console.log("  >>> FALHA: sem o nome do prédio o modelo inventa a que prédio a sala pertence");
+        falhas++;
+    } else {
+        const p42 = await executar("listar_salas", { q: "42" }, { baseUrl: BASE_URL, token: PERFIS.diretor });
+        const todasDo42 = (p42.linhas || []).every((s) => String(s.predio) === "42");
+        console.log(`  q="42" → ${(p42.linhas || []).length} sala(s), todas do prédio 42? ${todasDo42 ? "sim" : "NÃO"}`);
+        if (!todasDo42) { console.log("  >>> FALHA: filtro de prédio trouxe sala de outro prédio"); falhas++; }
+        else console.log("  >>> ok: nome do prédio presente e filtro correto");
+    }
+
     console.log("\n═══ 3c. Telefone e nascimento não chegam ao modelo ═══\n");
     const servidores = await executar("listar_servidores", {}, { baseUrl: BASE_URL, token: PERFIS.diretor });
     const amostraServ = servidores.paraModelo?.amostra_dos_primeiros || servidores.linhas || [];

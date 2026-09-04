@@ -19,34 +19,49 @@ function emailValido(email) {
 }
 
 // GET /api/usuarios — lista usuários (com filtro de escopo)
+//
+// Aceita ?q= (nome, SIAPE ou e-mail) e ?subunidade_id= para ESTREITAR o
+// resultado. Os dois só restringem: o recorte de escopo abaixo continua sendo
+// aplicado antes, então nenhum filtro amplia o que o usuário pode ver.
+// Sem busca, são 485 registros — inviável para quem consome a lista querendo
+// uma pessoa específica.
 router.get("/", async (req, res) => {
     try {
         const nivel = getNivelAcesso(req.usuario);
-        let query, params = [];
+        const condicoes = [];
+        const params = [];
 
-        if (nivel === "super_admin") {
-            query = `SELECT ${CAMPOS_USUARIO}, s.subunidade_nome
-                     FROM users u
-                     LEFT JOIN subunidades s ON s.subunidade_id = u.subunidade_id
-                     ORDER BY u.nome`;
-        } else if (nivel === "diretor") {
-            query = `SELECT ${CAMPOS_USUARIO}, s.subunidade_nome
-                     FROM users u
-                     LEFT JOIN subunidades s ON s.subunidade_id = u.subunidade_id
-                     WHERE s.unidade_id = $1 OR u.unidade_id = $1
-                     ORDER BY u.nome`;
-            params = [req.usuario.unidade];
-        } else {
-            // chefe vê apenas usuários da sua subunidade
-            query = `SELECT ${CAMPOS_USUARIO}, s.subunidade_nome
-                     FROM users u
-                     LEFT JOIN subunidades s ON s.subunidade_id = u.subunidade_id
-                     WHERE u.subunidade_id = $1
-                     ORDER BY u.nome`;
-            params = [req.usuario.subunidade];
+        // 1) Escopo por nível — inalterado
+        if (nivel === "diretor") {
+            params.push(req.usuario.unidade);
+            condicoes.push(`(s.unidade_id = $${params.length} OR u.unidade_id = $${params.length})`);
+        } else if (nivel !== "super_admin") {
+            params.push(req.usuario.subunidade);
+            condicoes.push(`u.subunidade_id = $${params.length}`);
         }
 
-        const { rows } = await pool.query(query, params);
+        // 2) Filtros opcionais de quem chamou
+        const busca = String(req.query.q || "").trim();
+        if (busca) {
+            params.push(`%${busca}%`);
+            const i = params.length;
+            condicoes.push(`(u.nome ILIKE $${i} OR u.siape ILIKE $${i} OR u.email ILIKE $${i})`);
+        }
+        const subunidadeId = parseInt(req.query.subunidade_id, 10);
+        if (Number.isInteger(subunidadeId)) {
+            params.push(subunidadeId);
+            condicoes.push(`u.subunidade_id = $${params.length}`);
+        }
+
+        const where = condicoes.length ? `WHERE ${condicoes.join(" AND ")}` : "";
+        const { rows } = await pool.query(
+            `SELECT ${CAMPOS_USUARIO}, s.subunidade_nome
+               FROM users u
+               LEFT JOIN subunidades s ON s.subunidade_id = u.subunidade_id
+             ${where}
+             ORDER BY u.nome`,
+            params
+        );
         return res.status(200).json({ status: "success", message: "", data: rows });
     } catch (error) {
         logger.error({ err: error }, "Erro ao listar usuários:");

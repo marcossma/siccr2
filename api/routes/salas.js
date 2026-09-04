@@ -32,17 +32,38 @@ router.get("/", async (req, res) => {
 router.get("/total-info", async (req, res) => {
     try {
         const nivel = getNivelAcesso(req.usuario);
-        let whereClause = "";
-        let params = [];
+        const condicoes = [];
+        const params = [];
 
+        // 1) Escopo por nível (super_admin vê tudo) — inalterado
         if (nivel === "chefe") {
-            whereClause = "WHERE sa.subunidade_id = $1";
-            params = [req.usuario.subunidade];
+            params.push(req.usuario.subunidade);
+            condicoes.push(`sa.subunidade_id = $${params.length}`);
         } else if (nivel === "diretor") {
-            whereClause = "WHERE p.unidade_id = $1";
-            params = [req.usuario.unidade];
+            params.push(req.usuario.unidade);
+            condicoes.push(`p.unidade_id = $${params.length}`);
         }
-        // super_admin vê tudo
+
+        // 2) Filtros opcionais, que só ESTREITAM o que o escopo já permitiu.
+        //    `q` casa em sala, prédio e subunidade porque quem procura costuma
+        //    dizer "sala do prédio 42" sem saber o id de nada.
+        const busca = String(req.query.q || "").trim();
+        if (busca) {
+            params.push(`%${busca}%`);
+            const i = params.length;
+            condicoes.push(
+                `(sa.sala_nome ILIKE $${i} OR p.predio ILIKE $${i} OR p.descricao ILIKE $${i}
+                  OR s.subunidade_nome ILIKE $${i} OR s.subunidade_sigla ILIKE $${i}
+                  OR st.sala_tipo_nome ILIKE $${i})`
+            );
+        }
+        const predioId = parseInt(req.query.predio_id, 10);
+        if (Number.isInteger(predioId)) {
+            params.push(predioId);
+            condicoes.push(`sa.predio_id = $${params.length}`);
+        }
+
+        const whereClause = condicoes.length ? `WHERE ${condicoes.join(" AND ")}` : "";
 
         const { rows } = await pool.query(`
             SELECT

@@ -437,6 +437,18 @@ quem aparece várias vezes ficaria fora do topo. `por` sai de **whitelist** (`AG
 escolhendo o valor do outro lado. `soma` e `total` usam funções de janela e valem para
 **todos** os grupos, não só os que o `limit` devolve.
 
+⚠️ **Toda ferramenta que lista precisa de busca.** O modelo recebe só as 25 primeiras
+linhas (`LINHAS_PARA_MODELO`); sem um filtro, procurar alguém na posição 280 de 485 é
+impossível e ele conclui que a pessoa não existe. Por isso `GET /api/usuarios` ganhou
+`?q=` (nome/SIAPE/e-mail) e `?subunidade_id=`, e `GET /api/salas/total-info` ganhou `?q=`
+e `?predio_id=` — ambos **estreitam** dentro do escopo RBAC, nunca ampliam (um chefe que
+peça `subunidade_id` de outro setor recebe zero).
+
+⚠️ **Ferramenta de listagem deve apontar para a rota com JOIN.** `GET /api/salas` é
+`SELECT * FROM salas` e devolve só `predio_id`; o modelo não tem como saber que o id 3 é o
+"prédio 42" — e inventava. A ferramenta usa `GET /api/salas/total-info`, que traz
+`p.predio`, `subunidade_nome` e `sala_tipo_nome`.
+
 **Tabela sob demanda:** toda ferramenta ganha, via `PARAMS_APRESENTACAO`, os parâmetros
 `exibir_tabela` e `colunas`. A tabela **não** é mais automática — só aparece quando a
 pergunta pede para ver/listar os registros, e com os campos que o usuário citou. Antes vinha

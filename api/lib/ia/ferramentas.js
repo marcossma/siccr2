@@ -306,11 +306,26 @@ FERRAMENTAS.push(
     {
         nome: "listar_salas",
         descricao:
-            "Salas cadastradas: identificação, prédio, subunidade, tipo, capacidade (lugares), " +
+            "Salas cadastradas com NOME DO PRÉDIO, subunidade, tipo, capacidade (lugares), " +
             "dimensões, se é agendável e se está fora do ensalamento automático. " +
-            "Use para 'quais salas existem', 'qual a capacidade da sala X', 'salas do prédio Y'.",
-        parametros: { type: "object", properties: {}, required: [] },
-        rota: () => "/api/salas",
+            "Use para 'quais salas existem', 'qual a capacidade da sala X', 'salas do prédio 42'. " +
+            "Para restringir a um prédio, passe o número/nome dele em q (ex.: q='42') — " +
+            "NUNCA deduza o prédio a partir de um id numérico.",
+        parametros: {
+            type: "object",
+            properties: {
+                q: {
+                    type: "string",
+                    description: "Busca em nome da sala, prédio, subunidade e tipo. " +
+                        "Ex.: '42' para o prédio 42, 'laboratório' para o tipo.",
+                },
+            },
+            required: [],
+        },
+        // /total-info em vez de / : a listagem crua é um SELECT * sem join, e
+        // devolve só predio_id. O modelo não tem como saber que id 3 é o
+        // "prédio 42" — foi assim que ele acabou citando o prédio errado.
+        rota: (a) => `/api/salas/total-info${query({ q: a.q })}`,
         compactar: (d) => compactarListagem({ itens: Array.isArray(d) ? d : [], total: (d || []).length }),
         linhas: (d) => (Array.isArray(d) ? d : []),
         titulo: "Salas",
@@ -428,8 +443,25 @@ FERRAMENTAS.push(
             "Telefone e data de nascimento não estão disponíveis, por proteção de dado pessoal — " +
             "se pedirem, explique isso sem rodeios. " +
             "Restrito a chefe ou superior, e o chefe só enxerga a própria subunidade.",
-        parametros: { type: "object", properties: {}, required: [] },
-        rota: () => "/api/usuarios",
+        parametros: {
+            type: "object",
+            properties: {
+                q: {
+                    type: "string",
+                    description:
+                        "Busca por parte do nome, SIAPE ou e-mail. USE SEMPRE que a pergunta " +
+                        "citar uma pessoa ('contato do Maico', 'e-mail da Carine'): são centenas " +
+                        "de servidores e sem busca você recebe apenas os primeiros da lista, " +
+                        "podendo concluir por engano que a pessoa não existe.",
+                },
+                subunidade_id: {
+                    type: "integer",
+                    description: "Restringe a uma subunidade. Ids vêm de resumo_execucao.",
+                },
+            },
+            required: [],
+        },
+        rota: (a) => `/api/usuarios${query({ q: a.q, subunidade_id: a.subunidade_id })}`,
         compactar: (d) => compactarListagem({ itens: Array.isArray(d) ? d : [], total: (d || []).length }),
         linhas: (d) => (Array.isArray(d) ? d : []),
         titulo: "Servidores",
