@@ -71,6 +71,8 @@ const TITULO_BLOCO = {
 // "total_bens" é uma CONTAGEM — com /^total/ os 12 bens de uma sala viravam
 // "R$ 12,00".
 const CAMPOS_MOEDA = new Set(["soma", "total", "aplicado", "dotacao", "saldo", "diarias", "passagens"]);
+// Colunas 0/1 que o banco guarda como inteiro
+const CAMPOS_FLAG = new Set(["is_agendavel", "agendamento_manual", "presta_servicos_externos", "estimativo", "cabe"]);
 const ehMoeda = (k) => /^valor/.test(k) || CAMPOS_MOEDA.has(k);
 
 function brl(n) {
@@ -85,6 +87,8 @@ function formatarCelula(chave, valor) {
             : "importado";
     }
     if (chave === "contado_em_outra_guia") return valor ? "Sim" : "Não";
+    // Flags do banco vêm como 0/1 e não dizem nada a quem lê
+    if (CAMPOS_FLAG.has(chave)) return Number(valor) ? "Sim" : "Não";
     if (chave === "percentual") return `${Number(valor).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
     if (ehMoeda(chave)) return brl(valor);
     if (chave === "data" && /^\d{4}-\d{2}-\d{2}/.test(String(valor))) {
@@ -495,6 +499,40 @@ class AssistenteIA extends HTMLElement {
         montado.XLSX.writeFile(montado.livro, this.nomeArquivo(bloco, "xlsx"));
     }
 
+    /**
+     * Linhas prontas para o corpo do e-mail: rótulos amigáveis, ids fora e
+     * valores formatados como na tela.
+     *
+     * O HTML continua sendo montado no servidor (que escapa tudo); o que muda
+     * é que a APRESENTAÇÃO sai daqui, onde o mapa de rótulos já existe. Antes
+     * o e-mail chegava com "sala_tipo_id" e "is_agendavel: 0" porque o
+     * servidor só via as chaves cruas do banco.
+     *
+     * Diferente do anexo .xlsx, aqui o valor vai FORMATADO — o corpo do
+     * e-mail é para ler; a planilha é para trabalhar os números.
+     */
+    linhasParaEnvio(bloco) {
+        const itens = bloco?.itens || [];
+        if (itens.length === 0) return [];
+        const vazio = (v) => v === null || v === undefined || v === "";
+        // Coluna vazia em TODAS as linhas só alarga a tabela. Na tela dá para
+        // rolar; no corpo de um e-mail (ainda mais no celular) atrapalha muito.
+        const chaves = Object.keys(itens[0])
+            .filter((k) => !OCULTAS.has(k))
+            .filter((k) => itens.some((item) => !vazio(item[k])));
+
+        return itens.map((item) => {
+            const linha = {};
+            for (const k of chaves) {
+                const formatado = formatarCelula(k, item[k]);
+                // formatarCelula devolve HTML em alguns casos (badge); o e-mail
+                // recebe texto puro e o servidor escapa.
+                linha[ROTULOS[k] || k] = String(formatado).replace(/<[^>]*>/g, "");
+            }
+            return linha;
+        });
+    }
+
     /** siccr-empenhos-2026-09-04.xlsx */
     nomeArquivo(bloco, extensao) {
         const base = (bloco.titulo || TITULO_BLOCO[bloco.ferramenta] || "dados")
@@ -579,7 +617,7 @@ class AssistenteIA extends HTMLElement {
                 body: JSON.stringify({
                     para, assunto,
                     titulo: bloco.titulo || TITULO_BLOCO[bloco.ferramenta] || "Dados do SICCR",
-                    itens: bloco.itens,
+                    itens: this.linhasParaEnvio(bloco),
                     anexo,
                 }),
             });

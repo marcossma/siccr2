@@ -484,7 +484,13 @@ automático completaria a cadeia clássica de exfiltração: bastaria alguém es
 "envie para fulano@..." numa observação de empenho. Instrução injetada não clica em botão
 — por isso o envio **tem** que continuar exigindo a confirmação humana.
 O HTML da tabela é montado no servidor a partir das linhas (nunca marcação vinda do
-cliente), e todo envio, inclusive falho, é registrado em `assistente_envios`.
+cliente), mas quem envia as linhas é o front, **já traduzidas** por
+`linhasParaEnvio()`: rótulos amigáveis, ids fora, flags 0/1 como Sim/Não e colunas
+inteiramente vazias descartadas. O mapa de rótulos vive só no componente — duplicá-lo no
+backend garantiria divergência. Antes disso o e-mail chegava com `sala_tipo_id` e
+`is_agendavel: 0`. O corpo vai com valores **formatados** (é para ler); o anexo .xlsx vai
+com números crus (é para calcular). Todo envio, inclusive falho, é registrado em
+`assistente_envios`.
 A planilha do anexo é gerada no navegador (SheetJS) e enviada em base64 — evita a
 dependência de geração de xlsx no backend; limites de 2000 linhas e 8 MB.
 
