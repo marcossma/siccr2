@@ -26,6 +26,20 @@ const RE_CPF = /(?<!\d)(\d{3})\.?(\d{3})\.?(\d{3})-?(\d{2})(?!\d)/g;
 
 const CHAVES_SENSIVEIS = /^(cpf|cpf_proposto|documento_pessoal)$/i;
 
+/**
+ * Campos que somem por completo do que vai ao modelo.
+ *
+ * `/api/usuarios` devolve 485 servidores COM whatsapp e data de nascimento.
+ * São dados pessoais sem qualquer finalidade analítica — nenhuma pergunta do
+ * tipo "quem trabalha no DSOL?" precisa do celular de ninguém. Some aqui, na
+ * fronteira, em vez de depender de cada ferramenta lembrar de não pedir.
+ *
+ * Aniversários continuam funcionando: `/api/aniversariantes` devolve `dia` e
+ * `dia_mes` como campos próprios, sem o ano — que é justamente a parte
+ * sensível de uma data de nascimento.
+ */
+const CHAVES_REMOVIDAS = /^(whatsapp|telefone|celular|data_nascimento|nascimento|senha|password|token)$/i;
+
 /** "948.431.550-04" → "***.***.550-04" (mantém o fim, que é o que a pessoa usa p/ conferir) */
 function mascararCpf(_m, _a, _b, c, d) {
     return `***.***.${c}-${d}`;
@@ -48,6 +62,7 @@ function redigir(valor) {
 
     const saida = {};
     for (const [chave, v] of Object.entries(valor)) {
+        if (CHAVES_REMOVIDAS.test(chave)) continue;          // nem chega ao modelo
         if (CHAVES_SENSIVEIS.test(chave)) {
             saida[chave] = typeof v === "string" && v.trim() ? redigirTexto(v) : null;
         } else {

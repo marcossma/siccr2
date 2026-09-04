@@ -36,7 +36,11 @@ const brl = (n) => Number(n || 0).toLocaleString("pt-BR", { style: "currency", c
 
     console.log("═══ 1. Todas as ferramentas respondem (perfil direção) ═══\n");
     // Argumentos mínimos por ferramenta; as que não aparecem aqui só precisam do ano
-    const ARGS = { somar_por: { fonte: "empenhos", por: "fornecedor" } };
+    const ARGS = {
+        somar_por: { fonte: "empenhos", por: "fornecedor" },
+        salas_disponiveis: { dia_semana: 4, hora_inicio: "08:30", hora_fim: "10:10", vagas: 40 },
+        agenda_de_salas: { inicio: "2026-09-01", fim: "2026-09-30" },
+    };
     for (const f of FERRAMENTAS) {
         const r = await executar(f.nome, { ano: 2026, ...(ARGS[f.nome] || {}) }, { baseUrl: BASE_URL, token: PERFIS.diretor });
         const linhas = Array.isArray(r.linhas) ? r.linhas.length : "—";
@@ -86,6 +90,51 @@ const brl = (n) => Number(n || 0).toLocaleString("pt-BR", { style: "currency", c
         falhas++;
     } else {
         console.log("  >>> ok: negado, e com orientação para o modelo explicar em vez de contornar");
+    }
+
+    console.log("\n═══ 3b. Salas e servidores: RBAC por domínio ═══\n");
+    // Salas e manutenção são abertas a qualquer logado; a lista de servidores
+    // exige chefe+. O assistente não muda isso — herda de cada rota.
+    for (const [ferramenta, args] of [
+        ["listar_salas", {}],
+        ["listar_manutencoes", {}],
+        ["patrimonio_por_sala", {}],
+        ["aniversariantes", {}],
+        ["listar_servidores", {}],
+    ]) {
+        const comoServidor = await executar(ferramenta, args, { baseUrl: BASE_URL, token: PERFIS.servidor });
+        const comoDiretor = await executar(ferramenta, args, { baseUrl: BASE_URL, token: PERFIS.diretor });
+        const n = (r) => (Array.isArray(r.linhas) ? r.linhas.length : "—");
+        console.log(`  ${ferramenta.padEnd(22)} servidor: ${comoServidor.ok ? `ok (${n(comoServidor)})` : "negado"} · direção: ${comoDiretor.ok ? `ok (${n(comoDiretor)})` : "negado"}`);
+        if (!comoDiretor.ok) { console.log("  >>> FALHA: direção deveria conseguir"); falhas++; }
+    }
+    const servidoresParaServidor = await executar("listar_servidores", {}, { baseUrl: BASE_URL, token: PERFIS.servidor });
+    if (servidoresParaServidor.ok) {
+        console.log("  >>> FALHA: servidor comum não deveria listar servidores");
+        falhas++;
+    } else {
+        console.log("  >>> ok: lista de servidores exige chefe+, como a rota já define");
+    }
+
+    console.log("\n═══ 3c. Telefone e nascimento não chegam ao modelo ═══\n");
+    const servidores = await executar("listar_servidores", {}, { baseUrl: BASE_URL, token: PERFIS.diretor });
+    const amostraServ = servidores.paraModelo?.amostra_dos_primeiros || servidores.linhas || [];
+    const camposServ = amostraServ.length ? Object.keys(amostraServ[0]) : [];
+    const proibidos = camposServ.filter((c) => /whatsapp|telefone|celular|nascimento|senha/i.test(c));
+    console.log(`  ${servidores.paraModelo?.total_de_registros ?? amostraServ.length} servidor(es); campos entregues: ${camposServ.join(", ") || "(nenhum)"}`);
+    if (proibidos.length > 0) {
+        console.log(`  >>> FALHA: dado pessoal vazando: ${proibidos.join(", ")}`);
+        falhas++;
+    } else {
+        console.log("  >>> ok: sem telefone nem data de nascimento");
+    }
+    // O mural de aniversários continua funcionando (dia/mês, sem o ano)
+    const aniv = await executar("aniversariantes", {}, { baseUrl: BASE_URL, token: PERFIS.diretor });
+    const primeiro = (aniv.linhas || [])[0];
+    console.log(`  aniversariantes do mês: ${(aniv.linhas || []).length}${primeiro ? ` · exemplo: ${JSON.stringify(primeiro)}` : ""}`);
+    if (primeiro && /\d{4}/.test(JSON.stringify(primeiro))) {
+        console.log("  >>> FALHA: parece haver ano de nascimento na resposta");
+        falhas++;
     }
 
     console.log("\n═══ 4b. Agregação também respeita o escopo ═══\n");

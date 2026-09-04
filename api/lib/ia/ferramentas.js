@@ -297,6 +297,162 @@ const FERRAMENTAS = [
     },
 ];
 
+// ═══════════════════════════════════════════════════════════════════════
+// Salas, agenda, manutenção e patrimônio
+// Dado institucional; o RBAC de cada rota continua sendo quem decide.
+// ═══════════════════════════════════════════════════════════════════════
+
+FERRAMENTAS.push(
+    {
+        nome: "listar_salas",
+        descricao:
+            "Salas cadastradas: identificação, prédio, subunidade, tipo, capacidade (lugares), " +
+            "dimensões, se é agendável e se está fora do ensalamento automático. " +
+            "Use para 'quais salas existem', 'qual a capacidade da sala X', 'salas do prédio Y'.",
+        parametros: { type: "object", properties: {}, required: [] },
+        rota: () => "/api/salas",
+        compactar: (d) => compactarListagem({ itens: Array.isArray(d) ? d : [], total: (d || []).length }),
+        linhas: (d) => (Array.isArray(d) ? d : []),
+        titulo: "Salas",
+    },
+
+    {
+        nome: "salas_disponiveis",
+        descricao:
+            "Salas AGENDÁVEIS e LIVRES num horário, já descontando aulas e reservas existentes. " +
+            "Responde 'tem sala livre na quinta de manhã para 40 pessoas?'. " +
+            "Informe dia_semana (0=domingo … 6=sábado), hora_inicio e hora_fim em HH:MM, e " +
+            "opcionalmente quantas vagas precisa. Auditórios e salas de agendamento manual " +
+            "ficam fora por regra do ensalamento.",
+        parametros: {
+            type: "object",
+            properties: {
+                dia_semana: { type: "integer", minimum: 0, maximum: 6, description: "0=domingo, 1=segunda … 6=sábado." },
+                hora_inicio: { type: "string", description: "HH:MM, ex.: '08:30'." },
+                hora_fim: { type: "string", description: "HH:MM, ex.: '10:10'." },
+                vagas: { type: "integer", description: "Quantas pessoas precisam caber." },
+                predio_id: { type: "integer", description: "Restringe a um prédio." },
+                data_inicio: { type: "string", description: "Início do período a considerar (AAAA-MM-DD). Se omitir, usa os próximos 30 dias a partir de hoje." },
+                data_fim: { type: "string", description: "Fim do período (AAAA-MM-DD)." },
+            },
+            required: ["dia_semana", "hora_inicio", "hora_fim"],
+        },
+        // A rota exige um período (para saber contra quais ocorrências checar).
+        // Quem pergunta "tem sala livre quinta de manhã?" não pensa nisso, então
+        // assumimos os próximos 30 dias — o modelo só informa datas se a
+        // pergunta trouxer um período específico.
+        rota: (a) => {
+            const hoje = new Date();
+            const daqui30 = new Date(hoje.getTime() + 30 * 86400000);
+            const iso = (d) => d.toISOString().slice(0, 10);
+            return `/api/salas/disponiveis${query({
+                dia_semana: a.dia_semana, hora_inicio: a.hora_inicio, hora_fim: a.hora_fim,
+                vagas: a.vagas, predio_id: a.predio_id,
+                data_inicio: a.data_inicio || iso(hoje),
+                data_fim: a.data_fim || iso(daqui30),
+            })}`;
+        },
+        compactar: (d) => compactarListagem({ itens: Array.isArray(d) ? d : (d?.itens || []), total: (Array.isArray(d) ? d : d?.itens || []).length }),
+        linhas: (d) => (Array.isArray(d) ? d : d?.itens || []),
+        titulo: "Salas livres no horário",
+    },
+
+    {
+        nome: "agenda_de_salas",
+        descricao:
+            "O que está marcado nas salas num período: aulas e reservas, com sala, motivo, " +
+            "solicitante e horário. Use para 'o que tem marcado na sala X essa semana', " +
+            "'quais reservas existem em outubro'.",
+        parametros: {
+            type: "object",
+            properties: {
+                inicio: { type: "string", description: "Data inicial AAAA-MM-DD." },
+                fim: { type: "string", description: "Data final AAAA-MM-DD." },
+                sala_id: { type: "integer", description: "Restringe a uma sala (id vem de listar_salas)." },
+                incluir_pendentes: { type: "boolean", description: "Inclui solicitações ainda não aprovadas." },
+            },
+            required: ["inicio", "fim"],
+        },
+        rota: (a) => `/api/agendamentos/visao/calendario${query({
+            inicio: a.inicio, fim: a.fim, sala_id: a.sala_id,
+            incluir_pendentes: a.incluir_pendentes ? "1" : undefined,
+        })}`,
+        compactar: (d) => compactarListagem({ itens: Array.isArray(d) ? d : (d?.itens || []), total: (Array.isArray(d) ? d : d?.itens || []).length }),
+        linhas: (d) => (Array.isArray(d) ? d : d?.itens || []),
+        titulo: "Agenda das salas",
+    },
+
+    {
+        nome: "listar_manutencoes",
+        descricao:
+            "Chamados de manutenção: sala, categoria, descrição, prioridade, situação " +
+            "(aberta, em_andamento, concluida, cancelada), quem registrou e quando concluiu. " +
+            "Use para 'quais chamados estão abertos', 'a sala X tem problema registrado'.",
+        parametros: {
+            type: "object",
+            properties: {
+                status: { type: "string", enum: ["aberta", "em_andamento", "concluida", "cancelada"] },
+                sala_id: { type: "integer", description: "Restringe a uma sala." },
+            },
+            required: [],
+        },
+        rota: (a) => `/api/manutencao${query({ status: a.status, sala_id: a.sala_id })}`,
+        compactar: (d) => compactarListagem({ itens: Array.isArray(d) ? d : (d?.itens || []), total: (Array.isArray(d) ? d : d?.itens || []).length }),
+        linhas: (d) => (Array.isArray(d) ? d : d?.itens || []),
+        titulo: "Chamados de manutenção",
+    },
+
+    {
+        nome: "patrimonio_por_sala",
+        descricao:
+            "Quantos bens patrimoniais estão cadastrados em cada sala (com prédio e subunidade). " +
+            "Use para 'quantos bens tem na sala X', 'quais salas já foram levantadas'.",
+        parametros: { type: "object", properties: {}, required: [] },
+        rota: () => "/api/patrimonio/salas",
+        compactar: (d) => compactarListagem({ itens: Array.isArray(d) ? d : [], total: (d || []).length }),
+        linhas: (d) => (Array.isArray(d) ? d : []),
+        titulo: "Bens por sala",
+    },
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Servidores
+    // WhatsApp e data de nascimento NÃO chegam ao modelo — some em
+    // lib/ia/redacao.js, na fronteira. Aqui só se descreve o que sobra.
+    // ═══════════════════════════════════════════════════════════════════
+    {
+        nome: "listar_servidores",
+        descricao:
+            "Servidores cadastrados: nome, SIAPE, e-mail institucional, subunidade e nível de " +
+            "permissão. Use para 'quem trabalha no Departamento de Solos', 'qual o e-mail do " +
+            "fulano', 'quem é chefe de tal setor'. " +
+            "Telefone e data de nascimento não estão disponíveis, por proteção de dado pessoal — " +
+            "se pedirem, explique isso sem rodeios. " +
+            "Restrito a chefe ou superior, e o chefe só enxerga a própria subunidade.",
+        parametros: { type: "object", properties: {}, required: [] },
+        rota: () => "/api/usuarios",
+        compactar: (d) => compactarListagem({ itens: Array.isArray(d) ? d : [], total: (d || []).length }),
+        linhas: (d) => (Array.isArray(d) ? d : []),
+        titulo: "Servidores",
+    },
+
+    {
+        nome: "aniversariantes",
+        descricao:
+            "Aniversariantes do mês: nome, dia e subunidade — o mesmo mural que a plataforma já " +
+            "mostra internamente. Só dia e mês; o ano de nascimento não é exposto. " +
+            "Use para 'quem faz aniversário esse mês', 'tem aniversário essa semana'.",
+        parametros: {
+            type: "object",
+            properties: { mes: { type: "integer", minimum: 1, maximum: 12, description: "Mês. Padrão: mês atual." } },
+            required: [],
+        },
+        rota: (a) => `/api/aniversariantes${query({ mes: a.mes || new Date().getMonth() + 1 })}`,
+        compactar: (d) => ({ mes: d?.mes, total: (d?.aniversariantes || []).length, itens: d?.aniversariantes || [] }),
+        linhas: (d) => d?.aniversariantes || [],
+        titulo: "Aniversariantes do mês",
+    }
+);
+
 const POR_NOME = new Map(FERRAMENTAS.map((f) => [f.nome, f]));
 
 /** Formato que a API da OpenAI espera em `tools` */

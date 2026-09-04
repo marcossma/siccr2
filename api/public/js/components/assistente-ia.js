@@ -37,6 +37,11 @@ const ROTULOS = {
     subunidade: "Subunidade", aplicado: "Aplicado", dotacao: "Dotação", saldo: "Saldo",
     registros: "Registros", quantidade: "Qtd.", diarias: "Diárias", passagens: "Passagens",
     natureza: "Natureza",
+    sala_nome: "Sala", predio_nome: "Prédio", sala_capacidade: "Capacidade", total_bens: "Bens",
+    tipo_nome: "Categoria", prioridade: "Prioridade", status: "Situação", created_by_nome: "Registrado por",
+    concluido_por_nome: "Concluído por", cabe: "Cabe", folga: "Folga", dia: "Dia", dia_mes: "Data",
+    email: "E-mail", siape: "SIAPE", permissao: "Permissão", subunidade_nome: "Subunidade",
+    is_agendavel: "Agendável", motivo: "Motivo", hora_inicio: "Início", hora_fim: "Fim",
 };
 
 // Colunas que nunca precisam aparecer na tabela
@@ -46,7 +51,10 @@ const TITULO_BLOCO = {
     listar_empenhos: "Empenhos", listar_almoxarifado: "Requisições de almoxarifado",
     listar_viagens: "Viagens e diárias", listar_licitacoes: "Itens de licitação",
     listar_transferencias: "Transferências de recurso", listar_dotacoes: "Orçamento",
-    somar_por: "Totais agrupados",
+    somar_por: "Totais agrupados", listar_salas: "Salas",
+    salas_disponiveis: "Salas livres", agenda_de_salas: "Agenda",
+    listar_manutencoes: "Manutenção", patrimonio_por_sala: "Bens por sala",
+    listar_servidores: "Servidores", aniversariantes: "Aniversariantes",
 };
 
 const ehMoeda = (k) => /^(valor|soma|total)/.test(k) || ["soma", "total", "aplicado", "dotacao", "saldo"].includes(k);
@@ -110,7 +118,7 @@ class AssistenteIA extends HTMLElement {
                 <div class="ia-cabecalho">
                     <div>
                         <strong>Assistente do SICCR</strong>
-                        <div class="ia-sub">Consulta de execução orçamentária</div>
+                        <div class="ia-sub">Orçamento, salas e servidores</div>
                     </div>
                     <div class="ia-acoes-topo">
                         <button type="button" class="ia-btn-icone" data-acao="nova" title="Nova conversa">✚</button>
@@ -221,14 +229,15 @@ class AssistenteIA extends HTMLElement {
         const exemplos = [
             "Quanto o Departamento de Solos gastou em 2026?",
             "Quais os maiores fornecedores do centro este ano?",
-            "Mostre as diárias pagas em 2025",
-            "Como ficou o saldo de cada departamento?",
+            "Tem sala livre na quinta de manhã para 40 pessoas?",
+            "Quais chamados de manutenção estão abertos?",
+            "Quem faz aniversário este mês?",
         ];
         const div = document.createElement("div");
         div.className = "ia-msg ia-msg--assistente ia-boasvindas";
         div.innerHTML =
-            `<p>Olá! Posso consultar a execução orçamentária do centro — empenhos, almoxarifado, ` +
-            `diárias, licitações e orçamento. Pergunte do seu jeito.</p>` +
+            `<p>Olá! Posso consultar o <strong>orçamento</strong> do centro, as <strong>salas</strong> ` +
+            `(disponibilidade, manutenção, patrimônio) e os <strong>servidores</strong>. Pergunte do seu jeito.</p>` +
             `<div class="ia-exemplos">${exemplos
                 .map((e) => `<button type="button" class="ia-exemplo">${escapar(e)}</button>`)
                 .join("")}</div>`;

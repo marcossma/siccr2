@@ -404,6 +404,23 @@ totais) e `paraTela` (completo). Sem isso, 595 itens de licitação virariam dez
 milhares de tokens por pergunta. O modelo é instruído a usar os **totais**, não a somar a
 amostra.
 
+**Domínios (fase 2):** execução orçamentária, **salas** (cadastro, disponibilidade,
+agenda, manutenção, patrimônio por sala) e **servidores** (quem trabalha onde, e-mail,
+SIAPE, permissão, aniversariantes do mês). Tudo somente consulta.
+
+⚠️ **WhatsApp e data de nascimento não chegam ao modelo.** `/api/usuarios` devolve 485
+servidores COM celular e nascimento; nenhuma pergunta legítima precisa disso. `redacao.js`
+remove os campos na fronteira (`CHAVES_REMOVIDAS`), não em cada ferramenta — assim vale
+para qualquer rota que venha a ser embrulhada depois. Aniversários seguem funcionando
+porque `/api/aniversariantes` devolve `dia`/`dia_mes` como campos próprios, sem o ano.
+
+**Ambiente (dev nesta máquina):** o Avast Web/Mail Shield intercepta TLS e o container não
+confia na raiz dele — o certificado de `api.openai.com` chega emitido por "Avast Web/Mail
+Shield" e a chamada falha com `UNABLE_TO_VERIFY_LEAF_SIGNATURE`. Do host o TLS valida
+normal. Solução: excluir o Docker da varredura HTTPS do Avast (ou instalar a CA dele no
+container via `NODE_EXTRA_CA_CERTS`). **Nunca** desabilitar a verificação: a chave da API
+viajaria exposta a quem estiver no meio. Não afeta o VPS.
+
 Sub-rotas: `GET /status` (a interface pergunta antes de mostrar o chat), `POST /conversar`
 (`{pergunta, conversa_id?}` → `{resposta, blocos, ferramentas, uso}`; laço de até 5 rodadas
 de ferramenta), `GET /conversas`, `GET /conversas/:id`, `DELETE /conversas/:id`.
