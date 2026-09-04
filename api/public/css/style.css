@@ -876,6 +876,25 @@ assistente-ia[modo="pagina"] .ia-painel {
 }
 .ia-entrada textarea:disabled { background: #f8f9fa; color: #adb5bd; cursor: not-allowed; }
 .ia-entrada textarea:focus { outline: none; border-color: #009536; }
+/* Ditado por voz. O botão só é exibido pelo JS quando o navegador suporta,
+   então nasce com [hidden] e nem ocupa espaço onde não funciona. */
+.ia-microfone {
+    flex: 0 0 auto; width: 40px; border: 1px solid #ced4da; border-radius: 8px;
+    background: #fff; cursor: pointer; font-size: 16px; line-height: 1;
+    transition: background .15s ease, border-color .15s ease;
+}
+.ia-microfone:hover:not(:disabled) { background: #e7f5ec; border-color: #009536; }
+.ia-microfone:disabled { opacity: .5; cursor: not-allowed; }
+/* Gravando: vermelho pulsante, para não restar dúvida de que o microfone está aberto */
+.ia-microfone.gravando { background: #ffe3e3; border-color: #c92a2a; animation: ia-pulso 1.2s ease-in-out infinite; }
+@keyframes ia-pulso {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(201, 42, 42, .45); }
+    50%      { box-shadow: 0 0 0 6px rgba(201, 42, 42, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .ia-microfone.gravando { animation: none; border-width: 2px; }
+}
+
 .ia-enviar {
     background: var(--nav-bg, #007a2e); color: #fff; border: none; border-radius: 8px;
     padding: 0 16px; cursor: pointer; font: bold 12px var(--nav-font, verdana, sans-serif);

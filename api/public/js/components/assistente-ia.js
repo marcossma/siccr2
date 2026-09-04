@@ -147,6 +147,8 @@ class AssistenteIA extends HTMLElement {
                 <form class="ia-entrada">
                     <textarea rows="1" placeholder="Pergunte em português…"
                               aria-label="Sua pergunta"></textarea>
+                    <button type="button" class="ia-microfone" data-acao="ditar" hidden
+                            title="Ditar a pergunta" aria-label="Ditar a pergunta">🎤</button>
                     <button type="submit" class="ia-enviar" title="Enviar">Enviar</button>
                 </form>
                 <div class="ia-rodape">
@@ -183,6 +185,7 @@ class AssistenteIA extends HTMLElement {
             if (acao === "fechar") this.alternar(false);
             if (acao === "nova") this.novaConversa();
             if (acao === "imprimir") this.imprimirBloco(e.target.closest("[data-bloco]"));
+            if (acao === "ditar") this.alternarDitado();
             if (acao === "enviar-email") this.enviarEmailBloco(e.target.closest("[data-email]"));
             if (acao === "cancelar-email") e.target.closest("[data-email]")?.remove();
             if (acao === "excel") {
@@ -194,6 +197,8 @@ class AssistenteIA extends HTMLElement {
 
         const botao = this.querySelector(".ia-flutuante");
         if (botao) botao.addEventListener("click", () => this.alternar(this.painel.hidden));
+
+        this.prepararDitado();
     }
 
     /**
@@ -202,6 +207,94 @@ class AssistenteIA extends HTMLElement {
      * reiniciando) acusava falta da chave da OpenAI, mandando o usuário atrás
      * do problema errado.
      */
+    /**
+     * Ditado por voz usando o reconhecimento nativo do navegador.
+     *
+     * Sem dependência e sem custo, mas só existe em navegadores baseados no
+     * Chromium (Chrome, Edge). Onde não houver, o botão nem aparece — melhor
+     * que oferecer algo que não funciona.
+     *
+     * O texto reconhecido vai para o CAMPO, não é enviado automaticamente:
+     * reconhecimento de fala erra nomes próprios ("Departamento de Solos"
+     * vira coisa estranha), e aqui a pergunta pode virar consulta financeira.
+     * Quem confere é a pessoa.
+     */
+    prepararDitado() {
+        const Reconhecimento = window.SpeechRecognition || window.webkitSpeechRecognition;
+        this.btnMic = this.querySelector(".ia-microfone");
+        if (!Reconhecimento || !this.btnMic) return;
+
+        const rec = new Reconhecimento();
+        rec.lang = "pt-BR";
+        rec.continuous = false;
+        rec.interimResults = true;   // mostra o texto enquanto a pessoa fala
+
+        rec.onstart = () => { this.ditando = true; };
+        // onstart/onend chegam depois do clique; o visual já foi acertado lá.
+        // Aqui é só garantir que feche quando o navegador encerra sozinho
+        // (silêncio prolongado, tempo limite).
+        rec.onend = () => this.marcarDitado(false);
+
+        rec.onresult = (evento) => {
+            let texto = "";
+            for (let i = evento.resultIndex; i < evento.results.length; i++) {
+                texto += evento.results[i][0].transcript;
+            }
+            const base = this._textoBase || "";
+            this.campo.value = (base ? `${base} ` : "") + texto.trim();
+            this.campo.dispatchEvent(new Event("input")); // recalcula a altura
+        };
+
+        rec.onerror = (evento) => {
+            this.marcarDitado(false);
+            const mensagens = {
+                "not-allowed": "Permissão de microfone negada. Libere o acesso nas configurações do navegador.",
+                "service-not-allowed": "O navegador bloqueou o reconhecimento de voz.",
+                "no-speech": "Não ouvi nada. Tente falar mais perto do microfone.",
+                "audio-capture": "Nenhum microfone encontrado.",
+                network: "Sem conexão para reconhecer a fala.",
+            };
+            const msg = mensagens[evento.error];
+            if (msg) this.adicionarAviso(msg);
+        };
+
+        this.reconhecimento = rec;
+        this.btnMic.hidden = false;
+    }
+
+    /** Estado visual do ditado, num lugar só */
+    marcarDitado(ativo) {
+        this.ditando = ativo;
+        if (!this.btnMic) return;
+        this.btnMic.classList.toggle("gravando", ativo);
+        this.btnMic.title = ativo ? "Parar de ditar" : "Ditar a pergunta";
+        this.campo.placeholder = ativo ? "Ouvindo…" : "Pergunte em português…";
+    }
+
+    alternarDitado() {
+        if (!this.reconhecimento) return;
+        // O visual muda no CLIQUE, não nos eventos onstart/onend: eles são
+        // assíncronos, então o botão demorava a reagir nos dois sentidos.
+        if (this.ditando) {
+            this.marcarDitado(false);
+            this.reconhecimento.stop();
+            return;
+        }
+        // Estado e texto-base são definidos AQUI, no clique, e não no onstart:
+        // aquele é assíncrono, então o botão demorava a reagir e, se o evento
+        // não chegasse, o que a pessoa já tinha digitado era perdido.
+        // O texto já digitado também é capturado aqui — no onstart, se o
+        // evento não chegasse, o que a pessoa escreveu seria perdido.
+        this._textoBase = this.campo.value.trim();
+        this.marcarDitado(true);
+        try {
+            this.reconhecimento.start();
+            this.campo.focus();
+        } catch {
+            this.marcarDitado(false); // start() lança se já estiver ativo
+        }
+    }
+
     async verificarStatus() {
         this.habilitado = false;
         let motivo = "indisponivel";
@@ -234,7 +327,7 @@ class AssistenteIA extends HTMLElement {
             indisponivel: "O assistente está indisponível no momento.",
         };
         this.adicionarAviso(MENSAGENS[motivo] || MENSAGENS.indisponivel);
-        this.form.querySelector("button").disabled = true;
+        this.form.querySelectorAll("button").forEach((b) => { b.disabled = true; });
         this.campo.disabled = true;
     }
 

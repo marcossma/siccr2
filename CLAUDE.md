@@ -518,6 +518,14 @@ continua em `assistente_mensagens.ferramentas` — a auditoria de verdade é ess
 `<details>` na tela. O aviso de "parte dos dados fora das suas permissões" **fica**: sem
 ele o usuário lê uma resposta parcial achando que é completa.
 
+**Ditado por voz:** botão de microfone no campo de pergunta, usando a Web Speech API
+nativa (`SpeechRecognition`, `lang="pt-BR"`) — sem dependência e sem custo. Só existe em
+navegadores Chromium; onde não houver, o botão **nem é exibido**. O texto reconhecido vai
+para o CAMPO e não é enviado sozinho: reconhecimento erra nome próprio, e aqui a frase vira
+consulta financeira. ⚠️ O estado visual muda no CLIQUE, não em `onstart`/`onend` — esses
+eventos são assíncronos, e depender deles fazia o botão demorar a reagir e perder o texto
+já digitado. Os eventos seguem valendo para quando o navegador encerra sozinho.
+
 **Frontend:** `<assistente-ia>` (`js/components/assistente-ia.js`) — um componente, dois
 modos: botão flutuante (injetado automaticamente em toda página por `components/index.js`,
 sem editar cada HTML) e `modo="pagina"` na tela `/assistente`, que tem lista lateral de
