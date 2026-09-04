@@ -1,7 +1,7 @@
 const express = require("express");
 const pool = require("../config/database.js");
 const logger = require("../lib/logger.js");
-const { getNivelAcesso, autorizar } = require("../middlewares/autorizar.js");
+const { autorizar } = require("../middlewares/autorizar.js");
 const { expandirRecorrencia } = require("../lib/recorrencia.js");
 
 const router = express.Router();
@@ -31,20 +31,21 @@ router.get("/", async (req, res) => {
 // GET /api/salas/total-info — lista salas com dados relacionados
 router.get("/total-info", async (req, res) => {
     try {
-        const nivel = getNivelAcesso(req.usuario);
         const condicoes = [];
         const params = [];
 
-        // 1) Escopo por nível (super_admin vê tudo) — inalterado
-        if (nivel === "chefe") {
-            params.push(req.usuario.subunidade);
-            condicoes.push(`sa.subunidade_id = $${params.length}`);
-        } else if (nivel === "diretor") {
-            params.push(req.usuario.unidade);
-            condicoes.push(`p.unidade_id = $${params.length}`);
-        }
+        // Consulta de sala é informação de infraestrutura — quantas salas há,
+        // capacidade, prédio, tipo — e fica aberta a qualquer servidor logado,
+        // como já era em /disponiveis e como o painel de TV já expõe publicamente.
+        //
+        // Havia aqui um recorte por nível que produzia uma inversão: o CHEFE via
+        // só as salas da própria subunidade (muitas vezes nenhuma) enquanto um
+        // servidor comum via todas. Protegia nada e confundia.
+        //
+        // As ESCRITAS seguem restritas como antes: POST exige chefe+ ou a
+        // funcionalidade cadastrar_salas; PUT e DELETE, super_admin.
 
-        // 2) Filtros opcionais, que só ESTREITAM o que o escopo já permitiu.
+        // Filtros opcionais de quem chamou (só estreitam o resultado).
         //    `q` casa em sala, prédio e subunidade porque quem procura costuma
         //    dizer "sala do prédio 42" sem saber o id de nada.
         const busca = String(req.query.q || "").trim();

@@ -183,6 +183,13 @@ getEscopoFiltro(req.usuario, req.nivelAcesso, baseParams)
 - **salas_tipo** — `sala_tipo_id`, `sala_tipo_nome`
 - **salas_historico** — `id_historico`, `sala_id`(FK SET NULL), `sala_nome`(snapshot), `acao`(`cadastro`/`edicao`/`exclusao`), `user_id`(FK users SET NULL), `detalhe`(o que mudou), `createdat`. Auditoria das salas: POST/PUT/DELETE gravam evento **na mesma transação**. Consultável em `GET /salas/:id/historico` (ícone de histórico nas telas `/salas` e `/adm/salas`).
 
+> **Leitura de sala é aberta a qualquer servidor logado**, inclusive `/total-info` e
+> `/disponiveis`: é informação de infraestrutura (quantas salas, capacidade, prédio, tipo) e
+> o painel de TV já a expõe sem autenticação nenhuma. Havia em `/total-info` um recorte por
+> nível que produzia uma **inversão** — o chefe via só as salas da própria subunidade
+> (frequentemente nenhuma) enquanto um servidor comum via todas. Removido em set/2026.
+> As escritas seguem restritas: criar exige chefe+ ou `cadastrar_salas`; editar/excluir, super_admin.
+
 ### Manutenção
 - **manutencao_tipos** — `id_tipo`, `nome`, `ativo`(bool), `createdat`. Categorias configuráveis (Datashow/Projetor, Ar-condicionado, Mobiliário, Informática, Elétrica, Hidráulica, Estrutura/Alvenaria, Limpeza, Outros). CRUD só **direção**.
 - **manutencoes** — `id_manutencao`, `sala_id`(FK SET NULL), `tipo_id`(FK SET NULL), `descricao`, `prioridade`(`baixa`/`media`/`alta`), `status`(`aberta`/`em_andamento`/`concluida`/`cancelada`), `created_by_user_id`(quem registrou), `resolucao`, `data_conclusao`, `concluido_por_user_id`, `createdat`, `updatedat`
@@ -286,7 +293,7 @@ conjuntos de chave) e desmarca a aba contida, senão o valor dobra.
 | `/api/unidades` | diretor | routes/unidades.js |
 | `/api/predios` | chefe | routes/predios.js |
 | `/api/subunidades` | chefe | routes/subunidades.js |
-| `/api/salas` | servidor (ler) / chefe+·`cadastrar_salas` (criar) / super_admin (editar·excluir) | routes/salas.js |
+| `/api/salas` | servidor (ler — **sem recorte por subunidade**) / chefe+·`cadastrar_salas` (criar) / super_admin (editar·excluir) | routes/salas.js |
 | `/api/salas-tipo` | chefe | routes/salas-tipo.js |
 | `/api/patrimonio` | servidor (logado; toda ação auditada) | routes/patrimonio.js |
 | `/api/aniversariantes` | servidor (logado) | routes/aniversariantes.js |
