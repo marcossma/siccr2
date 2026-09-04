@@ -66,7 +66,13 @@ async function getAccessToken() {
     });
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok || !data.access_token) {
-        throw new Error(data.error_description || data.error || `http_${resp.status}`);
+        // O código do Google (invalid_grant, invalid_client) é o que diz o que
+        // fazer; a descrição costuma ser só "Bad Request" e não ajuda ninguém.
+        // invalid_grant = refresh token expirado, revogado ou inválido →
+        // gerar outro com `npm run email:token`.
+        const motivo = [data.error, data.error_description].filter(Boolean).join(": ")
+            || `http_${resp.status}`;
+        throw new Error(motivo);
     }
     tokenCache = { accessToken: data.access_token, exp: Date.now() + (data.expires_in || 3600) * 1000 };
     return tokenCache.accessToken;
