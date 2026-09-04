@@ -515,6 +515,16 @@ const PARAMS_APRESENTACAO = {
             "Se o usuário disse quais informações quer, passe exatamente essas. " +
             "Omita para mostrar todos os campos.",
     },
+    exportar: {
+        type: "string",
+        enum: ["excel", "pdf"],
+        description:
+            "Gera um ARQUIVO com esses dados para o usuário baixar. Use quando ele pedir " +
+            "('gere um excel', 'exporta em pdf', 'quero uma planilha', 'baixar'). " +
+            "Exportar já implica mostrar a tabela — não precisa repetir exibir_tabela. " +
+            "Se o pedido for uma continuação ('agora gera um PDF disso'), refaça a MESMA " +
+            "consulta de antes, com os mesmos filtros, acrescentando este parâmetro.",
+    },
 };
 
 /** Formato que a API da OpenAI espera em `tools` */
@@ -639,7 +649,10 @@ async function executar(nome, argumentos, ctx) {
             linhas,
             // Quem decide se a tabela aparece é a pergunta do usuário, traduzida
             // pelo modelo neste parâmetro — não o simples fato de haver linhas.
-            exibirTabela: argumentos?.exibir_tabela === true,
+            // Pedir arquivo implica ter os dados na tela: não faz sentido baixar
+            // um Excel de algo que o usuário não está vendo.
+            exibirTabela: argumentos?.exibir_tabela === true || Boolean(argumentos?.exportar),
+            exportar: ["excel", "pdf"].includes(argumentos?.exportar) ? argumentos.exportar : null,
             titulo: ferramenta.titulo || null,
             total: seguro?.total ?? brutas.length,
             soma: seguro?.soma,

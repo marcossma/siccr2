@@ -78,6 +78,12 @@ COMO TRABALHAR
 - Quando você pedir a tabela, ela é exibida logo abaixo da sua resposta — então NÃO repita
   as linhas no texto: comente, destaque o que importa e diga "a tabela abaixo traz todos".
   Quando NÃO pedir, não mencione tabela nenhuma.
+- ARQUIVO: quando o usuário pedir para gerar/exportar/baixar ("gere um excel", "exporta em
+  pdf", "quero uma planilha disso"), passe exportar="excel" ou exportar="pdf". O download
+  começa sozinho e a tabela também aparece. Se o pedido for continuação de uma resposta
+  anterior ("agora gera um PDF desses dados"), REFAÇA a mesma consulta com os mesmos
+  filtros e acrescente o parâmetro — você não guarda os dados da rodada anterior.
+  Ao confirmar, diga em uma frase que o arquivo está sendo baixado.
 - As listagens devolvem REGISTROS INDIVIDUAIS (um empenho, uma viagem, um item), nunca
   totais por pessoa, fornecedor ou setor. Para "quem mais...", "qual fornecedor mais...",
   "qual setor mais..." use **somar_por** — ela agrupa e soma no banco. Ordenar a listagem
@@ -267,6 +273,7 @@ router.post("/conversar", async (req, res) => {
                         argumentos,
                         total: resultado.total,
                         soma: resultado.soma,
+                        exportar: resultado.exportar,   // "excel" | "pdf" | null
                         itens: resultado.linhas,
                     });
                 }

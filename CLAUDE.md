@@ -463,6 +463,18 @@ embaixo de qualquer resposta, inclusive de pergunta cuja resposta era um número
 `selecionarColunas()` casa sem acento/maiúscula (o modelo pode mandar "Fornecedor") e, se
 nenhuma coluna pedida existir, devolve todas — tabela com coluna demais é melhor que vazia.
 
+**Exportação (Excel/PDF):** `PARAMS_APRESENTACAO` também tem `exportar` (`"excel"|"pdf"`),
+que já implica `exibir_tabela`. Excel usa o **SheetJS carregado sob demanda** do mesmo CDN
+fixado que a tela de importação usa — sem dependência nova nem rebuild da imagem, e sem
+somar ~900 KB a toda página só porque o widget está lá. Números vão como número e datas
+como `Date`, senão a planilha chega toda como texto e não dá para somar. PDF reusa o
+`window.print()` com `@media print` isolando a tabela. Como o histórico guarda só o texto,
+um pedido de continuação ("agora gera um PDF disso") faz o modelo **refazer a mesma
+consulta** com o parâmetro — está no prompt.
+
+⚠️ Ao mexer em `ehMoeda`: `total` sozinho é dinheiro, mas `total_bens` é **contagem**. Um
+`/^total/` fazia os 12 bens de uma sala virarem "R$ 12,00".
+
 **A interface não expõe o que foi consultado.** O bloco "De onde veio" foi removido em
 set/2026: era ruído para quem só quer a informação. O registro do que a IA consultou
 continua em `assistente_mensagens.ferramentas` — a auditoria de verdade é essa, não um

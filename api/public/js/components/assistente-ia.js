@@ -42,10 +42,20 @@ const ROTULOS = {
     concluido_por_nome: "Concluído por", cabe: "Cabe", folga: "Folga", dia: "Dia", dia_mes: "Data",
     email: "E-mail", siape: "SIAPE", permissao: "Permissão", subunidade_nome: "Subunidade",
     is_agendavel: "Agendável", motivo: "Motivo", hora_inicio: "Início", hora_fim: "Fim",
+    predio: "Prédio", predio_descricao: "Descrição do prédio", sala_descricao: "Descrição",
+    sala_tipo_nome: "Tipo", sala_largura: "Largura (m)", sala_comprimento: "Comprimento (m)",
+    sala_altura: "Altura (m)", agendamento_manual: "Só agendamento manual",
+    presta_servicos_externos: "Serviços externos",
 };
 
-// Colunas que nunca precisam aparecer na tabela
-const OCULTAS = new Set(["id", "id_dotacao"]);
+// Chaves técnicas que não interessam a quem lê a tabela (ids de relacionamento)
+const OCULTAS_EXTRA = [
+    "id", "id_dotacao", "sala_id", "predio_id", "subunidade_id", "sala_tipo_id",
+    "unidade_id", "created_by_user_id", "user_id", "id_manutencao", "tipo_id",
+];
+
+// Colunas que nunca precisam aparecer na tabela (definida logo abaixo dos rótulos)
+const OCULTAS = new Set(OCULTAS_EXTRA);
 
 const TITULO_BLOCO = {
     listar_empenhos: "Empenhos", listar_almoxarifado: "Requisições de almoxarifado",
@@ -57,7 +67,11 @@ const TITULO_BLOCO = {
     listar_servidores: "Servidores", aniversariantes: "Aniversariantes",
 };
 
-const ehMoeda = (k) => /^(valor|soma|total)/.test(k) || ["soma", "total", "aplicado", "dotacao", "saldo"].includes(k);
+// Campos monetários. Cuidado com o prefixo: "total" sozinho é dinheiro, mas
+// "total_bens" é uma CONTAGEM — com /^total/ os 12 bens de uma sala viravam
+// "R$ 12,00".
+const CAMPOS_MOEDA = new Set(["soma", "total", "aplicado", "dotacao", "saldo", "diarias", "passagens"]);
+const ehMoeda = (k) => /^valor/.test(k) || CAMPOS_MOEDA.has(k);
 
 function brl(n) {
     return Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -165,6 +179,11 @@ class AssistenteIA extends HTMLElement {
             if (acao === "fechar") this.alternar(false);
             if (acao === "nova") this.novaConversa();
             if (acao === "imprimir") this.imprimirBloco(e.target.closest("[data-bloco]"));
+            if (acao === "excel") {
+                const el = e.target.closest("[data-bloco]");
+                const dados = this._blocos?.get(el?.dataset.bloco);
+                if (dados) this.baixarExcel(dados);
+            }
         });
 
         const botao = this.querySelector(".ia-flutuante");
@@ -326,7 +345,18 @@ class AssistenteIA extends HTMLElement {
             let html = `<p>${textoParaHtml(d.resposta)}</p>`;
             for (const bloco of d.blocos || []) html += this.montarTabela(bloco);
             if (d.ferramentas?.length) html += this.montarAvisos(d.ferramentas);
-            this.adicionarMensagem("assistente", html);
+            const mensagem = this.adicionarMensagem("assistente", html);
+
+            // O usuário pediu um arquivo: entrega sem exigir mais um clique.
+            // Os botões continuam na tabela caso o download seja bloqueado.
+            for (const bloco of d.blocos || []) {
+                if (bloco.exportar === "excel") {
+                    this.baixarExcel(bloco);
+                } else if (bloco.exportar === "pdf" && bloco.__id) {
+                    const alvo = mensagem.querySelector(`[data-bloco="${bloco.__id}"]`);
+                    if (alvo) setTimeout(() => this.imprimirBloco(alvo), 250);
+                }
+            }
         } catch (err) {
             console.error("Erro no assistente:", err);
             pensando.remove();
@@ -342,6 +372,12 @@ class AssistenteIA extends HTMLElement {
         const itens = bloco.itens || [];
         if (itens.length === 0) return "";
         const id = `bloco-${++this.contadorBloco}`;
+        // Guarda o dado para os botões de exportação (o DOM já perdeu os tipos)
+        // e marca o bloco com o id do elemento, para o disparo automático saber
+        // exatamente qual tabela imprimir quando houver mais de uma.
+        this._blocos = this._blocos || new Map();
+        this._blocos.set(id, bloco);
+        bloco.__id = id;
 
         const chaves = Object.keys(itens[0]).filter((k) => !OCULTAS.has(k));
         const cabecalho = chaves.map((k) => `<th${ehMoeda(k) ? ' class="num"' : ""}>${escapar(ROTULOS[k] || k)}</th>`).join("");
@@ -361,6 +397,7 @@ class AssistenteIA extends HTMLElement {
                 <div class="ia-bloco-topo">
                     <strong>${escapar(titulo)}</strong>
                     <span class="ia-bloco-resumo">${escapar(resumo)}</span>
+                    <button type="button" class="ia-btn-mini" data-acao="excel">📊 Excel</button>
                     <button type="button" class="ia-btn-mini" data-acao="imprimir">🖨 PDF</button>
                 </div>
                 <div class="ia-bloco-tabela"><table>
@@ -371,6 +408,84 @@ class AssistenteIA extends HTMLElement {
                     ? `<div class="ia-bloco-nota">Exibindo ${itens.length} de ${bloco.total}. Os totais acima consideram todos.</div>`
                     : ""}
             </div>`;
+    }
+
+    /**
+     * Carrega o SheetJS só quando alguém pede Excel.
+     *
+     * Mesma versão fixada que a tela de importação já usa — não é dependência
+     * nova, e carregar sob demanda evita somar ~900 KB a toda página do sistema
+     * só porque o widget do assistente está presente nelas.
+     */
+    async carregarSheetJS() {
+        if (window.XLSX) return window.XLSX;
+        if (!this._sheetjs) {
+            this._sheetjs = new Promise((resolve, reject) => {
+                const script = document.createElement("script");
+                script.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+                script.onload = () => resolve(window.XLSX);
+                script.onerror = () => reject(new Error("falha ao carregar o gerador de planilha"));
+                document.head.appendChild(script);
+            });
+        }
+        return this._sheetjs;
+    }
+
+    /**
+     * Excel a partir do dado cru da tabela.
+     *
+     * Números continuam números e datas viram Date — senão a planilha chega
+     * toda como texto e o usuário não consegue somar nem ordenar, que é
+     * justamente o motivo de pedir Excel em vez de PDF.
+     */
+    async baixarExcel(bloco) {
+        const itens = bloco?.itens || [];
+        if (itens.length === 0) return;
+
+        let XLSX;
+        try {
+            XLSX = await this.carregarSheetJS();
+        } catch {
+            this.adicionarAviso("Não foi possível carregar o gerador de planilha. Verifique sua conexão e tente de novo.");
+            return;
+        }
+
+        const ehDataIso = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}/.test(v);
+        // DECIMAL do Postgres chega como string ("1234.56"); vira número
+        const ehNumeroTexto = (v) => typeof v === "string" && v !== "" && /^-?\d+(\.\d+)?$/.test(v);
+
+        const linhas = itens.map((item) => {
+            const linha = {};
+            for (const [chave, valor] of Object.entries(item)) {
+                if (OCULTAS.has(chave)) continue;
+                const rotulo = ROTULOS[chave] || chave;
+                if (valor === null || valor === undefined) linha[rotulo] = "";
+                else if (ehDataIso(valor)) linha[rotulo] = new Date(`${valor.slice(0, 10)}T12:00:00`);
+                else if (ehNumeroTexto(valor)) linha[rotulo] = Number(valor);
+                else linha[rotulo] = valor;
+            }
+            return linha;
+        });
+
+        const planilha = XLSX.utils.json_to_sheet(linhas, { cellDates: true });
+        // Largura por coluna — sem isso sai tudo espremido
+        const cabecalhos = Object.keys(linhas[0]);
+        planilha["!cols"] = cabecalhos.map((c) => {
+            const maior = Math.max(c.length, ...linhas.slice(0, 200).map((l) => String(l[c] ?? "").length));
+            return { wch: Math.min(Math.max(maior + 2, 10), 60) };
+        });
+
+        const livro = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(livro, planilha, "Dados");
+        XLSX.writeFile(livro, this.nomeArquivo(bloco, "xlsx"));
+    }
+
+    /** siccr-empenhos-2026-09-04.xlsx */
+    nomeArquivo(bloco, extensao) {
+        const base = (bloco.titulo || TITULO_BLOCO[bloco.ferramenta] || "dados")
+            .normalize("NFKD").replace(/[̀-ͯ]/g, "")
+            .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        return `siccr-${base}-${new Date().toISOString().slice(0, 10)}.${extensao}`;
     }
 
     /**
