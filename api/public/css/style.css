@@ -861,22 +861,35 @@ assistente-ia[modo="pagina"] .ia-painel {
 /* Impressão de UM bloco: esconde tudo, mostra só a tabela escolhida.
    Sem janela nova — popup costuma ser bloqueado. */
 @media print {
-    body.ia-modo-impressao > *:not(assistente-ia) { display: none !important; }
-    body.ia-modo-impressao assistente-ia .ia-flutuante,
-    body.ia-modo-impressao assistente-ia .ia-cabecalho,
-    body.ia-modo-impressao assistente-ia .ia-entrada,
-    body.ia-modo-impressao assistente-ia .ia-rodape,
-    body.ia-modo-impressao assistente-ia .ia-msg,
-    body.ia-modo-impressao assistente-ia .ia-btn-mini { display: none !important; }
-    body.ia-modo-impressao assistente-ia,
-    body.ia-modo-impressao .ia-painel,
-    body.ia-modo-impressao .ia-mensagens {
-        position: static !important; display: block !important; width: auto !important;
-        height: auto !important; max-height: none !important; overflow: visible !important;
-        box-shadow: none !important; border: none !important; background: #fff !important;
+    /* Imprime UMA tabela e mais nada.
+       O JS marca com .ia-cadeia-impressao todos os ancestrais do bloco
+       escolhido; aqui escondemos, em cada nível, os irmãos que ficaram de
+       fora. Assim funciona a qualquer profundidade — no widget flutuante,
+       que é filho direto do body, e na página /assistente, onde o componente
+       está aninhado no .container.
+
+       Usar display (e não visibility) é o que faz o resto do documento sair
+       do fluxo: com visibility os elementos ocultos continuam ocupando altura
+       e a impressão vinha com páginas em branco depois da tabela. */
+    body.ia-modo-impressao > *:not(.ia-cadeia-impressao) { display: none !important; }
+    body.ia-modo-impressao .ia-cadeia-impressao > *:not(.ia-cadeia-impressao):not(.ia-imprimindo) { display: none !important; }
+
+    /* A cadeia vira fluxo simples: o painel é fixed, com altura e overflow
+       próprios, e cortaria a tabela na altura da tela. */
+    body.ia-modo-impressao .ia-cadeia-impressao {
+        position: static !important; display: block !important;
+        width: auto !important; height: auto !important; max-height: none !important;
+        overflow: visible !important; box-shadow: none !important; border: none !important;
+        background: #fff !important; margin: 0 !important; padding: 0 !important;
     }
-    body.ia-modo-impressao .ia-imprimindo { display: block !important; border: none; }
-    body.ia-modo-impressao .ia-imprimindo .ia-bloco-topo { display: flex !important; background: #fff; }
-    body.ia-modo-impressao .ia-imprimindo .ia-bloco-tabela { max-height: none; overflow: visible; }
+
+    body.ia-modo-impressao .ia-imprimindo { border: none !important; margin: 0 !important; }
+    body.ia-modo-impressao .ia-imprimindo .ia-bloco-topo { background: #fff; border-bottom: 1px solid #ccc; }
+    body.ia-modo-impressao .ia-imprimindo .ia-bloco-tabela { max-height: none !important; overflow: visible !important; }
     body.ia-modo-impressao .ia-imprimindo table { font-size: 9px; }
+    body.ia-modo-impressao .ia-imprimindo thead th {
+        background: #009536 !important; color: #fff !important;
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    body.ia-modo-impressao .ia-btn-mini { display: none !important; }
 }

@@ -468,7 +468,13 @@ que já implica `exibir_tabela`. Excel usa o **SheetJS carregado sob demanda** d
 fixado que a tela de importação usa — sem dependência nova nem rebuild da imagem, e sem
 somar ~900 KB a toda página só porque o widget está lá. Números vão como número e datas
 como `Date`, senão a planilha chega toda como texto e não dá para somar. PDF reusa o
-`window.print()` com `@media print` isolando a tabela. Como o histórico guarda só o texto,
+`window.print()`. **A isolação da tabela na impressão é delicada**: `imprimirBloco()` marca
+com `.ia-cadeia-impressao` os ANCESTRAIS do bloco (nunca o próprio bloco — marcá-lo faz a
+regra que esconde irmãos varrer os filhos dele, e a folha sai em branco) e o `@media print`
+esconde, em cada nível, os irmãos fora da cadeia. Tem que ser `display`, não `visibility`:
+com visibility os ocultos continuam ocupando altura e saem páginas em branco depois da
+tabela. Funciona nos dois modos justamente por não depender da profundidade — no widget o
+componente é filho do body, na página `/assistente` está dentro do `.container`. Como o histórico guarda só o texto,
 um pedido de continuação ("agora gera um PDF disso") faz o modelo **refazer a mesma
 consulta** com o parâmetro — está no prompt.
 

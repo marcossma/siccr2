@@ -512,17 +512,29 @@ class AssistenteIA extends HTMLElement {
      */
     imprimirBloco(bloco) {
         if (!bloco) return;
-        document.querySelectorAll(".ia-imprimindo").forEach((el) => el.classList.remove("ia-imprimindo"));
+        const marcados = [];
+        // Marca a cadeia de ancestrais até o body: é o que permite ao CSS
+        // esconder os irmãos em cada nível sem depender de onde o componente
+        // está no documento (flutuante x embutido na página).
+        for (let el = bloco.parentElement; el && el !== document.body; el = el.parentElement) {
+            el.classList.add("ia-cadeia-impressao");
+            marcados.push(el);
+        }
+        // Só os ANCESTRAIS entram na cadeia. Marcar o próprio bloco faria a
+        // regra que esconde irmãos varrer os filhos dele — o título e a
+        // tabela — e a folha saía em branco.
         bloco.classList.add("ia-imprimindo");
         document.body.classList.add("ia-modo-impressao");
+
         const limpar = () => {
             document.body.classList.remove("ia-modo-impressao");
             bloco.classList.remove("ia-imprimindo");
+            marcados.forEach((el) => el.classList.remove("ia-cadeia-impressao"));
             window.removeEventListener("afterprint", limpar);
         };
         window.addEventListener("afterprint", limpar);
         window.print();
-        // Safari/alguns navegadores não disparam afterprint
+        // Alguns navegadores não disparam afterprint
         setTimeout(limpar, 3000);
     }
 }
