@@ -455,12 +455,77 @@ FERRAMENTAS.push(
 
 const POR_NOME = new Map(FERRAMENTAS.map((f) => [f.nome, f]));
 
+/**
+ * Parâmetros de APRESENTAÇÃO, injetados em toda ferramenta.
+ *
+ * A tabela deixou de ser automática: aparecia embaixo de qualquer resposta,
+ * inclusive quando a pergunta era só "quanto deu o total?". Agora o modelo
+ * decide — e, quando o usuário pede campos específicos, pede só aqueles.
+ *
+ * Ficam aqui, num lugar só, em vez de repetidos em 17 ferramentas.
+ */
+const PARAMS_APRESENTACAO = {
+    exibir_tabela: {
+        type: "boolean",
+        description:
+            "Se true, os registros aparecem como TABELA abaixo da sua resposta. " +
+            "Use APENAS quando o usuário pedir para ver/listar/detalhar os registros " +
+            "('mostre', 'liste', 'quero ver', 'em tabela', 'detalhe'). " +
+            "Para perguntas de número fechado ('quanto foi', 'qual o total', 'quem mais gastou') " +
+            "deixe false: a resposta em texto basta e a tabela só polui.",
+    },
+    colunas: {
+        type: "array",
+        items: { type: "string" },
+        description:
+            "Quais campos mostrar na tabela, nos nomes usados pelos dados (ex.: " +
+            "['data','fornecedor','valor_empenhado']). Só faz sentido com exibir_tabela=true. " +
+            "Se o usuário disse quais informações quer, passe exatamente essas. " +
+            "Omita para mostrar todos os campos.",
+    },
+};
+
 /** Formato que a API da OpenAI espera em `tools` */
 function esquemaOpenAI() {
     return FERRAMENTAS.map((f) => ({
         type: "function",
-        function: { name: f.nome, description: f.descricao, parameters: f.parametros },
+        function: {
+            name: f.nome,
+            description: f.descricao,
+            parameters: {
+                ...f.parametros,
+                properties: { ...(f.parametros.properties || {}), ...PARAMS_APRESENTACAO },
+            },
+        },
     }));
+}
+
+/**
+ * Reduz as linhas às colunas pedidas. Casa sem diferenciar maiúscula/acento e
+ * aceita o rótulo amigável além do nome do campo. Se nada casar, devolve tudo —
+ * uma tabela com colunas demais é melhor que uma tabela vazia.
+ */
+function selecionarColunas(linhas, colunas) {
+    if (!Array.isArray(linhas) || linhas.length === 0) return linhas;
+    if (!Array.isArray(colunas) || colunas.length === 0) return linhas;
+
+    const simplificar = (s) => String(s).normalize("NFKD").replace(/[̀-ͯ]/g, "")
+        .toLowerCase().replace(/[^a-z0-9]/g, "");
+
+    const disponiveis = Object.keys(linhas[0]);
+    const mapa = new Map(disponiveis.map((c) => [simplificar(c), c]));
+    const escolhidas = [];
+    for (const pedida of colunas) {
+        const alvo = mapa.get(simplificar(pedida));
+        if (alvo && !escolhidas.includes(alvo)) escolhidas.push(alvo);
+    }
+    if (escolhidas.length === 0) return linhas;
+
+    return linhas.map((linha) => {
+        const nova = {};
+        for (const c of escolhidas) nova[c] = linha[c];
+        return nova;
+    });
 }
 
 /**
@@ -529,17 +594,22 @@ async function executar(nome, argumentos, ctx) {
         const compacto = ferramenta.compactar ? ferramenta.compactar(seguro) : compactarListagem(seguro);
         // Linhas da tabela que a tela vai montar. Por padrão é uma listagem
         // ({itens}); ferramentas com formato próprio declaram `linhas`.
-        const linhas = ferramenta.linhas
+        const brutas = ferramenta.linhas
             ? ferramenta.linhas(seguro)
             : (Array.isArray(seguro?.itens) ? seguro.itens : []);
+        // Colunas pedidas pelo usuário (via modelo); sem isso, todas.
+        const linhas = selecionarColunas(brutas, argumentos?.colunas);
 
         return {
             ok: true, rota,
             paraModelo: compacto,
             paraTela: seguro,
             linhas,
+            // Quem decide se a tabela aparece é a pergunta do usuário, traduzida
+            // pelo modelo neste parâmetro — não o simples fato de haver linhas.
+            exibirTabela: argumentos?.exibir_tabela === true,
             titulo: ferramenta.titulo || null,
-            total: seguro?.total ?? linhas.length,
+            total: seguro?.total ?? brutas.length,
             soma: seguro?.soma,
         };
     } catch (error) {

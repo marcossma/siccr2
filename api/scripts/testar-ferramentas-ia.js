@@ -163,6 +163,40 @@ const brl = (n) => Number(n || 0).toLocaleString("pt-BR", { style: "currency", c
         console.log("  >>> ok: recusado pela whitelist");
     }
 
+    console.log("\n═══ 4c. Tabela só quando pedida, com as colunas pedidas ═══\n");
+    const semPedido = await executar("listar_empenhos", { ano: 2026, limit: 5 }, { baseUrl: BASE_URL, token: PERFIS.diretor });
+    console.log(`  sem exibir_tabela      → exibirTabela=${semPedido.exibirTabela} (a tela não monta tabela)`);
+    if (semPedido.exibirTabela) { console.log("  >>> FALHA: deveria ser false por padrão"); falhas++; }
+
+    const comPedido = await executar("listar_empenhos", { ano: 2026, limit: 5, exibir_tabela: true }, { baseUrl: BASE_URL, token: PERFIS.diretor });
+    const todasColunas = comPedido.linhas?.[0] ? Object.keys(comPedido.linhas[0]) : [];
+    console.log(`  exibir_tabela=true     → exibirTabela=${comPedido.exibirTabela}, ${todasColunas.length} colunas`);
+    if (!comPedido.exibirTabela) { console.log("  >>> FALHA: deveria ser true"); falhas++; }
+
+    const comColunas = await executar(
+        "listar_empenhos",
+        { ano: 2026, limit: 5, exibir_tabela: true, colunas: ["data", "Fornecedor", "valor_empenhado"] },
+        { baseUrl: BASE_URL, token: PERFIS.diretor }
+    );
+    const escolhidas = comColunas.linhas?.[0] ? Object.keys(comColunas.linhas[0]) : [];
+    console.log(`  colunas pedidas        → ${escolhidas.join(", ")}`);
+    if (escolhidas.length !== 3 || !escolhidas.includes("fornecedor")) {
+        console.log("  >>> FALHA: filtro de colunas não aplicou (nem casou 'Fornecedor' com 'fornecedor')");
+        falhas++;
+    } else {
+        console.log("  >>> ok: só as 3 colunas, casando maiúscula/minúscula");
+    }
+
+    // Coluna inexistente não pode zerar a tabela
+    const colunaRuim = await executar(
+        "listar_empenhos",
+        { ano: 2026, limit: 3, exibir_tabela: true, colunas: ["campo_que_nao_existe"] },
+        { baseUrl: BASE_URL, token: PERFIS.diretor }
+    );
+    const nRuim = colunaRuim.linhas?.[0] ? Object.keys(colunaRuim.linhas[0]).length : 0;
+    console.log(`  coluna inexistente     → ${nRuim} colunas (volta ao conjunto completo)`);
+    if (nRuim === 0) { console.log("  >>> FALHA: tabela ficou vazia"); falhas++; }
+
     console.log("\n═══ 5. Dado pessoal não sai da plataforma (duas camadas) ═══\n");
 
     // Camada 1: a própria rota não seleciona o CPF

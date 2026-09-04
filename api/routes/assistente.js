@@ -69,11 +69,15 @@ COMO TRABALHAR
 - Para descobrir o id de uma subunidade a partir do nome ou sigla que o usuário falou
   ("Solos", "DSOL", "Departamento de Zootecnia"), chame resumo_execucao: ele traz a lista
   com id, sigla e nome. Depois use o id nas outras ferramentas.
-- As tabelas com os dados completos JÁ SÃO EXIBIDAS ao usuário automaticamente, abaixo da
-  sua resposta — mas SÓ quando você de fato consultou uma ferramenta que devolve linhas.
-  Então NÃO reproduza listas longas nem repita linha por linha: comente, destaque o que
-  importa, aponte o que chama atenção. Só mencione "a tabela abaixo" se realmente houver
-  uma; se você respondeu apenas com totais, não prometa tabela nenhuma.
+- TABELA: por padrão NÃO se mostra tabela. Responda em texto, direto ao ponto.
+  Só passe exibir_tabela=true quando o usuário quiser ver os registros — "mostre",
+  "liste", "quero ver", "em tabela", "detalhe", "quais foram". Para pergunta de número
+  fechado ("quanto foi", "qual o total", "quem mais gastou"), responda em texto e pronto.
+- Quando o usuário disser QUAIS informações quer ("só a data e o valor", "com fornecedor e
+  resumo"), passe esses campos no parâmetro colunas. Sem isso a tabela vem com tudo.
+- Quando você pedir a tabela, ela é exibida logo abaixo da sua resposta — então NÃO repita
+  as linhas no texto: comente, destaque o que importa e diga "a tabela abaixo traz todos".
+  Quando NÃO pedir, não mencione tabela nenhuma.
 - As listagens devolvem REGISTROS INDIVIDUAIS (um empenho, uma viagem, um item), nunca
   totais por pessoa, fornecedor ou setor. Para "quem mais...", "qual fornecedor mais...",
   "qual setor mais..." use **somar_por** — ela agrupa e soma no banco. Ordenar a listagem
@@ -251,11 +255,12 @@ router.post("/conversar", async (req, res) => {
                     registros: Array.isArray(resultado.linhas) ? resultado.linhas.length : null,
                 });
 
-                // Só vira tabela na tela o que tem linhas de fato. Quem define
-                // as linhas é a própria ferramenta (`linhas`), porque nem toda
-                // rota devolve uma listagem — o resumo, por exemplo, rende a
-                // tabela por subunidade.
-                if (resultado.ok && Array.isArray(resultado.linhas) && resultado.linhas.length > 0) {
+                // A tabela só aparece quando o usuário pediu para ver os
+                // registros — o modelo traduz isso em exibir_tabela. Antes ela
+                // vinha embaixo de toda resposta, inclusive de perguntas cuja
+                // resposta era um número só.
+                if (resultado.ok && resultado.exibirTabela
+                    && Array.isArray(resultado.linhas) && resultado.linhas.length > 0) {
                     blocos.push({
                         ferramenta: nome,
                         titulo: resultado.titulo || null,

@@ -437,6 +437,13 @@ quem aparece várias vezes ficaria fora do topo. `por` sai de **whitelist** (`AG
 escolhendo o valor do outro lado. `soma` e `total` usam funções de janela e valem para
 **todos** os grupos, não só os que o `limit` devolve.
 
+**Tabela sob demanda:** toda ferramenta ganha, via `PARAMS_APRESENTACAO`, os parâmetros
+`exibir_tabela` e `colunas`. A tabela **não** é mais automática — só aparece quando a
+pergunta pede para ver/listar os registros, e com os campos que o usuário citou. Antes vinha
+embaixo de qualquer resposta, inclusive de pergunta cuja resposta era um número só.
+`selecionarColunas()` casa sem acento/maiúscula (o modelo pode mandar "Fornecedor") e, se
+nenhuma coluna pedida existir, devolve todas — tabela com coluna demais é melhor que vazia.
+
 **Frontend:** `<assistente-ia>` (`js/components/assistente-ia.js`) — um componente, dois
 modos: botão flutuante (injetado automaticamente em toda página por `components/index.js`,
 sem editar cada HTML) e `modo="pagina"` na tela `/assistente`, que tem lista lateral de
