@@ -835,9 +835,6 @@ assistente-ia[modo="pagina"] .ia-painel {
     text-transform: uppercase; background: #d0ebff; color: #1864ab;
 }
 
-.ia-fonte { margin-top: 8px; font-size: 11px; color: #868e96; }
-.ia-fonte summary { cursor: pointer; }
-
 .ia-entrada { display: flex; gap: 8px; padding: 10px; border-top: 1px solid #e9ecef; background: #fff; }
 .ia-entrada textarea {
     flex: 1; resize: none; border: 1px solid #ced4da; border-radius: 8px; padding: 9px 11px;

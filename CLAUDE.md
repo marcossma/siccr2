@@ -463,6 +463,12 @@ embaixo de qualquer resposta, inclusive de pergunta cuja resposta era um número
 `selecionarColunas()` casa sem acento/maiúscula (o modelo pode mandar "Fornecedor") e, se
 nenhuma coluna pedida existir, devolve todas — tabela com coluna demais é melhor que vazia.
 
+**A interface não expõe o que foi consultado.** O bloco "De onde veio" foi removido em
+set/2026: era ruído para quem só quer a informação. O registro do que a IA consultou
+continua em `assistente_mensagens.ferramentas` — a auditoria de verdade é essa, não um
+`<details>` na tela. O aviso de "parte dos dados fora das suas permissões" **fica**: sem
+ele o usuário lê uma resposta parcial achando que é completa.
+
 **Frontend:** `<assistente-ia>` (`js/components/assistente-ia.js`) — um componente, dois
 modos: botão flutuante (injetado automaticamente em toda página por `components/index.js`,
 sem editar cada HTML) e `modo="pagina"` na tela `/assistente`, que tem lista lateral de

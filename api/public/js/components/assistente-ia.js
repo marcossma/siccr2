@@ -325,7 +325,7 @@ class AssistenteIA extends HTMLElement {
 
             let html = `<p>${textoParaHtml(d.resposta)}</p>`;
             for (const bloco of d.blocos || []) html += this.montarTabela(bloco);
-            if (d.ferramentas?.length) html += this.montarFonte(d.ferramentas);
+            if (d.ferramentas?.length) html += this.montarAvisos(d.ferramentas);
             this.adicionarMensagem("assistente", html);
         } catch (err) {
             console.error("Erro no assistente:", err);
@@ -373,19 +373,22 @@ class AssistenteIA extends HTMLElement {
             </div>`;
     }
 
-    /** Transparência: o que foi consultado para chegar na resposta */
-    montarFonte(ferramentas) {
-        const nomes = [...new Set(ferramentas.filter((f) => f.ok).map((f) => TITULO_BLOCO[f.nome] || f.nome))];
+    /**
+     * Avisos que afetam a LEITURA da resposta.
+     *
+     * O "De onde veio" (que listava as consultas feitas) foi removido: era
+     * ruído para quem só quer a informação, e o registro do que foi consultado
+     * continua onde importa — gravado em `assistente_mensagens.ferramentas`,
+     * que é a auditoria de verdade.
+     *
+     * O aviso de permissão fica: sem ele o usuário lê uma resposta parcial
+     * achando que é completa.
+     */
+    montarAvisos(ferramentas) {
         const negadas = ferramentas.filter((f) => !f.ok && /permiss/i.test(f.erro || ""));
-        let html = "";
-        if (nomes.length) {
-            html += `<details class="ia-fonte"><summary>De onde veio</summary>` +
-                `<div>Consultado: ${escapar(nomes.join(", "))}</div></details>`;
-        }
-        if (negadas.length) {
-            html += `<div class="ia-aviso">Parte dos dados não foi consultada porque está fora das suas permissões.</div>`;
-        }
-        return html;
+        return negadas.length
+            ? `<div class="ia-aviso">Parte dos dados não foi consultada porque está fora das suas permissões.</div>`
+            : "";
     }
 
     /**
