@@ -1,12 +1,12 @@
 -- Schema dump gerado automaticamente. NÃO editar manualmente.
--- Origem: docker compose db (siccr) — 2026-09-03T19:24:22.285Z
+-- Origem: docker compose db (siccr) — 2026-09-04T17:14:07.432Z
 -- Regenere com: npm run db:dump
 
 --
 -- PostgreSQL database dump
 --
 
-\restrict kzP1SYOCyjZ9449OmUx5N6YqT8b4f05yzUhMuLs85oldkSp2zfbhR7MgJrrdImS
+\restrict EhuiXcl6Qkce489PP6jj8cMUCPqGBlmMwb8DH0fW6Qa8igYhuqpleW46O5YXqa8
 
 -- Dumped from database version 16.13
 -- Dumped by pg_dump version 16.13
@@ -262,6 +262,44 @@ CREATE SEQUENCE public.assistente_conversas_id_conversa_seq
 --
 
 ALTER SEQUENCE public.assistente_conversas_id_conversa_seq OWNED BY public.assistente_conversas.id_conversa;
+
+
+--
+-- Name: assistente_envios; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.assistente_envios (
+    id_envio integer NOT NULL,
+    user_id integer,
+    destinatario character varying(255) NOT NULL,
+    assunto character varying(255) NOT NULL,
+    origem character varying(80),
+    linhas integer DEFAULT 0 NOT NULL,
+    com_anexo boolean DEFAULT false NOT NULL,
+    sucesso boolean DEFAULT false NOT NULL,
+    erro text,
+    createdat timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: assistente_envios_id_envio_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.assistente_envios_id_envio_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: assistente_envios_id_envio_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.assistente_envios_id_envio_seq OWNED BY public.assistente_envios.id_envio;
 
 
 --
@@ -1667,6 +1705,13 @@ ALTER TABLE ONLY public.assistente_conversas ALTER COLUMN id_conversa SET DEFAUL
 
 
 --
+-- Name: assistente_envios id_envio; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.assistente_envios ALTER COLUMN id_envio SET DEFAULT nextval('public.assistente_envios_id_envio_seq'::regclass);
+
+
+--
 -- Name: assistente_mensagens id_mensagem; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1987,6 +2032,14 @@ ALTER TABLE ONLY public.api_keys
 
 ALTER TABLE ONLY public.assistente_conversas
     ADD CONSTRAINT assistente_conversas_pkey PRIMARY KEY (id_conversa);
+
+
+--
+-- Name: assistente_envios assistente_envios_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.assistente_envios
+    ADD CONSTRAINT assistente_envios_pkey PRIMARY KEY (id_envio);
 
 
 --
@@ -2457,6 +2510,20 @@ CREATE INDEX assistente_conversas_user_id ON public.assistente_conversas USING b
 
 
 --
+-- Name: assistente_envios_createdat; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX assistente_envios_createdat ON public.assistente_envios USING btree (createdat);
+
+
+--
+-- Name: assistente_envios_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX assistente_envios_user_id ON public.assistente_envios USING btree (user_id);
+
+
+--
 -- Name: assistente_mensagens_conversa_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2800,6 +2867,14 @@ ALTER TABLE ONLY public.api_keys
 
 ALTER TABLE ONLY public.assistente_conversas
     ADD CONSTRAINT assistente_conversas_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: assistente_envios assistente_envios_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.assistente_envios
+    ADD CONSTRAINT assistente_envios_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE SET NULL;
 
 
 --
@@ -3198,5 +3273,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict kzP1SYOCyjZ9449OmUx5N6YqT8b4f05yzUhMuLs85oldkSp2zfbhR7MgJrrdImS
+\unrestrict EhuiXcl6Qkce489PP6jj8cMUCPqGBlmMwb8DH0fW6Qa8igYhuqpleW46O5YXqa8
 

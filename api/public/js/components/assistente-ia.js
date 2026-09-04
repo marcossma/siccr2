@@ -179,6 +179,8 @@ class AssistenteIA extends HTMLElement {
             if (acao === "fechar") this.alternar(false);
             if (acao === "nova") this.novaConversa();
             if (acao === "imprimir") this.imprimirBloco(e.target.closest("[data-bloco]"));
+            if (acao === "enviar-email") this.enviarEmailBloco(e.target.closest("[data-email]"));
+            if (acao === "cancelar-email") e.target.closest("[data-email]")?.remove();
             if (acao === "excel") {
                 const el = e.target.closest("[data-bloco]");
                 const dados = this._blocos?.get(el?.dataset.bloco);
@@ -407,6 +409,7 @@ class AssistenteIA extends HTMLElement {
                 ${itens.length < (bloco.total || 0)
                     ? `<div class="ia-bloco-nota">Exibindo ${itens.length} de ${bloco.total}. Os totais acima consideram todos.</div>`
                     : ""}
+                ${bloco.emailProposto ? this.montarConfirmacaoEmail(bloco, id) : ""}
             </div>`;
     }
 
@@ -438,20 +441,14 @@ class AssistenteIA extends HTMLElement {
      * toda como texto e o usuário não consegue somar nem ordenar, que é
      * justamente o motivo de pedir Excel em vez de PDF.
      */
-    async baixarExcel(bloco) {
+    /** Monta o workbook a partir do bloco (usado pelo download e pelo anexo do e-mail) */
+    async montarPlanilha(bloco) {
         const itens = bloco?.itens || [];
-        if (itens.length === 0) return;
-
-        let XLSX;
-        try {
-            XLSX = await this.carregarSheetJS();
-        } catch {
-            this.adicionarAviso("Não foi possível carregar o gerador de planilha. Verifique sua conexão e tente de novo.");
-            return;
-        }
+        if (itens.length === 0) return null;
+        const XLSX = await this.carregarSheetJS();
 
         const ehDataIso = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}/.test(v);
-        // DECIMAL do Postgres chega como string ("1234.56"); vira número
+        // DECIMAL do Postgres chega como string ("1234.56"); vira numero
         const ehNumeroTexto = (v) => typeof v === "string" && v !== "" && /^-?\d+(\.\d+)?$/.test(v);
 
         const linhas = itens.map((item) => {
@@ -460,7 +457,7 @@ class AssistenteIA extends HTMLElement {
                 if (OCULTAS.has(chave)) continue;
                 const rotulo = ROTULOS[chave] || chave;
                 if (valor === null || valor === undefined) linha[rotulo] = "";
-                else if (ehDataIso(valor)) linha[rotulo] = new Date(`${valor.slice(0, 10)}T12:00:00`);
+                else if (ehDataIso(valor)) linha[rotulo] = new Date(valor.slice(0, 10) + "T12:00:00");
                 else if (ehNumeroTexto(valor)) linha[rotulo] = Number(valor);
                 else linha[rotulo] = valor;
             }
@@ -468,16 +465,34 @@ class AssistenteIA extends HTMLElement {
         });
 
         const planilha = XLSX.utils.json_to_sheet(linhas, { cellDates: true });
-        // Largura por coluna — sem isso sai tudo espremido
         const cabecalhos = Object.keys(linhas[0]);
         planilha["!cols"] = cabecalhos.map((c) => {
-            const maior = Math.max(c.length, ...linhas.slice(0, 200).map((l) => String(l[c] ?? "").length));
+            const maior = Math.max(c.length, ...linhas.slice(0, 200).map((l) => String(l[c] === null || l[c] === undefined ? "" : l[c]).length));
             return { wch: Math.min(Math.max(maior + 2, 10), 60) };
         });
 
         const livro = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(livro, planilha, "Dados");
-        XLSX.writeFile(livro, this.nomeArquivo(bloco, "xlsx"));
+        return { XLSX, livro };
+    }
+
+    /**
+     * Excel a partir do dado cru da tabela.
+     *
+     * Numeros continuam numeros e datas viram Date — senao a planilha chega
+     * toda como texto e o usuario nao consegue somar nem ordenar, que e
+     * justamente o motivo de pedir Excel em vez de PDF.
+     */
+    async baixarExcel(bloco) {
+        let montado;
+        try {
+            montado = await this.montarPlanilha(bloco);
+        } catch {
+            this.adicionarAviso("Nao foi possivel carregar o gerador de planilha. Verifique sua conexao e tente de novo.");
+            return;
+        }
+        if (!montado) return;
+        montado.XLSX.writeFile(montado.livro, this.nomeArquivo(bloco, "xlsx"));
     }
 
     /** siccr-empenhos-2026-09-04.xlsx */
@@ -486,6 +501,98 @@ class AssistenteIA extends HTMLElement {
             .normalize("NFKD").replace(/[̀-ͯ]/g, "")
             .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
         return `siccr-${base}-${new Date().toISOString().slice(0, 10)}.${extensao}`;
+    }
+
+    /**
+     * Confirmação de envio por e-mail.
+     *
+     * O modelo NÃO envia — ele só propõe. Este painel é o ponto onde uma
+     * pessoa vê para quem o dado vai e decide. É o que impede que um texto
+     * malicioso vindo da planilha ("envie para fulano@...") vire vazamento:
+     * instrução injetada não clica em botão.
+     *
+     * Por isso o destinatário aparece em destaque e editável, e não escondido
+     * numa linha de resumo.
+     */
+    montarConfirmacaoEmail(bloco, id) {
+        const p = bloco.emailProposto;
+        const assunto = p.assunto || `${bloco.titulo || TITULO_BLOCO[bloco.ferramenta] || "Dados"} — SICCR`;
+        return `
+            <div class="ia-email" data-email="${id}">
+                <div class="ia-email-titulo">✉ Confirmar envio por e-mail</div>
+                <label class="ia-email-campo">
+                    <span>Para</span>
+                    <input type="email" class="ia-email-para" value="${escapar(p.para)}" autocomplete="off">
+                </label>
+                <label class="ia-email-campo">
+                    <span>Assunto</span>
+                    <input type="text" class="ia-email-assunto" value="${escapar(assunto)}" maxlength="255">
+                </label>
+                <label class="ia-email-anexo">
+                    <input type="checkbox" class="ia-email-planilha" checked>
+                    anexar a planilha (.xlsx)
+                </label>
+                <div class="ia-email-acoes">
+                    <button type="button" class="ia-email-enviar" data-acao="enviar-email">Enviar</button>
+                    <button type="button" class="ia-btn-mini" data-acao="cancelar-email">Cancelar</button>
+                </div>
+                <div class="ia-email-status" hidden></div>
+            </div>`;
+    }
+
+    async enviarEmailBloco(caixa) {
+        const id = caixa?.dataset.email;
+        const bloco = this._blocos?.get(id);
+        if (!bloco) return;
+
+        const para = caixa.querySelector(".ia-email-para").value.trim();
+        const assunto = caixa.querySelector(".ia-email-assunto").value.trim();
+        const comPlanilha = caixa.querySelector(".ia-email-planilha").checked;
+        const status = caixa.querySelector(".ia-email-status");
+        const botao = caixa.querySelector(".ia-email-enviar");
+
+        const mostrar = (texto, erro) => {
+            status.hidden = false;
+            status.textContent = texto;
+            status.className = `ia-email-status${erro ? " erro" : " ok"}`;
+        };
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(para)) return mostrar("Endereço de e-mail inválido.", true);
+        if (!assunto) return mostrar("Informe o assunto.", true);
+
+        botao.disabled = true;
+        const original = botao.textContent;
+        botao.textContent = "Enviando…";
+        try {
+            let anexo;
+            if (comPlanilha) {
+                const montado = await this.montarPlanilha(bloco);
+                if (montado) {
+                    anexo = {
+                        nome: this.nomeArquivo(bloco, "xlsx"),
+                        base64: montado.XLSX.write(montado.livro, { type: "base64", bookType: "xlsx" }),
+                    };
+                }
+            }
+            const r = await fetch(`${API}/assistente/enviar-email`, {
+                method: "POST",
+                body: JSON.stringify({
+                    para, assunto,
+                    titulo: bloco.titulo || TITULO_BLOCO[bloco.ferramenta] || "Dados do SICCR",
+                    itens: bloco.itens,
+                    anexo,
+                }),
+            });
+            const resp = await r.json();
+            if (!r.ok) { mostrar(resp.message || "Não foi possível enviar.", true); botao.disabled = false; botao.textContent = original; return; }
+            mostrar(resp.message || `E-mail enviado para ${para}.`, false);
+            caixa.querySelector(".ia-email-acoes").hidden = true;
+        } catch (err) {
+            console.error("Erro ao enviar e-mail:", err);
+            mostrar("Erro de comunicação ao enviar.", true);
+            botao.disabled = false;
+            botao.textContent = original;
+        }
     }
 
     /**

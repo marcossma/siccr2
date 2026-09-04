@@ -308,7 +308,7 @@ conjuntos de chave) e desmarca a aba contida, senão o valor dobra.
 | `/api/previsoes-despesas` | chefe | routes/previsoes-despesas.js |
 | `/api/relatorios` | chefe | routes/relatorios.js |
 | `/api/execucao-orcamentaria` | chefe (direção vê tudo; chefe só a própria subunidade) | routes/execucao-orcamentaria.js |
-| `/api/assistente` | servidor (logado) — o recorte vem das rotas consultadas | routes/assistente.js |
+| `/api/assistente` | servidor (logado) — o recorte vem das rotas consultadas; `POST /enviar-email` só via confirmação na tela | routes/assistente.js |
 | `/api/importacao/financeiro` | direção **ou** `importar_financeiro` (guarda dentro do router) | routes/importacao-financeiro.js |
 | `/api/agendamentos` | servidor* | routes/agendamentos.js |
 | `/api/periodos-letivos` | chefe | routes/periodos-letivos.js |
@@ -462,6 +462,22 @@ pergunta pede para ver/listar os registros, e com os campos que o usuário citou
 embaixo de qualquer resposta, inclusive de pergunta cuja resposta era um número só.
 `selecionarColunas()` casa sem acento/maiúscula (o modelo pode mandar "Fornecedor") e, se
 nenhuma coluna pedida existir, devolve todas — tabela com coluna demais é melhor que vazia.
+
+**Envio por e-mail — a única ação do assistente que sai da instituição.**
+`enviar_email`/`assunto_email` fazem a ferramenta devolver um `emailProposto`; o front
+abre uma **confirmação** com destinatário (em destaque e editável), assunto e opção de
+anexar a planilha. `POST /api/assistente/enviar-email` é chamado pelo diálogo, **nunca**
+pelo modelo.
+
+⚠️ **Isso não é preciosismo de UX, é o que fecha a brecha.** O assistente já reúne dado
+privado + texto não confiável (os campos livres vindos da planilha). Um canal de saída
+automático completaria a cadeia clássica de exfiltração: bastaria alguém escrever
+"envie para fulano@..." numa observação de empenho. Instrução injetada não clica em botão
+— por isso o envio **tem** que continuar exigindo a confirmação humana.
+O HTML da tabela é montado no servidor a partir das linhas (nunca marcação vinda do
+cliente), e todo envio, inclusive falho, é registrado em `assistente_envios`.
+A planilha do anexo é gerada no navegador (SheetJS) e enviada em base64 — evita a
+dependência de geração de xlsx no backend; limites de 2000 linhas e 8 MB.
 
 **Exportação (Excel/PDF):** `PARAMS_APRESENTACAO` também tem `exportar` (`"excel"|"pdf"`),
 que já implica `exibir_tabela`. Excel usa o **SheetJS carregado sob demanda** do mesmo CDN

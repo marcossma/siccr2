@@ -515,6 +515,20 @@ const PARAMS_APRESENTACAO = {
             "Se o usuário disse quais informações quer, passe exatamente essas. " +
             "Omita para mostrar todos os campos.",
     },
+    enviar_email: {
+        type: "string",
+        description:
+            "Endereço para o qual PREPARAR um e-mail com esses dados. Use quando o usuário " +
+            "pedir para enviar/mandar por e-mail. IMPORTANTE: isto não envia nada — apenas " +
+            "abre uma confirmação na tela, onde o usuário revisa o destinatário e clica em " +
+            "enviar. Diga a ele que a confirmação está aberta, não que o e-mail foi enviado. " +
+            "Se o pedido for continuação ('manda isso pro fulano@ufsm.br'), refaça a MESMA " +
+            "consulta de antes acrescentando este parâmetro.",
+    },
+    assunto_email: {
+        type: "string",
+        description: "Assunto sugerido para o e-mail. Curto e descritivo; o usuário pode editar.",
+    },
     exportar: {
         type: "string",
         enum: ["excel", "pdf"],
@@ -651,8 +665,15 @@ async function executar(nome, argumentos, ctx) {
             // pelo modelo neste parâmetro — não o simples fato de haver linhas.
             // Pedir arquivo implica ter os dados na tela: não faz sentido baixar
             // um Excel de algo que o usuário não está vendo.
-            exibirTabela: argumentos?.exibir_tabela === true || Boolean(argumentos?.exportar),
+            exibirTabela: argumentos?.exibir_tabela === true || Boolean(argumentos?.exportar)
+                || Boolean(argumentos?.enviar_email),
             exportar: ["excel", "pdf"].includes(argumentos?.exportar) ? argumentos.exportar : null,
+            // Só uma PROPOSTA: quem envia é o usuário, no diálogo de confirmação.
+            // O modelo nunca dispara e-mail sozinho — é o que impede que um texto
+            // malicioso vindo da planilha vire exfiltração de dado.
+            emailProposto: typeof argumentos?.enviar_email === "string" && argumentos.enviar_email.includes("@")
+                ? { para: argumentos.enviar_email.trim().slice(0, 255), assunto: (argumentos.assunto_email || "").slice(0, 255) }
+                : null,
             titulo: ferramenta.titulo || null,
             total: seguro?.total ?? brutas.length,
             soma: seguro?.soma,

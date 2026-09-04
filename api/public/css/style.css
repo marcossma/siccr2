@@ -835,6 +835,33 @@ assistente-ia[modo="pagina"] .ia-painel {
     text-transform: uppercase; background: #d0ebff; color: #1864ab;
 }
 
+/* Confirmação de envio por e-mail — o destinatário fica em destaque de
+   propósito: é o ponto em que uma pessoa decide para onde o dado vai, e é o
+   que impede que uma instrução injetada nos dados vire exfiltração. */
+.ia-email {
+    margin: 10px; padding: 12px; border: 2px solid #f59f00; border-radius: 8px; background: #fffdf5;
+}
+.ia-email-titulo { font-weight: bold; color: #a06800; margin-bottom: 10px; font-size: 12px; }
+.ia-email-campo { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.ia-email-campo span { flex: 0 0 56px; font-size: 11px; color: #666; }
+.ia-email-campo input {
+    flex: 1; padding: 7px 10px; border: 1px solid #ced4da; border-radius: 6px;
+    font: 13px var(--nav-font, verdana, sans-serif); min-width: 0;
+}
+.ia-email-para { font-weight: bold; color: #1864ab; }
+.ia-email-campo input:focus { outline: none; border-color: #009536; }
+.ia-email-anexo { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #555; margin: 8px 0 12px; }
+.ia-email-acoes { display: flex; gap: 8px; }
+.ia-email-enviar {
+    background: var(--nav-bg, #007a2e); color: #fff; border: none; border-radius: 6px;
+    padding: 7px 16px; cursor: pointer; font: bold 12px var(--nav-font, verdana, sans-serif);
+}
+.ia-email-enviar:hover:not(:disabled) { background: var(--nav-hover, #009536); }
+.ia-email-enviar:disabled { background: #adb5bd; cursor: not-allowed; }
+.ia-email-status { margin-top: 10px; font-size: 12px; padding: 7px 9px; border-radius: 5px; }
+.ia-email-status.ok { background: #e7f5ec; color: #007a2e; }
+.ia-email-status.erro { background: #fff0f0; color: #c92a2a; }
+
 .ia-entrada { display: flex; gap: 8px; padding: 10px; border-top: 1px solid #e9ecef; background: #fff; }
 .ia-entrada textarea {
     flex: 1; resize: none; border: 1px solid #ced4da; border-radius: 8px; padding: 9px 11px;
@@ -891,5 +918,6 @@ assistente-ia[modo="pagina"] .ia-painel {
         background: #009536 !important; color: #fff !important;
         -webkit-print-color-adjust: exact; print-color-adjust: exact;
     }
-    body.ia-modo-impressao .ia-btn-mini { display: none !important; }
+    body.ia-modo-impressao .ia-btn-mini,
+    body.ia-modo-impressao .ia-email { display: none !important; }
 }

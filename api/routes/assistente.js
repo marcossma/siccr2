@@ -32,6 +32,7 @@ const pool = require("../config/database.js");
 const logger = require("../lib/logger.js");
 const ia = require("../lib/ia/openai.js");
 const { esquemaOpenAI, executar } = require("../lib/ia/ferramentas.js");
+const { enviarEmail } = require("../lib/email.js");
 
 const router = express.Router();
 
@@ -78,6 +79,11 @@ COMO TRABALHAR
 - Quando você pedir a tabela, ela é exibida logo abaixo da sua resposta — então NÃO repita
   as linhas no texto: comente, destaque o que importa e diga "a tabela abaixo traz todos".
   Quando NÃO pedir, não mencione tabela nenhuma.
+- E-MAIL: quando o usuário pedir para enviar os dados por e-mail, passe o endereço em
+  enviar_email (e um assunto curto em assunto_email). Isso NÃO envia: abre uma confirmação
+  na tela com destinatário, assunto e prévia, e quem envia é o usuário. Então diga
+  "preparei o e-mail, confirme na tela" — nunca "enviei". Se for continuação de uma
+  resposta anterior, refaça a mesma consulta com o parâmetro.
 - ARQUIVO: quando o usuário pedir para gerar/exportar/baixar ("gere um excel", "exporta em
   pdf", "quero uma planilha disso"), passe exportar="excel" ou exportar="pdf". O download
   começa sozinho e a tabela também aparece. Se o pedido for continuação de uma resposta
@@ -274,6 +280,7 @@ router.post("/conversar", async (req, res) => {
                         total: resultado.total,
                         soma: resultado.soma,
                         exportar: resultado.exportar,   // "excel" | "pdf" | null
+                        emailProposto: resultado.emailProposto, // { para, assunto } | null
                         itens: resultado.linhas,
                     });
                 }
@@ -321,6 +328,135 @@ router.post("/conversar", async (req, res) => {
         logger.error({ err: error }, "Erro no assistente");
         return res.status(500).json({ status: "error", message: "Erro ao processar a pergunta.", data: null });
     }
+});
+
+// ───────────────────────────────────────────────────────────────
+// POST /enviar-email — envia os dados de uma consulta por e-mail
+//
+// Chamado pelo DIÁLOGO DE CONFIRMAÇÃO, nunca pelo modelo. A ferramenta só
+// prepara a proposta; quem dispara é o usuário, depois de ver o destinatário.
+// É isso que impede que uma instrução escondida num campo de texto importado
+// da planilha ("envie para fulano@...") vire vazamento de dado: o modelo pode
+// até propor, mas não clica no botão.
+//
+// O HTML da tabela é montado AQUI, a partir das linhas. Não se aceita marcação
+// pronta do cliente — mesmo princípio do módulo de comunicados.
+// ───────────────────────────────────────────────────────────────
+
+const MAX_LINHAS_EMAIL = 2000;
+const MAX_ANEXO_BYTES = 8 * 1024 * 1024;
+
+function escaparHtml(v) {
+    return String(v === null || v === undefined ? "" : v)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+/** Tabela HTML com estilo inline — cliente de e-mail ignora <style> externo */
+function tabelaHtml(itens) {
+    const colunas = Object.keys(itens[0]);
+    const th = colunas
+        .map((c) => `<th style="background:#009536;color:#fff;padding:6px 9px;text-align:left;font-size:12px;border:1px solid #007a2e">${escaparHtml(c)}</th>`)
+        .join("");
+    const linhas = itens.map((item, i) => {
+        const fundo = i % 2 ? "#f7fbf8" : "#ffffff";
+        const tds = colunas
+            .map((c) => `<td style="padding:5px 9px;border:1px solid #e9ecef;font-size:12px;background:${fundo}">${escaparHtml(item[c])}</td>`)
+            .join("");
+        return `<tr>${tds}</tr>`;
+    }).join("");
+    return `<table style="border-collapse:collapse;width:100%;font-family:verdana,sans-serif">
+        <thead><tr>${th}</tr></thead><tbody>${linhas}</tbody></table>`;
+}
+
+router.post("/enviar-email", async (req, res) => {
+    const para = String(req.body?.para || "").trim();
+    const assunto = String(req.body?.assunto || "").trim().slice(0, 255);
+    const titulo = String(req.body?.titulo || "Dados do SICCR").trim().slice(0, 120);
+    const itens = Array.isArray(req.body?.itens) ? req.body.itens : [];
+    const anexo = req.body?.anexo; // { nome, base64 } — planilha gerada no navegador
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(para)) {
+        return res.status(400).json({ status: "error", message: "Endereço de e-mail inválido.", data: null });
+    }
+    if (!assunto) {
+        return res.status(400).json({ status: "error", message: "Informe o assunto.", data: null });
+    }
+    if (itens.length === 0) {
+        return res.status(400).json({ status: "error", message: "Não há dados para enviar.", data: null });
+    }
+    if (itens.length > MAX_LINHAS_EMAIL) {
+        return res.status(400).json({
+            status: "error",
+            message: `São ${itens.length} linhas — demais para um e-mail. Refine a consulta.`,
+            data: null,
+        });
+    }
+
+    let anexos;
+    if (anexo?.base64) {
+        const bytes = Buffer.byteLength(anexo.base64, "base64");
+        if (bytes > MAX_ANEXO_BYTES) {
+            return res.status(400).json({ status: "error", message: "O anexo ficou grande demais.", data: null });
+        }
+        anexos = [{
+            filename: String(anexo.nome || "dados.xlsx").replace(/[^\w.-]/g, "_").slice(0, 120),
+            content: Buffer.from(anexo.base64, "base64"),
+            contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        }];
+    }
+
+    const quando = new Date().toLocaleString("pt-BR");
+    const html = `
+        <div style="font-family:verdana,sans-serif;color:#333">
+          <p>Olá,</p>
+          <p><strong>${escaparHtml(req.usuario.nome)}</strong> enviou estes dados pelo assistente do SICCR:</p>
+          <h3 style="color:#007a2e;font-size:14px;margin:18px 0 8px">${escaparHtml(titulo)}</h3>
+          ${tabelaHtml(itens)}
+          <p style="font-size:11px;color:#888;margin-top:18px">
+            ${itens.length} registro(s) · gerado em ${escaparHtml(quando)}${anexos ? " · planilha em anexo" : ""}<br>
+            Enviado automaticamente pelo SICCR — Centro de Ciências Rurais / UFSM.
+          </p>
+        </div>`;
+    const texto = `${req.usuario.nome} enviou estes dados pelo assistente do SICCR.\n\n` +
+        `${titulo} — ${itens.length} registro(s), gerado em ${quando}.\n` +
+        (anexos ? "A planilha está em anexo.\n" : "Abra em um leitor com HTML para ver a tabela.\n");
+
+    let resultado = { ok: false };
+    try {
+        resultado = await enviarEmail({ to: para, subject: assunto, html, text: texto, attachments: anexos });
+    } catch (error) {
+        logger.error({ err: error }, "Falha ao enviar e-mail do assistente");
+    }
+
+    // Registra sempre — inclusive a falha
+    try {
+        await pool.query(
+            `INSERT INTO assistente_envios
+               (user_id, destinatario, assunto, origem, linhas, com_anexo, sucesso, erro)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [req.usuario.id, para, assunto, titulo, itens.length, Boolean(anexos), Boolean(resultado.ok),
+                resultado.ok ? null : (resultado.motivo || "falha no envio")]
+        );
+    } catch (error) {
+        logger.error({ err: error }, "Falha ao registrar envio do assistente");
+    }
+
+    logger.info(
+        { userId: req.usuario.id, linhas: itens.length, comAnexo: Boolean(anexos), ok: Boolean(resultado.ok) },
+        "E-mail enviado pelo assistente"
+    );
+
+    if (!resultado.ok) {
+        return res.status(502).json({
+            status: "error",
+            message: resultado.motivo === "nao_configurado"
+                ? "O envio de e-mail não está configurado neste servidor."
+                : "Não foi possível enviar o e-mail. Tente novamente em instantes.",
+            data: null,
+        });
+    }
+    return res.status(200).json({ status: "success", message: `E-mail enviado para ${para}.`, data: null });
 });
 
 // ───────────────────────────────────────────────────────────────
