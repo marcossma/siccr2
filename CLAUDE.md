@@ -568,6 +568,13 @@ daltonismo e contraste: `#009536 #1971c2 #e8590c #9c36b5 #00949b #c2255c #8a6d00
 Regras que valem em qualquer gráfico: no máximo 8 fatias categóricas (o resto vira "Outros"),
 nunca dois eixos Y, série única não leva legenda, e a cor segue a categoria — nunca a posição no ranking.
 
+### CSS — `[hidden]` tem regra global
+`style.css` declara `[hidden] { display: none !important; }` logo no topo. **Não remova.**
+O atributo `hidden` só esconde quando nenhuma classe declara `display`; qualquer
+`display:flex/grid` o anula silenciosamente e o JS passa a parecer quebrado. Já custou dois
+bugs: o painel do assistente (que "não fechava" e nascia aberto) e os botões de confirmação
+do e-mail (que continuavam mostrando "Enviando…" depois de enviado).
+
 ### CSS — variáveis globais (style.css)
 ```css
 :root {

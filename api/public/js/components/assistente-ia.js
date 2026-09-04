@@ -586,7 +586,12 @@ class AssistenteIA extends HTMLElement {
             const resp = await r.json();
             if (!r.ok) { mostrar(resp.message || "Não foi possível enviar.", true); botao.disabled = false; botao.textContent = original; return; }
             mostrar(resp.message || `E-mail enviado para ${para}.`, false);
+            // Some com o que pede ação e trava os campos: depois de enviado a
+            // caixa é registro do que foi feito, não um formulário pendente.
             caixa.querySelector(".ia-email-acoes").hidden = true;
+            caixa.classList.add("concluido");
+            caixa.querySelector(".ia-email-titulo").textContent = "✓ E-mail enviado";
+            caixa.querySelectorAll("input").forEach((el) => { el.disabled = true; });
         } catch (err) {
             console.error("Erro ao enviar e-mail:", err);
             mostrar("Erro de comunicação ao enviar.", true);

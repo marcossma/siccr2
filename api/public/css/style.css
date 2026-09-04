@@ -8,6 +8,12 @@
     font-size: 12px;
 }
 
+/* O atributo `hidden` precisa vencer qualquer `display` vindo de classe.
+   Sem isto, `el.hidden = true` não esconde nada quando a classe declara
+   display:flex/grid — e o JS parece quebrado. Já aconteceu duas vezes: no
+   painel do assistente e nos botões de confirmação do e-mail. */
+[hidden] { display: none !important; }
+
 .container {
     display: flex;
     flex-direction: column;
@@ -757,12 +763,6 @@ footer {
 .ia-flutuante:hover { background: var(--nav-hover, #009536); transform: scale(1.06); }
 .ia-flutuante:focus-visible { outline: 3px solid #9c36b5; outline-offset: 2px; }
 
-/* `display:flex` abaixo vence a regra padrão do navegador para [hidden]
-   (`display:none`), então o atributo hidden não escondia nada — o botão de
-   fechar "não funcionava" e o painel nascia aberto. Esta regra devolve o
-   comportamento esperado do atributo. */
-.ia-painel[hidden] { display: none; }
-
 .ia-painel {
     position: fixed; right: 22px; bottom: 88px; z-index: 901;
     width: min(560px, calc(100vw - 44px)); height: min(640px, calc(100vh - 130px));
@@ -859,7 +859,11 @@ assistente-ia[modo="pagina"] .ia-painel {
 .ia-email-enviar:hover:not(:disabled) { background: var(--nav-hover, #009536); }
 .ia-email-enviar:disabled { background: #adb5bd; cursor: not-allowed; }
 .ia-email-status { margin-top: 10px; font-size: 12px; padding: 7px 9px; border-radius: 5px; }
-.ia-email-status.ok { background: #e7f5ec; color: #007a2e; }
+.ia-email-status.ok { background: #e7f5ec; color: #007a2e; font-weight: bold; }
+/* Concluído: a caixa deixa de "pedir ação" — vira registro do que foi feito */
+.ia-email.concluido { border-color: #009536; background: #f7fbf8; }
+.ia-email.concluido .ia-email-titulo { color: #007a2e; }
+.ia-email.concluido input { background: #f1f3f5; color: #666; border-color: #e9ecef; }
 .ia-email-status.erro { background: #fff0f0; color: #c92a2a; }
 
 .ia-entrada { display: flex; gap: 8px; padding: 10px; border-top: 1px solid #e9ecef; background: #fff; }
